@@ -1,17 +1,31 @@
 
 import React from 'react';
-import { CompanySettings, Quote, Invoice, Client } from '../types';
+import { CompanySettings, Quote, Invoice, Client, DeliveryNote } from '../types';
 
 interface DocumentPreviewProps {
     settings: Partial<CompanySettings>;
-    document: Quote | Invoice;
+    document: Quote | Invoice | DeliveryNote;
     client: Client;
 }
 
 const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, client }) => {
     const primaryColor = settings.primaryColor || '#059669'; // Default to emerald-600
-    const isQuote = 'expiryDate' in document;
-    const documentType = isQuote ? 'DEVIS' : 'FACTURE';
+    
+    // Détermination du type de document
+    let documentType = 'DOCUMENT';
+    let isDeliveryNote = false;
+    let isQuote = false;
+
+    if ('expiryDate' in document) {
+        documentType = 'DEVIS';
+        isQuote = true;
+    } else if ('dueDate' in document) {
+        documentType = 'FACTURE';
+    } else {
+        // Logique par défaut pour DeliveryNote (qui n'a ni date d'échéance ni validité explicite dans l'interface de base)
+        documentType = 'BON DE LIVRAISON';
+        isDeliveryNote = true;
+    }
 
     const renderAddress = (address: string) => {
         return address.split('\n').map((line, index) => (
@@ -56,11 +70,13 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                     <p className="font-semibold mt-2 text-lg text-neutral-700">#{document.id}</p>
                     <div className="text-xs mt-4 text-neutral-600 space-y-1">
                         <p>Date : <span className="font-medium text-neutral-900">{new Date(document.date).toLocaleDateString('fr-FR')}</span></p>
-                        {isQuote ? (
-                            <p>Valable jusqu'au : <span className="font-medium text-neutral-900">{new Date(document.expiryDate).toLocaleDateString('fr-FR')}</span></p>
-                        ) : (
+                        {isQuote && (
+                            <p>Valable jusqu'au : <span className="font-medium text-neutral-900">{new Date((document as Quote).expiryDate).toLocaleDateString('fr-FR')}</span></p>
+                        )}
+                        {!isQuote && !isDeliveryNote && (
                             <p>Échéance : <span className="font-medium text-neutral-900">{new Date((document as Invoice).dueDate).toLocaleDateString('fr-FR')}</span></p>
                         )}
+                        {/* Delivery Note doesn't explicitly need extra date fields here */}
                         {document.reference && <p>Réf. client : <span className="font-medium text-neutral-900">{document.reference}</span></p>}
                     </div>
                 </div>
@@ -94,9 +110,13 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                         <tr style={{ backgroundColor: primaryColor, color: 'white' }}>
                             <th className="p-3 font-semibold uppercase text-xs rounded-tl-lg rounded-bl-lg">Désignation</th>
                             <th className="p-3 text-center font-semibold uppercase text-xs w-16">Qté</th>
-                            <th className="p-3 text-right font-semibold uppercase text-xs w-28">P.U. HT</th>
-                            <th className="p-3 text-center font-semibold uppercase text-xs w-16">TVA</th>
-                            <th className="p-3 text-right font-semibold uppercase text-xs w-28 rounded-tr-lg rounded-br-lg">Total HT</th>
+                            {!isDeliveryNote && (
+                                <>
+                                    <th className="p-3 text-right font-semibold uppercase text-xs w-28">P.U. HT</th>
+                                    <th className="p-3 text-center font-semibold uppercase text-xs w-16">TVA</th>
+                                    <th className="p-3 text-right font-semibold uppercase text-xs w-28 rounded-tr-lg rounded-br-lg">Total HT</th>
+                                </>
+                            )}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-200">
@@ -106,34 +126,49 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                     <p className="font-semibold text-neutral-900">{item.name}</p>
                                     {item.description && <p className="text-xs text-neutral-500 mt-0.5">{item.description}</p>}
                                 </td>
-                                <td className="p-3 text-center align-top">{item.quantity}</td>
-                                <td className="p-3 text-right align-top">{item.unitPrice.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}</td>
-                                <td className="p-3 text-center align-top text-xs text-neutral-500">{item.vat}%</td>
-                                <td className="p-3 text-right align-top font-medium text-neutral-900">{(item.quantity * item.unitPrice).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}</td>
+                                <td className="p-3 text-center align-top font-bold">{item.quantity}</td>
+                                {!isDeliveryNote && (
+                                    <>
+                                        <td className="p-3 text-right align-top">{item.unitPrice.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}</td>
+                                        <td className="p-3 text-center align-top text-xs text-neutral-500">{item.vat}%</td>
+                                        <td className="p-3 text-right align-top font-medium text-neutral-900">{(item.quantity * item.unitPrice).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}</td>
+                                    </>
+                                )}
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </section>
 
-            {/* Totals */}
-            <section className="flex justify-end mt-8">
-                <div className="w-full max-w-xs space-y-3">
-                    <div className="flex justify-between text-neutral-600">
-                        <span>Total HT</span>
-                        <span className="font-medium">{document.subTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
+            {/* Totals - Hidden for Delivery Notes */}
+            {!isDeliveryNote ? (
+                <section className="flex justify-end mt-8">
+                    <div className="w-full max-w-xs space-y-3">
+                        <div className="flex justify-between text-neutral-600">
+                            <span>Total HT</span>
+                            <span className="font-medium">{(document as Invoice).subTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
+                        </div>
+                        <div className="flex justify-between text-neutral-600">
+                            <span>Total TVA</span>
+                            <span className="font-medium">{(document as Invoice).vatAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
+                        </div>
+                        <div className="h-px bg-neutral-200 my-2"></div>
+                        <div className="flex justify-between text-lg font-bold bg-neutral-50 p-2 rounded" style={{ color: primaryColor }}>
+                            <span>Net à Payer</span>
+                            <span>{((document as any).amount || (document as any).totalAmount).toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
+                        </div>
                     </div>
-                    <div className="flex justify-between text-neutral-600">
-                        <span>Total TVA</span>
-                        <span className="font-medium">{document.vatAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
+                </section>
+            ) : (
+                <section className="mt-12 pt-8 border-t border-neutral-200 flex justify-between px-10">
+                    <div className="text-center w-40">
+                        <p className="font-bold text-neutral-400 mb-8 border-b pb-2">Signature Expéditeur</p>
                     </div>
-                    <div className="h-px bg-neutral-200 my-2"></div>
-                    <div className="flex justify-between text-lg font-bold bg-neutral-50 p-2 rounded" style={{ color: primaryColor }}>
-                        <span>Net à Payer</span>
-                        <span>{document.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
+                    <div className="text-center w-40">
+                        <p className="font-bold text-neutral-400 mb-8 border-b pb-2">Signature Client</p>
                     </div>
-                </div>
-            </section>
+                </section>
+            )}
             
             {/* Footer */}
             <footer className="mt-auto pt-8 text-center">

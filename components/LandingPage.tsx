@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-    FileText, CheckCircle, Shield, Zap, LayoutDashboard, ArrowRight, 
+    Files, CheckCircle, Shield, Zap, LayoutDashboard, ArrowRight, 
     BarChart3, Users, Globe, ChevronRight, Star, TrendingUp, Menu, X, Quote
 } from 'lucide-react';
 
@@ -30,21 +30,21 @@ const LandingPage: React.FC = () => {
         {
             name: "Karim Benjelloun",
             role: "Fondateur, K-Tech Solutions",
-            content: "Depuis que j'utilise Zenith, la facturation n'est plus une corvée. C'est rapide, professionnel et conforme aux normes marocaines. Mes clients apprécient la clarté des devis.",
+            content: "Depuis que j'utilise Facturago, la facturation n'est plus une corvée. C'est rapide, professionnel et conforme aux normes marocaines. Mes clients apprécient la clarté des devis.",
             initials: "KB",
             color: "bg-blue-100 text-blue-600"
         },
         {
             name: "Meryem El Idrissi",
             role: "Gérante, Atlas Déco & Design",
-            content: "La gestion de stock était un véritable cauchemar pour ma boutique. Avec Zenith, je sais exactement ce qui entre et ce qui sort en temps réel. Une visibilité totale sur mon activité.",
+            content: "La gestion de stock était un véritable cauchemar pour ma boutique. Avec Facturago, je sais exactement ce qui entre et ce qui sort en temps réel. Une visibilité totale sur mon activité.",
             initials: "ME",
             color: "bg-purple-100 text-purple-600"
         },
         {
             name: "Youssef Alami",
             role: "Consultant Financier",
-            content: "J'ai testé plusieurs logiciels locaux et internationaux, mais Zenith est de loin le plus intuitif. L'interface est épurée et le support est très réactif. Je recommande vivement.",
+            content: "J'ai testé plusieurs logiciels locaux et internationaux, mais Facturago est de loin le plus intuitif. L'interface est épurée et le support est très réactif. Je recommande vivement.",
             initials: "YA",
             color: "bg-emerald-100 text-emerald-600"
         }
@@ -64,12 +64,12 @@ const LandingPage: React.FC = () => {
                 <div className="max-w-7xl mx-auto px-6 lg:px-8">
                     <div className="flex items-center justify-between">
                         {/* Logo */}
-                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
-                                <FileText size={22} />
+                        <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                            <div className="h-10 w-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-600/30">
+                                <Files size={22} className="transform -rotate-12" />
                             </div>
-                            <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
-                                Zenith
+                            <span className="text-2xl font-bold text-slate-900 tracking-tight">
+                                Facturago
                             </span>
                         </div>
 
@@ -229,7 +229,7 @@ const LandingPage: React.FC = () => {
                         <div className="md:col-span-2 bg-slate-50 rounded-3xl p-8 border border-slate-100 relative overflow-hidden group hover:border-emerald-200 transition-colors">
                             <div className="relative z-10">
                                 <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-emerald-600 mb-4">
-                                    <FileText size={24} />
+                                    <Files size={24} />
                                 </div>
                                 <h3 className="text-2xl font-bold text-slate-900 mb-2">Facturation Intelligente</h3>
                                 <p className="text-slate-500 max-w-sm">Créez des devis et factures professionnels en quelques clics. Automatisez les calculs de TVA et les conversions.</p>
@@ -336,9 +336,9 @@ const LandingPage: React.FC = () => {
                             </div>
                         </div>
                         <div>
-                            <h2 className="text-3xl font-bold text-slate-900 mb-6">Pourquoi choisir Zenith ?</h2>
+                            <h2 className="text-3xl font-bold text-slate-900 mb-6">Pourquoi choisir Facturago ?</h2>
                             <p className="text-lg text-slate-600 mb-8">
-                                Contrairement aux tableurs complexes ou aux logiciels obsolètes, Zenith est conçu pour l'entrepreneur moderne. 
+                                Contrairement aux tableurs complexes ou aux logiciels obsolètes, Facturago est conçu pour l'entrepreneur moderne. 
                                 Interface épurée, rapidité d'exécution et conformité aux normes comptables.
                             </p>
                             <ul className="space-y-4">
@@ -403,7 +403,7 @@ const LandingPage: React.FC = () => {
                 <div className="container max-w-4xl mx-auto px-6 relative z-10 text-center text-white">
                     <h2 className="text-4xl font-bold mb-6">Prêt à passer à la vitesse supérieure ?</h2>
                     <p className="text-emerald-100 text-lg mb-10 max-w-2xl mx-auto">
-                        Rejoignez les entrepreneurs qui ont choisi Zenith pour structurer leur activité. 
+                        Rejoignez les entrepreneurs qui ont choisi Facturago pour structurer leur activité. 
                         Commencez dès maintenant.
                     </p>
                     <button 
@@ -422,9 +422,9 @@ const LandingPage: React.FC = () => {
                         <div className="col-span-2 lg:col-span-2">
                             <div className="flex items-center gap-2 mb-4">
                                 <div className="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white">
-                                    <FileText size={18} />
+                                    <Files size={18} />
                                 </div>
-                                <span className="text-xl font-bold text-slate-900">Zenith</span>
+                                <span className="text-xl font-bold text-slate-900">Facturago</span>
                             </div>
                             <p className="text-slate-500 text-sm max-w-xs mb-6">
                                 La plateforme tout-en-un pour gérer votre entreprise avec simplicité et élégance.
@@ -469,7 +469,7 @@ const LandingPage: React.FC = () => {
                     
                     <div className="border-t border-slate-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
                         <p className="text-slate-400 text-sm">
-                            &copy; {new Date().getFullYear()} Zenith Platform. Tous droits réservés.
+                            &copy; {new Date().getFullYear()} Facturago. Tous droits réservés.
                         </p>
                         <div className="flex items-center gap-2 text-xs text-slate-400">
                             <span className="h-2 w-2 rounded-full bg-emerald-500"></span>

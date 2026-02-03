@@ -1,5 +1,6 @@
+
 {
-  "name": "FactoraGo",
-  "description": "An all-in-one platform for invoicing and business management. Manage clients, send invoices, track expenses, and streamline your operations.",
+  "name": "Facturago",
+  "description": "Une plateforme tout-en-un pour la facturation et la gestion d'entreprise. Gérez vos clients, envoyez des factures, suivez vos dépenses et optimisez vos opérations.",
   "requestFramePermissions": []
 }

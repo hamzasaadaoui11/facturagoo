@@ -150,10 +150,19 @@ export const generatePDF = async (
     const dateStr = new Date(doc.date).toLocaleDateString('fr-FR');
     const amountInLetters = numberToWordsFr(totalAmount);
     
+    const isDeliveryNote = docType === 'Bon de Livraison';
+
     // Config des colonnes
-    const activeColumns = (settings.documentColumns && settings.documentColumns.length > 0) 
+    let activeColumns = (settings.documentColumns && settings.documentColumns.length > 0) 
         ? settings.documentColumns.filter(c => c.visible).sort((a, b) => a.order - b.order)
         : DEFAULT_COLUMNS;
+
+    // LOGIQUE SPÉCIALE BON DE LIVRAISON : On force le masquage des colonnes de prix
+    if (isDeliveryNote) {
+        activeColumns = activeColumns.filter(col => 
+            col.id === 'name' || col.id === 'quantity'
+        );
+    }
 
     // Calcul date échéance / validité
     let extraDateLabel = '';
@@ -199,7 +208,7 @@ export const generatePDF = async (
     const headerRowHtml = activeColumns.map(col => {
         let align = 'left';
         let width = '';
-        if (col.id === 'quantity') { align = 'center'; width = 'width: 50px;'; }
+        if (col.id === 'quantity') { align = 'center'; width = 'width: 80px;'; }
         else if (col.id === 'vat') { align = 'center'; width = 'width: 40px;'; }
         else if (col.id === 'unitPrice' || col.id === 'total') { align = 'right'; width = 'width: 90px;'; }
         
@@ -223,6 +232,7 @@ export const generatePDF = async (
                 case 'quantity':
                     content = item.quantity.toString();
                     align = 'center';
+                    style = 'font-weight: 600; font-size: 12px;';
                     break;
                 case 'unitPrice':
                     content = item.unitPrice.toLocaleString('fr-MA', { minimumFractionDigits: 2 });
@@ -248,7 +258,8 @@ export const generatePDF = async (
 
     // Payment Info (if invoice/DL)
     let paymentInfoHtml = '';
-    if (docType === 'Facture' || docType === 'Bon de Livraison') {
+    // On n'affiche pas les infos de paiement sur le BL PDF par défaut (standard métier)
+    if (docType === 'Facture') {
         const paid = doc.amountPaid || doc.paymentAmount || 0;
         const remaining = totalAmount - paid;
         if (paid > 0) {
@@ -319,7 +330,8 @@ export const generatePDF = async (
                 </tbody>
             </table>
 
-            <!-- TOTALS & AMOUNT IN LETTERS -->
+            <!-- TOTALS & AMOUNT IN LETTERS (HIDDEN FOR DELIVERY NOTES) -->
+            ${!isDeliveryNote ? `
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
                 
                 <!-- Amount in letters (Left side) -->
@@ -354,6 +366,17 @@ export const generatePDF = async (
                     ${paymentInfoHtml}
                 </div>
             </div>
+            ` : `
+                <!-- Delivery Note Footer (Minimal) -->
+                <div style="display: flex; justify-content: space-between; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                    <div style="width: 45%;">
+                        <div style="font-weight: bold; margin-bottom: 40px;">Signature Expéditeur</div>
+                    </div>
+                    <div style="width: 45%; text-align: right;">
+                        <div style="font-weight: bold; margin-bottom: 40px;">Signature & Cachet Client</div>
+                    </div>
+                </div>
+            `}
         </div>
 
         <!-- FOOTER (Pushed to bottom via flex layout) -->

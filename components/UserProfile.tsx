@@ -91,7 +91,7 @@ const UserProfile: React.FC = () => {
                             <UserCircle size={64} />
                         </div>
                         <div className="flex-1">
-                            <h2 className="text-3xl font-bold">{settings?.companyName || "Utilisateur Zenith"}</h2>
+                            <h2 className="text-3xl font-bold">{settings?.companyName || "Utilisateur Facturago"}</h2>
                             <p className="text-emerald-100 font-medium opacity-90 flex items-center gap-2 mt-1">
                                 {user?.email}
                             </p>

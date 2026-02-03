@@ -130,7 +130,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                             <div className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 space-y-4">
                                 <div>
                                     <label htmlFor="company" className="block text-sm font-medium text-neutral-700">Nom de la Société <span className="text-red-500">*</span></label>
-                                    <input type="text" id="company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Ex: Zenith SARL" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                    <input type="text" id="company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Ex: Facturago SARL" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>

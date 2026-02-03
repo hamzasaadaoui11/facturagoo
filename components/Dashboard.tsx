@@ -1,9 +1,9 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { Invoice, InvoiceStatus, Client, Product, CompanySettings } from '../types';
-import { Users, Package, FileText, AlertCircle, AlertTriangle, DollarSign, Gift, Archive, CheckCircle, ArrowRight, UserPlus, List, ChevronRight, TrendingUp, ShoppingBag, CalendarDays, Clock } from 'lucide-react';
+import { Users, Package, FileText, AlertCircle, AlertTriangle, DollarSign, Gift, Archive, CheckCircle, ArrowRight, UserPlus, List, ChevronRight, TrendingUp, ShoppingBag, CalendarDays, Clock, Filter } from 'lucide-react';
 
 interface DashboardProps {
     invoices: Invoice[];
@@ -47,8 +47,13 @@ const ShortcutCard = ({ icon: Icon, label, desc, onClick, colorClass }: { icon: 
     );
 };
 
+type ChartPeriod = 'day' | 'week' | 'month' | 'year' | 'custom';
+
 const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, companySettings }) => {
     const navigate = useNavigate();
+    const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('year');
+    const [customStartDate, setCustomStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
+    const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
     
     // Date du jour formatée
     const todayDate = new Date().toLocaleDateString('fr-FR', { 
@@ -108,25 +113,111 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
     ];
 
     const chartData = useMemo(() => {
-        const months = Array.from({ length: 6 }, (_, i) => {
-            const d = new Date();
-            d.setMonth(d.getMonth() - i);
-            return { month: d.toLocaleString('fr-FR', { month: 'short' }), year: d.getFullYear(), revenues: 0 };
-        }).reverse();
+        const today = new Date();
+        let data: { name: string; fullDate?: string; Revenu: number }[] = [];
 
-        invoices.forEach(inv => {
-            if (inv.status === InvoiceStatus.Paid && inv.paymentDate) {
-                const paymentDate = new Date(inv.paymentDate);
-                const monthStr = paymentDate.toLocaleString('fr-FR', { month: 'short' });
-                const year = paymentDate.getFullYear();
-                const monthData = months.find(m => m.month === monthStr && m.year === year);
-                if (monthData) {
-                    monthData.revenues += inv.amount;
-                }
+        const getPaidInvoices = (start: Date, end: Date) => {
+            return invoices.filter(inv => {
+                if (inv.status !== InvoiceStatus.Paid) return false;
+                const d = new Date(inv.paymentDate || inv.date);
+                return d >= start && d <= end;
+            });
+        };
+
+        if (chartPeriod === 'day') {
+            // Logic for Today (Hourly buckets: 00h, 04h, 08h, etc.)
+            const startOfDay = new Date(today.setHours(0,0,0,0));
+            const endOfDay = new Date(today.setHours(23,59,59,999));
+            const relevantInvoices = getPaidInvoices(startOfDay, endOfDay);
+
+            for (let i = 0; i <= 24; i += 4) {
+                const label = `${i}h`;
+                const amount = relevantInvoices.reduce((acc, inv) => {
+                    const h = new Date(inv.paymentDate || inv.date).getHours();
+                    return (h >= i && h < i + 4) ? acc + inv.amount : acc;
+                }, 0);
+                data.push({ name: label, Revenu: amount });
             }
-        });
-        return months.map(m => ({ name: m.month, Revenu: m.revenues }));
-    }, [invoices]);
+
+        } else if (chartPeriod === 'week') {
+            // Logic for Week (Mon-Sun)
+            const curr = new Date();
+            const first = curr.getDate() - curr.getDay() + 1; // Monday
+            const last = first + 6; // Sunday
+            
+            const startOfWeek = new Date(curr.setDate(first));
+            startOfWeek.setHours(0,0,0,0);
+            const endOfWeek = new Date(curr.setDate(last));
+            endOfWeek.setHours(23,59,59,999);
+
+            const relevantInvoices = getPaidInvoices(startOfWeek, endOfWeek);
+            const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+            data = days.map((day, index) => {
+                // Note: getDay() returns 0 for Sunday, 1 for Monday. We need to shift logic.
+                const amount = relevantInvoices.reduce((acc, inv) => {
+                    let d = new Date(inv.paymentDate || inv.date).getDay(); // 0=Sun, 1=Mon
+                    let mappedIndex = d === 0 ? 6 : d - 1; // Map to 0=Mon, 6=Sun
+                    return mappedIndex === index ? acc + inv.amount : acc;
+                }, 0);
+                return { name: day, Revenu: amount };
+            });
+
+        } else if (chartPeriod === 'month') {
+            // Logic for Month (Days 1..31)
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            const relevantInvoices = getPaidInvoices(startOfMonth, endOfMonth);
+            const daysInMonth = endOfMonth.getDate();
+
+            // Group by 3-day intervals to avoid overcrowded X-axis, or just key days
+            for (let i = 1; i <= daysInMonth; i++) {
+                const amount = relevantInvoices.reduce((acc, inv) => {
+                    const d = new Date(inv.paymentDate || inv.date).getDate();
+                    return d === i ? acc + inv.amount : acc;
+                }, 0);
+                data.push({ name: `${i}`, Revenu: amount });
+            }
+
+        } else if (chartPeriod === 'year') {
+            // Logic for Year (Jan-Dec)
+            const startOfYear = new Date(today.getFullYear(), 0, 1);
+            const endOfYear = new Date(today.getFullYear(), 11, 31);
+            const relevantInvoices = getPaidInvoices(startOfYear, endOfYear);
+            
+            const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+            data = months.map((month, index) => {
+                const amount = relevantInvoices.reduce((acc, inv) => {
+                    const m = new Date(inv.paymentDate || inv.date).getMonth();
+                    return m === index ? acc + inv.amount : acc;
+                }, 0);
+                return { name: month, Revenu: amount };
+            });
+        } else if (chartPeriod === 'custom') {
+            // Logic for Custom Range
+            const start = new Date(customStartDate);
+            start.setHours(0,0,0,0);
+            const end = new Date(customEndDate);
+            end.setHours(23,59,59,999);
+            
+            const relevantInvoices = getPaidInvoices(start, end);
+            
+            // Generate distinct days between range
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+                const isoDate = d.toISOString().split('T')[0];
+                
+                const amount = relevantInvoices.reduce((acc, inv) => {
+                    const invDate = new Date(inv.paymentDate || inv.date).toISOString().split('T')[0];
+                    return invDate === isoDate ? acc + inv.amount : acc;
+                }, 0);
+                
+                data.push({ name: dateStr, fullDate: isoDate, Revenu: amount });
+            }
+        }
+
+        return data;
+    }, [invoices, chartPeriod, customStartDate, customEndDate]);
 
     // --- New Logic for Stock Alerts ---
     const lowStockProducts = useMemo(() => {
@@ -200,17 +291,63 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                 
                 {/* Chart Section */}
                 <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-slate-100 p-8 flex flex-col">
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                         <h3 className="text-lg font-bold text-slate-900">Évolution du Chiffre d'Affaires</h3>
-                        <span className="text-xs font-medium px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full">6 derniers mois</span>
+                        
+                        {/* Période Selector */}
+                        <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-lg">
+                            {(['day', 'week', 'month', 'year'] as ChartPeriod[]).map((p) => (
+                                <button
+                                    key={p}
+                                    onClick={() => setChartPeriod(p)}
+                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                                        chartPeriod === p 
+                                        ? 'bg-white text-emerald-600 shadow-sm' 
+                                        : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                                    }`}
+                                >
+                                    {p === 'day' ? 'Jour' : p === 'week' ? 'Semaine' : p === 'month' ? 'Mois' : 'Année'}
+                                </button>
+                            ))}
+                            <button
+                                onClick={() => setChartPeriod('custom')}
+                                className={`px-3 py-1 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${
+                                    chartPeriod === 'custom' 
+                                    ? 'bg-white text-emerald-600 shadow-sm' 
+                                    : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                                }`}
+                            >
+                                <Filter size={10} /> Perso
+                            </button>
+                        </div>
                     </div>
+
+                    {/* Date Pickers for Custom Range */}
+                    {chartPeriod === 'custom' && (
+                        <div className="flex items-center justify-end gap-2 mb-4 animate-fadeIn">
+                            <input 
+                                type="date" 
+                                value={customStartDate} 
+                                onChange={(e) => setCustomStartDate(e.target.value)}
+                                className="text-xs border-slate-200 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
+                            />
+                            <span className="text-slate-400">-</span>
+                            <input 
+                                type="date" 
+                                value={customEndDate} 
+                                onChange={(e) => setCustomEndDate(e.target.value)}
+                                className="text-xs border-slate-200 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
+                            />
+                        </div>
+                    )}
+
                     <div className="flex-grow min-h-[300px]">
                         {chartData.every(d => d.Revenu === 0) ? (
                             <div className="flex flex-col items-center justify-center h-full text-slate-400">
                                 <div className="p-4 bg-slate-50 rounded-full mb-3">
                                     <Archive className="h-8 w-8" />
                                 </div>
-                                <p>Aucune donnée financière pour le moment</p>
+                                <p>Aucune donnée financière pour cette période</p>
                             </div>
                         ) : (
                             <ResponsiveContainer width="100%" height="100%">
@@ -222,7 +359,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                    <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} dy={10} />
+                                    <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} dy={10} interval="preserveStartEnd" />
                                     <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false} />
                                     <Tooltip 
                                         contentStyle={{ backgroundColor: 'white', border: 'none', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 

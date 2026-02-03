@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Lock, Mail, Loader2, AlertCircle } from 'lucide-react';
+import { Files, Lock, Mail, Loader2, AlertCircle } from 'lucide-react';
 
 const Login: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -36,11 +36,11 @@ const Login: React.FC = () => {
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="flex justify-center">
                     <div className="h-12 w-12 rounded-xl bg-emerald-600 flex items-center justify-center text-white">
-                        <FileText size={24} />
+                        <Files size={24} />
                     </div>
                 </div>
                 <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-neutral-900">
-                    Connexion Zenith
+                    Connexion Facturago
                 </h2>
                 <p className="mt-2 text-center text-sm text-neutral-600">
                     Accédez à votre espace de gestion privé.

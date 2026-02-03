@@ -11,7 +11,7 @@ import {
     Package,
     Settings,
     ChevronDown,
-    FileText,
+    Files,
     ShoppingBag,
     BarChart3,
     LogOut,
@@ -68,9 +68,9 @@ const Sidebar: React.FC = () => {
         <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-emerald-600 px-6 pb-4">
             <div className="flex h-16 shrink-0 items-center gap-x-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white">
-                  <FileText className="h-5 w-5 text-emerald-600" />
+                  <Files className="h-5 w-5 text-emerald-600" />
                 </div>
-                <h1 className="text-xl font-bold text-white">Zenith</h1>
+                <h1 className="text-xl font-bold text-white">Facturago</h1>
             </div>
             <nav className="flex flex-1 flex-col">
                 <ul role="list" className="flex flex-1 flex-col gap-y-7">

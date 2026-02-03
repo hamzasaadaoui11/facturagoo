@@ -104,18 +104,46 @@ const MainContent: React.FC = () => {
         return `${prefix}${(maxCode + 1).toString().padStart(3, '0')}`;
     };
 
-    const getNextIdFor = (type: 'quote' | 'invoice' | 'purchaseOrder', currentItems: (Quote | Invoice | PurchaseOrder)[]) => {
-        let prefix = 'DOC';
-        if (type === 'quote') prefix = 'DEV';
-        else if (type === 'invoice') prefix = 'FA';
-        else if (type === 'purchaseOrder') prefix = 'BC';
+    /**
+     * Génère le prochain ID de document de manière incrémentale et formatée.
+     * Format: PREFIX + 00001 (5 chiffres)
+     */
+    const generateDocumentId = (type: 'quote' | 'invoice' | 'purchaseOrder' | 'deliveryNote', currentItems: { id: string }[]) => {
+        let prefix = '';
+        
+        switch (type) {
+            case 'invoice':
+                prefix = 'FA'; // Facture
+                break;
+            case 'deliveryNote':
+                prefix = 'BL'; // Bon de Livraison
+                break;
+            case 'quote':
+                prefix = 'DV'; // Devis
+                break;
+            case 'purchaseOrder':
+                prefix = 'BA'; // Bon d'Achat (ou BC pour Bon de Commande)
+                break;
+            default:
+                prefix = 'DOC';
+        }
 
-        const year = new Date().getFullYear();
-        const itemsThisYear = currentItems.filter(q => q.id.startsWith(`${prefix}-${year}`));
-        const lastId = itemsThisYear.length > 0
-            ? Math.max(...itemsThisYear.map(q => parseInt(q.id.split('-')[2] || '0', 10)))
-            : 0;
-        return `${prefix}-${year}-${(lastId + 1).toString().padStart(5, '0')}`;
+        // Filtrer les items qui correspondent exactement au préfixe actuel pour éviter les conflits avec d'anciens formats
+        const numbers = currentItems
+            .map(item => {
+                if (item.id.startsWith(prefix)) {
+                    const numberPart = item.id.replace(prefix, '');
+                    // On vérifie si c'est bien un nombre après le préfixe
+                    return !isNaN(Number(numberPart)) ? parseInt(numberPart, 10) : 0;
+                }
+                return 0;
+            });
+
+        const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
+        const nextNumber = maxNumber + 1;
+
+        // Formatage avec padding de 5 zéros (ex: FA00001)
+        return `${prefix}${nextNumber.toString().padStart(5, '0')}`;
     };
 
     // --- Core Logic ---
@@ -194,7 +222,12 @@ const MainContent: React.FC = () => {
 
     // 4. Quotes
     const addQuote = async (quoteData: Omit<Quote, 'id' | 'amount'>) => {
-        const newQuote: Quote = { id: getNextIdFor('quote', quotes), amount: quoteData.subTotal + quoteData.vatAmount, ...quoteData };
+        // Generation ID : DV00001
+        const newQuote: Quote = { 
+            id: generateDocumentId('quote', quotes), 
+            amount: quoteData.subTotal + quoteData.vatAmount, 
+            ...quoteData 
+        };
         await dbService.quotes.add(newQuote);
         setQuotes(prev => [newQuote, ...prev].sort((a, b) => b.id.localeCompare(a.id)));
     };
@@ -217,8 +250,9 @@ const MainContent: React.FC = () => {
             // CRITICAL FIX: Extract 'initialPayment' as it's not in the Invoice table schema
             const { initialPayment, ...invoiceFields } = invoiceData;
 
+            // Generation ID : FA00001
             const newInvoice: Invoice = { 
-                id: getNextIdFor('invoice', invoices), 
+                id: generateDocumentId('invoice', invoices), 
                 amount: invoiceFields.subTotal + invoiceFields.vatAmount, 
                 amountPaid: initialPayment ? initialPayment.amount : 0,
                 ...invoiceFields 
@@ -334,21 +368,39 @@ const MainContent: React.FC = () => {
         if (!quote) return;
         
         // No initial payment for quotes usually
-        const newInvoiceData: Omit<Invoice, 'id'| 'amount' | 'amountPaid'> = {
-            quoteId: quote.id, clientId: quote.clientId, clientName: quote.clientName,
+        // Generation ID : FA00001
+        const newInvoiceId = generateDocumentId('invoice', invoices);
+
+        const newInvoiceData: Invoice = {
+            id: newInvoiceId,
+            quoteId: quote.id, 
+            clientId: quote.clientId, 
+            clientName: quote.clientName,
             date: new Date().toISOString().split('T')[0],
             dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            status: InvoiceStatus.Pending, subject: quote.subject, reference: quote.reference,
-            lineItems: quote.lineItems, subTotal: quote.subTotal, vatAmount: quote.vatAmount,
+            status: InvoiceStatus.Pending, 
+            subject: quote.subject, 
+            reference: quote.reference,
+            lineItems: quote.lineItems, 
+            subTotal: quote.subTotal, 
+            vatAmount: quote.vatAmount,
+            amount: quote.amount,
+            amountPaid: 0
         };
-        await addInvoice(newInvoiceData);
+        
+        await dbService.invoices.add(newInvoiceData);
+        setInvoices(prev => [newInvoiceData, ...prev].sort((a, b) => b.id.localeCompare(a.id)));
         await updateQuoteStatus(quoteId, QuoteStatus.Converted);
     };
 
     // 6. Delivery Notes
     const createDeliveryNote = async (noteData: Omit<DeliveryNote, 'id'>) => {
         try {
-            const newNote: DeliveryNote = { id: crypto.randomUUID(), ...noteData };
+            // Generation ID : BL00001
+            const newNote: DeliveryNote = { 
+                id: generateDocumentId('deliveryNote', deliveryNotes), 
+                ...noteData 
+            };
             await dbService.deliveryNotes.add(newNote);
             setDeliveryNotes(prev => [newNote, ...prev]);
 
@@ -361,7 +413,7 @@ const MainContent: React.FC = () => {
                         date: noteData.date,
                         quantity: -item.quantity, 
                         type: 'Vente',
-                        reference: `BL-${newNote.id.split('-').pop()} ${noteData.invoiceId ? '(Facture ' + noteData.invoiceId + ')' : '(Manuel)'}`
+                        reference: `${newNote.id} ${noteData.invoiceId ? '(Facture ' + noteData.invoiceId + ')' : '(Manuel)'}`
                     });
                 }
             }
@@ -387,7 +439,8 @@ const MainContent: React.FC = () => {
             if (!note) return;
             if (note.invoiceId) return; 
 
-            const invoiceId = getNextIdFor('invoice', invoices);
+            // Generation ID : FA00001
+            const invoiceId = generateDocumentId('invoice', invoices);
             
             // Recalculate totals to be safe
             const subTotal = note.subTotal ?? note.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
@@ -410,8 +463,8 @@ const MainContent: React.FC = () => {
                 date: new Date().toISOString().split('T')[0],
                 dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
                 status: status,
-                subject: `Facture issue du BL-${note.id.split('-').pop()}`,
-                reference: `BL-${note.id.split('-').pop()}`,
+                subject: `Facture issue du ${note.id}`,
+                reference: note.id,
                 lineItems: note.lineItems,
                 subTotal: subTotal,
                 vatAmount: vatAmount,
@@ -450,7 +503,11 @@ const MainContent: React.FC = () => {
 
     // 7. Purchase Orders
     const addPurchaseOrder = async (orderData: Omit<PurchaseOrder, 'id'>) => {
-        const newOrder: PurchaseOrder = { id: getNextIdFor('purchaseOrder', purchaseOrders), ...orderData };
+        // Generation ID : BA00001
+        const newOrder: PurchaseOrder = { 
+            id: generateDocumentId('purchaseOrder', purchaseOrders), 
+            ...orderData 
+        };
         await dbService.purchaseOrders.add(newOrder);
         setPurchaseOrders(prev => [newOrder, ...prev].sort((a, b) => b.id.localeCompare(a.id)));
     };
@@ -624,10 +681,26 @@ const App: React.FC = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            setLoading(false);
-        });
+        const initSession = async () => {
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) {
+                    console.error("Session check failed, potentially invalid token:", error);
+                    // Force a local sign out to clear stale tokens
+                    await supabase.auth.signOut().catch(console.error);
+                    setSession(null);
+                } else {
+                    setSession(session);
+                }
+            } catch (err) {
+                console.error("Unexpected error during session init:", err);
+                setSession(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        initSession();
 
         const {
             data: { subscription },

@@ -185,7 +185,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                                     <div className="md:col-span-2">
-                                         <InputField icon={Briefcase} label="Nom de la société / Raison sociale" name="companyName" value={localSettings.companyName || ''} onChange={handleInputChange} placeholder="Ex: Zenith SARL" />
+                                         <InputField icon={Briefcase} label="Nom de la société / Raison sociale" name="companyName" value={localSettings.companyName || ''} onChange={handleInputChange} placeholder="Ex: Facturago SARL" />
                                     </div>
                                     <div className="md:col-span-2">
                                         <TextAreaField icon={MapPin} label="Adresse du siège" name="address" value={localSettings.address || ''} onChange={handleInputChange} rows={3} placeholder="Adresse complète..." />
