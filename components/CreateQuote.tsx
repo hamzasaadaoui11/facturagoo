@@ -1,0 +1,416 @@
+
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Client, Product, Quote, LineItem, QuoteStatus } from '../types';
+import { X, Check, Eye, Save, Trash2, Plus } from 'lucide-react';
+
+interface CreateQuoteProps {
+  clients: Client[];
+  products: Product[];
+  onAddQuote: (quote: Omit<Quote, 'id' | 'amount'>) => void;
+  quotes?: Quote[];
+  onUpdateQuote?: (quote: Quote) => void;
+}
+
+const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote, quotes, onUpdateQuote }) => {
+  const { quoteId } = useParams();
+  const navigate = useNavigate();
+  const isEditMode = Boolean(quoteId);
+
+  const quoteToEdit = useMemo(() => {
+    if (!isEditMode || !quotes) return null;
+    return quotes.find(q => q.id === quoteId) || null;
+  }, [quotes, quoteId, isEditMode]);
+
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [expiryDate, setExpiryDate] = useState('');
+  const [subject, setSubject] = useState('');
+  const [reference, setReference] = useState('');
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [lineItems, setLineItems] = useState<LineItem[]>([
+    { id: `line-${Date.now()}`, productId: null, name: '', description: '', quantity: 1, unitPrice: 0, vat: 20 },
+  ]);
+
+  useEffect(() => {
+    if (isEditMode && quoteToEdit) {
+        setDate(quoteToEdit.date);
+        setExpiryDate(quoteToEdit.expiryDate === 'Non spécifiée' ? '' : quoteToEdit.expiryDate);
+        setSubject(quoteToEdit.subject || '');
+        setReference(quoteToEdit.reference || '');
+        const client = clients.find(c => c.id === quoteToEdit.clientId);
+        setSelectedClient(client || null);
+        setLineItems(quoteToEdit.lineItems);
+    }
+  }, [isEditMode, quoteToEdit, clients]);
+
+  const addLineItem = () => {
+    setLineItems([...lineItems, { id: `line-${Date.now()}`, productId: null, name: '', description: '', quantity: 1, unitPrice: 0, vat: 20 }]);
+  };
+
+  const removeLineItem = (id: string) => {
+    setLineItems(lineItems.filter(item => item.id !== id));
+  };
+
+  const updateLineItem = (id: string, updatedField: Partial<LineItem>) => {
+    setLineItems(lineItems.map(item => item.id === id ? { ...item, ...updatedField } : item));
+  };
+  
+  const handleProductSelect = (lineId: string, productId: string | null) => {
+      const product = products.find(p => p.id === productId);
+      if(product) {
+          updateLineItem(lineId, { 
+              productId: product.id,
+              name: product.name,
+              description: product.description,
+              unitPrice: product.salePrice,
+              vat: product.vat,
+          });
+      } else {
+        updateLineItem(lineId, { 
+            productId: null, name: '', description: '', unitPrice: 0, vat: 20,
+        });
+      }
+  };
+
+  const totals = useMemo(() => {
+    const subTotal = lineItems.reduce((acc, item) => acc + item.quantity * item.unitPrice, 0);
+    const vatAmount = lineItems.reduce((acc, item) => acc + (item.quantity * item.unitPrice * item.vat / 100), 0);
+    const total = subTotal + vatAmount;
+    return { subTotal, vatAmount, total };
+  }, [lineItems]);
+  
+    const handleSave = (status: QuoteStatus) => {
+        if (!selectedClient) {
+            alert("Veuillez sélectionner un client.");
+            return;
+        }
+        if (lineItems.length === 0 || lineItems.every(item => !item.name)) {
+            alert("Veuillez ajouter au moins un article valide au devis.");
+            return;
+        }
+
+        if (isEditMode && quoteToEdit && onUpdateQuote) {
+            const updatedQuote: Quote = {
+                ...quoteToEdit,
+                clientId: selectedClient.id,
+                clientName: selectedClient.name,
+                date,
+                expiryDate: expiryDate || 'Non spécifiée',
+                subject: subject || '',
+                reference: reference || '',
+                lineItems,
+                subTotal: totals.subTotal,
+                vatAmount: totals.vatAmount,
+                amount: totals.total,
+                status,
+            };
+            onUpdateQuote(updatedQuote);
+        } else {
+            const newQuote = {
+                clientId: selectedClient.id,
+                clientName: selectedClient.name,
+                date,
+                expiryDate: expiryDate || 'Non spécifiée',
+                subject: subject || '',
+                reference: reference || '',
+                lineItems,
+                subTotal: totals.subTotal,
+                vatAmount: totals.vatAmount,
+                status,
+            };
+            onAddQuote(newQuote);
+        }
+        
+        navigate('/sales/quotes');
+    };
+    
+    const handlePreview = () => {
+        if (!selectedClient) {
+            alert("Veuillez sélectionner un client pour l'aperçu.");
+            return;
+        }
+        const previewText = `
+            Aperçu du Devis
+            -------------------
+            Client: ${selectedClient.name}
+            Date: ${date}
+            Échéance: ${expiryDate || 'N/A'}
+            Objet: ${subject || 'N/A'}
+            -------------------
+            Articles:
+            ${lineItems.map(item => `  - ${item.name || 'Article non défini'} (x${item.quantity}): ${(item.quantity * item.unitPrice).toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}`).join('\n')}
+            -------------------
+            Sous-total HT: ${totals.subTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
+            TVA: ${totals.vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
+            Total TTC: ${totals.total.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
+        `;
+        alert(previewText);
+    };
+
+  const SearchableSelect = ({ items, selectedItem, onSelect, placeholder, displayField, addNewPath, addNewLabel }: any) => {
+      const [searchTerm, setSearchTerm] = useState('');
+      const [isOpen, setIsOpen] = useState(false);
+      const wrapperRef = useRef<HTMLDivElement>(null);
+      const dropdownRef = useRef<HTMLUListElement>(null);
+      const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+
+      // --- Position and State Management ---
+      const updateDropdownPosition = () => {
+          if (wrapperRef.current) {
+              const rect = wrapperRef.current.getBoundingClientRect();
+              setDropdownStyle({
+                  top: `${rect.bottom + 4}px`,
+                  left: `${rect.left}px`,
+                  width: `${rect.width}px`,
+              });
+          }
+      };
+
+      const handleOpen = () => {
+          setSearchTerm('');
+          updateDropdownPosition();
+          setIsOpen(true);
+      };
+      
+      const handleClose = () => {
+          setIsOpen(false);
+      };
+
+      const handleSelect = (item: any) => {
+          onSelect(item);
+          handleClose();
+      };
+      
+      // --- Event Handlers ---
+      const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+          setSearchTerm(e.target.value);
+          if (!isOpen) {
+              handleOpen();
+          }
+      };
+
+      const handleInputClick = () => {
+          if (isOpen) {
+              handleClose();
+          } else {
+              handleOpen();
+          }
+      };
+
+      const handleAddNew = () => {
+          if (addNewPath) { navigate(addNewPath); }
+      };
+
+      // --- Effects for managing position and outside clicks ---
+      useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (isOpen &&
+                wrapperRef.current && !wrapperRef.current.contains(event.target as Node) &&
+                dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                handleClose();
+            }
+        }
+        
+        if (isOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+            window.addEventListener('resize', updateDropdownPosition);
+            window.addEventListener('scroll', updateDropdownPosition, true);
+        }
+        
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            window.removeEventListener('resize', updateDropdownPosition);
+            window.removeEventListener('scroll', updateDropdownPosition, true);
+        };
+      }, [isOpen]);
+      
+      // --- Filtering and Rendering ---
+      const filteredItems = items.filter((item: any) =>
+          (item[displayField] || '').toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      
+      const inputValue = isOpen ? searchTerm : (selectedItem ? selectedItem[displayField] : '');
+
+      const DropdownList = (
+          <ul ref={dropdownRef} style={dropdownStyle} className="fixed z-50 max-h-60 overflow-auto rounded-lg bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+              {addNewPath && (
+                  <li onClick={handleAddNew} className="flex items-center gap-x-2 sticky top-0 bg-white cursor-pointer select-none py-2 pl-3 pr-9 text-emerald-600 hover:bg-emerald-50 border-b z-10">
+                      <Plus size={16} />
+                      <span className="block truncate font-semibold">{addNewLabel}</span>
+                  </li>
+              )}
+              {items.length === 0 ? (
+                  <li className="relative cursor-default select-none py-2 px-3 text-neutral-500">
+                      Aucun élément disponible.
+                  </li>
+              ) : filteredItems.length === 0 ? (
+                  <li className="relative cursor-default select-none py-2 px-3 text-neutral-500">
+                      Aucun résultat trouvé.
+                  </li>
+              ) : (
+                  filteredItems.map((item: any) => (
+                      <li key={item.id} onMouseDown={() => handleSelect(item)} className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-neutral-900 hover:bg-neutral-100">
+                          <span className="block truncate">{item[displayField]}</span>
+                      </li>
+                  ))
+              )}
+          </ul>
+      );
+
+      return (
+          <div ref={wrapperRef}>
+              <input 
+                  type="text"
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  onClick={handleInputClick}
+                  placeholder={placeholder}
+                  className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+              />
+              {isOpen && createPortal(DropdownList, document.body)}
+          </div>
+      );
+  };
+
+
+  return (
+    <div>
+      <div className="md:flex md:items-center md:justify-between mb-6">
+        <div>
+            <h1 className="text-3xl font-bold text-neutral-900">{isEditMode ? 'Modifier le Devis' : 'Nouveau Devis'}</h1>
+            <p className="text-sm text-neutral-500 mt-1">{isEditMode ? `Mise à jour du devis ${quoteToEdit?.id}` : 'Créer un nouveau devis pour un client'}</p>
+        </div>
+        <div className="mt-4 md:mt-0 flex flex-wrap items-center gap-2">
+            <button onClick={() => navigate('/sales/quotes')} className="inline-flex items-center gap-x-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all duration-200 ease-in-out">
+                <X size={16} className="-ml-0.5" /> Annuler
+            </button>
+            <button onClick={() => handleSave(isEditMode ? quoteToEdit!.status : QuoteStatus.Draft)} className="inline-flex items-center gap-x-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all duration-200 ease-in-out">
+                <Save size={16} className="-ml-0.5" /> {isEditMode ? 'Enregistrer' : 'Enregistrer brouillon'}
+            </button>
+            <button onClick={handlePreview} className="inline-flex items-center gap-x-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all duration-200 ease-in-out">
+                <Eye size={16} className="-ml-0.5" /> Aperçu
+            </button>
+            <button onClick={() => handleSave(isEditMode ? quoteToEdit!.status : QuoteStatus.Created)} className="inline-flex items-center gap-x-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-all duration-200 ease-in-out">
+                <Check size={16} className="-ml-0.5" /> {isEditMode ? 'Mettre à jour' : 'Créer le devis'}
+            </button>
+        </div>
+      </div>
+      
+      <div className="bg-white p-6 rounded-lg shadow-sm ring-1 ring-neutral-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 pb-6 border-b border-neutral-200">
+            <div className="lg:col-span-1">
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Client *</label>
+                 <SearchableSelect 
+                    items={clients}
+                    selectedItem={selectedClient}
+                    onSelect={setSelectedClient}
+                    placeholder="Sélectionner ou rechercher un client"
+                    displayField="name"
+                />
+            </div>
+             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Date d'émission</label>
+                    <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">Date d'échéance</label>
+                    <input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
+                </div>
+             </div>
+             <div className="lg:col-span-2">
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Objet</label>
+                <input type="text" value={subject} onChange={e => setSubject(e.target.value)} placeholder="Objet du document (facultatif)" className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">Référence</label>
+                <input type="text" value={reference} onChange={e => setReference(e.target.value)} placeholder="Référence (facultatif)" className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
+            </div>
+        </div>
+        
+        <h3 className="text-lg font-semibold text-neutral-800 mb-4">Articles</h3>
+        <div className="overflow-x-auto -mx-6">
+            <table className="min-w-full">
+                <thead className="bg-neutral-50">
+                    <tr>
+                        <th className="px-6 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider w-2/5">Article</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Qté</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">P.U. HT</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">TVA</th>
+                        <th className="px-3 py-2 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">Total HT</th>
+                        <th className="w-12 px-3 py-2"></th>
+                    </tr>
+                </thead>
+                <tbody className="bg-white">
+                {lineItems.map(item => {
+                    const lineTotal = item.quantity * item.unitPrice;
+                    const selectedProduct = products.find(p => p.id === item.productId);
+                    return (
+                        <tr key={item.id} className="border-b border-neutral-200">
+                            <td className="px-6 py-3 whitespace-nowrap">
+                                <SearchableSelect 
+                                    items={products}
+                                    selectedItem={selectedProduct}
+                                    onSelect={(product: Product) => handleProductSelect(item.id, product ? product.id : null)}
+                                    placeholder="Sélectionner un produit"
+                                    displayField="name"
+                                    addNewPath="/products/new"
+                                    addNewLabel="Ajouter un produit"
+                                />
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap">
+                                <input type="number" value={item.quantity} onChange={e => updateLineItem(item.id, { quantity: parseInt(e.target.value) || 0 })} className="w-20 rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap">
+                                <input type="number" step="0.01" value={item.unitPrice} onChange={e => updateLineItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })} className="w-28 rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
+                            </td>
+                             <td className="px-3 py-3 whitespace-nowrap">
+                                <select value={item.vat} onChange={e => updateLineItem(item.id, { vat: parseInt(e.target.value) })} className="w-24 rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
+                                    <option value="20">20%</option>
+                                    <option value="14">14%</option>
+                                    <option value="10">10%</option>
+                                    <option value="7">7%</option>
+                                    <option value="0">0%</option>
+                                </select>
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap text-sm text-neutral-600 font-medium text-right">
+                                {lineTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap">
+                                <button type="button" onClick={() => removeLineItem(item.id)} className="text-neutral-400 hover:text-red-600 transition-colors"><Trash2 size={16}/></button>
+                            </td>
+                        </tr>
+                    );
+                })}
+                </tbody>
+            </table>
+        </div>
+        
+        <button type="button" onClick={addLineItem} className="mt-4 inline-flex items-center text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
+            <Plus size={16} className="mr-1"/> Ajouter une ligne
+        </button>
+
+        <div className="flex justify-end mt-6">
+            <div className="w-full max-w-sm space-y-3">
+                <div className="flex justify-between text-sm">
+                    <span className="text-neutral-600">Sous-total HT</span>
+                    <span className="font-medium text-neutral-800">{totals.subTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                    <span className="text-neutral-600">TVA</span>
+                    <span className="font-medium text-neutral-800">{totals.vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                </div>
+                <hr className="my-2 border-neutral-200"/>
+                <div className="flex justify-between font-bold text-lg">
+                    <span className="text-neutral-900">Total TTC</span>
+                    <span className="text-emerald-600">{totals.total.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                </div>
+            </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CreateQuote;
