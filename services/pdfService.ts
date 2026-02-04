@@ -3,6 +3,7 @@ import { CompanySettings, Invoice, Quote, DeliveryNote, PurchaseOrder, Client, S
 
 interface DocumentData {
     id: string;
+    documentId?: string; // Added documentId
     date: string;
     lineItems: LineItem[];
     subTotal?: number;
@@ -150,6 +151,9 @@ export const generatePDF = async (
     const dateStr = new Date(doc.date).toLocaleDateString('fr-FR');
     const amountInLetters = numberToWordsFr(totalAmount);
     
+    // Utiliser documentId s'il existe, sinon l'id technique
+    const displayId = doc.documentId || doc.id;
+    
     const isDeliveryNote = docType === 'Bon de Livraison';
 
     // Config des colonnes
@@ -291,7 +295,7 @@ export const generatePDF = async (
                 </div>
                 <div style="width: 40%; text-align: right;">
                     <div style="font-size: 26px; font-weight: bold; text-transform: uppercase; color: ${primaryColor}; margin-bottom: 10px;">${docType}</div>
-                    <div style="font-size: 16px; font-weight: 600; color: #111827;">N° ${doc.id}</div>
+                    <div style="font-size: 16px; font-weight: 600; color: #111827;">N° ${displayId}</div>
                     <div style="margin-top: 10px; font-size: 12px;">
                         <div>Date : <b>${dateStr}</b></div>
                         ${extraDateLabel ? `<div>${extraDateLabel} : <b>${extraDateValue}</b></div>` : ''}
@@ -405,7 +409,7 @@ export const generatePDF = async (
         // Configurations html2pdf
         const opt = {
             margin: 0, // No margin, handled by CSS padding
-            filename: `${docType}_${doc.id}.pdf`,
+            filename: `${docType}_${displayId}.pdf`,
             image: { type: 'jpeg', quality: 1 }, // Quality 1.0 (Max)
             html2canvas: { 
                 scale: 4, // Increased scale for high resolution (was 2)
