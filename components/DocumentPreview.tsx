@@ -67,7 +67,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                 </div>
                 <div className="text-right">
                     <h2 className="text-3xl font-bold uppercase tracking-widest" style={{ color: primaryColor }}>{documentType}</h2>
-                    <p className="font-semibold mt-2 text-lg text-neutral-700">#{document.id}</p>
+                    <p className="font-semibold mt-2 text-lg text-neutral-700">#{document.documentId || document.id}</p>
                     <div className="text-xs mt-4 text-neutral-600 space-y-1">
                         <p>Date : <span className="font-medium text-neutral-900">{new Date(document.date).toLocaleDateString('fr-FR')}</span></p>
                         {isQuote && (
@@ -129,9 +129,9 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                 <td className="p-3 text-center align-top font-bold">{item.quantity}</td>
                                 {!isDeliveryNote && (
                                     <>
-                                        <td className="p-3 text-right align-top">{item.unitPrice.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}</td>
+                                        <td className="p-3 text-right align-top">{item.unitPrice.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
                                         <td className="p-3 text-center align-top text-xs text-neutral-500">{item.vat}%</td>
-                                        <td className="p-3 text-right align-top font-medium text-neutral-900">{(item.quantity * item.unitPrice).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}</td>
+                                        <td className="p-3 text-right align-top font-medium text-neutral-900">{(item.quantity * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
                                     </>
                                 )}
                             </tr>
@@ -146,16 +146,16 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                     <div className="w-full max-w-xs space-y-3">
                         <div className="flex justify-between text-neutral-600">
                             <span>Total HT</span>
-                            <span className="font-medium">{(document as Invoice).subTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
+                            <span className="font-medium">{(document as Invoice).subTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                         </div>
                         <div className="flex justify-between text-neutral-600">
                             <span>Total TVA</span>
-                            <span className="font-medium">{(document as Invoice).vatAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
+                            <span className="font-medium">{(document as Invoice).vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                         </div>
                         <div className="h-px bg-neutral-200 my-2"></div>
                         <div className="flex justify-between text-lg font-bold bg-neutral-50 p-2 rounded" style={{ color: primaryColor }}>
                             <span>Net à Payer</span>
-                            <span>{((document as any).amount || (document as any).totalAmount).toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
+                            <span>{((document as any).amount || (document as any).totalAmount).toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                         </div>
                     </div>
                 </section>

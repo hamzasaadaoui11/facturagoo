@@ -75,6 +75,7 @@ export interface LineItem {
 
 export interface Quote {
     id: string;
+    documentId?: string; // Human readable ID (DV00001)
     clientId: string;
     clientName: string;
     date: string;
@@ -90,6 +91,7 @@ export interface Quote {
 
 export interface PurchaseOrder {
     id: string;
+    documentId?: string; // Human readable ID (BC00001)
     supplierId: string;
     supplierName: string;
     date: string;
@@ -104,6 +106,7 @@ export interface PurchaseOrder {
 
 export interface Invoice {
     id: string;
+    documentId?: string; // Human readable ID (FA00001)
     quoteId?: string;
     clientId: string;
     clientName: string;
@@ -145,6 +148,7 @@ export interface StockMovement {
 
 export interface DeliveryNote {
     id: string;
+    documentId?: string; // Human readable ID (BL00001)
     invoiceId?: string; // Optional now
     clientId: string;
     clientName: string;

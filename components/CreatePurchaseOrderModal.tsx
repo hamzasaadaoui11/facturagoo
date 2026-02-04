@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Trash2, ScanLine, FileText } from 'lucide-react';
+import { X, Plus, Trash2, ScanLine, FileText, Loader2 } from 'lucide-react';
 import { Supplier, Product, PurchaseOrder, LineItem, PurchaseOrderStatus } from '../types';
 
 interface CreatePurchaseOrderModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (order: Omit<PurchaseOrder, 'id'>, id?: string) => void;
+    onSave: (order: Omit<PurchaseOrder, 'id'>, id?: string) => Promise<any> | void;
     suppliers: Supplier[];
     products: Product[];
     orderToEdit?: PurchaseOrder | null;
@@ -14,6 +14,7 @@ interface CreatePurchaseOrderModalProps {
 
 const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isOpen, onClose, onSave, suppliers, products, orderToEdit }) => {
     const [isVisible, setIsVisible] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     
     // Form State
     const [supplierId, setSupplierId] = useState('');
@@ -91,7 +92,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
         return { subTotal, vatAmount, totalAmount };
     }, [lineItems]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!supplierId) {
             alert('Veuillez sélectionner un fournisseur.');
             return;
@@ -103,19 +104,26 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
 
         const supplier = suppliers.find(s => s.id === supplierId);
         
-        onSave({
-            supplierId,
-            supplierName: supplier?.name || 'Fournisseur inconnu',
-            date,
-            expectedDate,
-            notes,
-            lineItems,
-            status: orderToEdit ? orderToEdit.status : PurchaseOrderStatus.Draft,
-            subTotal: totals.subTotal,
-            vatAmount: totals.vatAmount,
-            totalAmount: totals.totalAmount,
-        }, orderToEdit?.id);
-        handleClose();
+        setIsSubmitting(true);
+        try {
+            await onSave({
+                supplierId,
+                supplierName: supplier?.name || 'Fournisseur inconnu',
+                date,
+                expectedDate,
+                notes,
+                lineItems,
+                status: orderToEdit ? orderToEdit.status : PurchaseOrderStatus.Draft,
+                subTotal: totals.subTotal,
+                vatAmount: totals.vatAmount,
+                totalAmount: totals.totalAmount,
+            }, orderToEdit?.id);
+            handleClose();
+        } catch (error) {
+            console.error("Save failed", error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     if (!isOpen) return null;
@@ -130,7 +138,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
                     <div>
                         <h3 className="text-lg font-semibold text-neutral-900">{orderToEdit ? 'Modifier Bon de Commande' : 'Nouveau Bon de Commande'}</h3>
-                        <p className="text-sm text-neutral-500">{orderToEdit ? `Modification du BC #${orderToEdit.id}` : 'Créer une commande fournisseur.'}</p>
+                        <p className="text-sm text-neutral-500">{orderToEdit ? `Modification du BC #${orderToEdit.documentId || orderToEdit.id}` : 'Créer une commande fournisseur.'}</p>
                     </div>
                     <button onClick={handleClose} className="p-1 text-neutral-400 hover:text-neutral-600 rounded-full hover:bg-neutral-100 transition-colors">
                         <X size={20} />
@@ -290,15 +298,18 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 <div className="flex justify-end gap-3 px-6 py-4 bg-neutral-50 border-t border-neutral-200 rounded-b-lg">
                      <button 
                         onClick={handleClose}
-                        className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg shadow-sm hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all"
+                        disabled={isSubmitting}
+                        className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg shadow-sm hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all disabled:opacity-50"
                     >
                         Annuler
                     </button>
                     <button 
                         onClick={handleSave}
-                        className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-lg shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all flex items-center gap-2"
+                        disabled={isSubmitting}
+                        className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-lg shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <FileText size={16} /> {orderToEdit ? 'Mettre à jour' : 'Enregistrer Commande'}
+                        {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />} 
+                        {isSubmitting ? 'Enregistrement...' : (orderToEdit ? 'Mettre à jour' : 'Enregistrer Commande')}
                     </button>
                 </div>
 

@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Trash2, ScanLine, Calculator, CreditCard } from 'lucide-react';
+import { X, Plus, Trash2, ScanLine, Calculator, CreditCard, Loader2 } from 'lucide-react';
 import { Client, Product, DeliveryNote, LineItem } from '../types';
 
 interface CreateDeliveryNoteModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (note: Omit<DeliveryNote, 'id'>, id?: string) => void;
+    onSave: (note: Omit<DeliveryNote, 'id'>, id?: string) => Promise<any> | void;
     clients: Client[];
     products: Product[];
     noteToEdit?: DeliveryNote | null;
@@ -14,6 +14,7 @@ interface CreateDeliveryNoteModalProps {
 
 const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpen, onClose, onSave, clients, products, noteToEdit }) => {
     const [isVisible, setIsVisible] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     
     // Form State
     const [clientId, setClientId] = useState('');
@@ -96,7 +97,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         }
     }, [totals.totalTTC, noteToEdit]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!clientId) {
             alert('Veuillez sélectionner un client.');
             return;
@@ -108,20 +109,27 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
 
         const client = clients.find(c => c.id === clientId);
         
-        onSave({
-            clientId,
-            clientName: client?.name || 'Client inconnu',
-            date,
-            lineItems,
-            status: 'Livré',
-            subTotal: totals.subTotal,
-            vatAmount: totals.vatAmount,
-            totalAmount: totals.totalTTC,
-            paymentAmount: paymentAmount,
-            paymentMethod: paymentMethod,
-            invoiceId: noteToEdit?.invoiceId // Keep invoice link if existing
-        }, noteToEdit?.id); // Pass ID if editing
-        handleClose();
+        setIsSubmitting(true);
+        try {
+            await onSave({
+                clientId,
+                clientName: client?.name || 'Client inconnu',
+                date,
+                lineItems,
+                status: 'Livré',
+                subTotal: totals.subTotal,
+                vatAmount: totals.vatAmount,
+                totalAmount: totals.totalTTC,
+                paymentAmount: paymentAmount,
+                paymentMethod: paymentMethod,
+                invoiceId: noteToEdit?.invoiceId // Keep invoice link if existing
+            }, noteToEdit?.id);
+            handleClose();
+        } catch (error) {
+            console.error("Save failed", error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const remainingAmount = totals.totalTTC - paymentAmount;
@@ -138,7 +146,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
                     <div>
                         <h3 className="text-lg font-semibold text-neutral-900">{noteToEdit ? 'Modifier Bon de Livraison' : 'Nouveau Bon de Livraison'}</h3>
-                        <p className="text-sm text-neutral-500">{noteToEdit ? `Modification du BL-${noteToEdit.id.split('-').pop()}` : 'Créez un BL et enregistrez un règlement immédiat.'}</p>
+                        <p className="text-sm text-neutral-500">{noteToEdit ? `Modification du BL-${noteToEdit.documentId || noteToEdit.id}` : 'Créez un BL et enregistrez un règlement immédiat.'}</p>
                     </div>
                     <button onClick={handleClose} className="p-1 text-neutral-400 hover:text-neutral-600 rounded-full hover:bg-neutral-100 transition-colors">
                         <X size={20} />
@@ -147,7 +155,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
 
                 {/* Body - Scrollable */}
                 <div className="px-6 py-6 overflow-y-auto custom-scrollbar space-y-6 flex-1">
-                    
+                    {/* ... (Existing Body Content same as before) ... */}
                     {/* Client & Date */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
@@ -328,15 +336,18 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 <div className="flex justify-end gap-3 px-6 py-4 bg-neutral-50 border-t border-neutral-200 rounded-b-lg">
                      <button 
                         onClick={handleClose}
-                        className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg shadow-sm hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all"
+                        disabled={isSubmitting}
+                        className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg shadow-sm hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all disabled:opacity-50"
                     >
                         Annuler
                     </button>
                     <button 
                         onClick={handleSave}
-                        className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-lg shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all flex items-center gap-2"
+                        disabled={isSubmitting}
+                        className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-lg shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <Calculator size={16} /> {noteToEdit ? 'Mettre à jour' : 'Enregistrer'}
+                        {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Calculator size={16} />} 
+                        {isSubmitting ? 'Traitement...' : (noteToEdit ? 'Mettre à jour' : 'Enregistrer')}
                     </button>
                 </div>
 

@@ -18,8 +18,8 @@ interface InvoicesProps {
     invoices: Invoice[];
     onUpdateInvoiceStatus: (invoiceId: string, newStatus: InvoiceStatus) => void;
     onAddPayment: (payment: Omit<Payment, 'id'>) => void;
-    onCreateInvoice?: (invoice: any) => void;
-    onUpdateInvoice?: (invoice: any, id: string) => void; // Nouvelle prop
+    onCreateInvoice?: (invoice: any) => Promise<any> | void;
+    onUpdateInvoice?: (invoice: any, id: string) => Promise<any> | void;
     clients?: Client[];
     products?: Product[];
     companySettings?: CompanySettings | null;
@@ -54,7 +54,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
         
         onAddPayment({
             invoiceId: selectedInvoiceForPayment.id,
-            invoiceNumber: selectedInvoiceForPayment.id,
+            invoiceNumber: selectedInvoiceForPayment.documentId || selectedInvoiceForPayment.id,
             clientId: selectedInvoiceForPayment.clientId,
             clientName: selectedInvoiceForPayment.clientName,
             date: new Date().toISOString().split('T')[0],
@@ -67,9 +67,9 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
 
     const handleSaveInvoice = (invoiceData: any, id?: string) => {
         if (id && onUpdateInvoice) {
-            onUpdateInvoice(invoiceData, id);
+            return onUpdateInvoice(invoiceData, id);
         } else if (onCreateInvoice) {
-            onCreateInvoice(invoiceData);
+            return onCreateInvoice(invoiceData);
         }
     };
 
@@ -112,7 +112,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                     <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
                         <h3 className="text-lg font-bold mb-4">Enregistrer un paiement</h3>
-                        <p className="text-sm text-gray-500 mb-4">Pour la facture {selectedInvoiceForPayment.id}</p>
+                        <p className="text-sm text-gray-500 mb-4">Pour la facture {selectedInvoiceForPayment.documentId || selectedInvoiceForPayment.id}</p>
                         <form onSubmit={handlePaymentSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Montant</label>
@@ -169,7 +169,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                     const isDownloading = downloadingId === invoice.id;
                                     return (
                                     <tr key={invoice.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">{invoice.id}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">{invoice.documentId || invoice.id}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-600">{invoice.clientName}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-medium">{invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-red-600">{remaining > 0 ? remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}</td>

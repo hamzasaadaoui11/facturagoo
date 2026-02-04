@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Trash2, ScanLine, Calculator, FileText, CreditCard } from 'lucide-react';
+import { X, Plus, Trash2, ScanLine, Calculator, FileText, CreditCard, Loader2 } from 'lucide-react';
 import { Client, Product, Invoice, LineItem, InvoiceStatus } from '../types';
 
 interface CreateInvoiceModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (invoice: any, id?: string) => void;
+    onSave: (invoice: any, id?: string) => Promise<any> | void;
     clients: Client[];
     products: Product[];
     invoiceToEdit?: Invoice | null;
@@ -14,6 +14,7 @@ interface CreateInvoiceModalProps {
 
 const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose, onSave, clients, products, invoiceToEdit }) => {
     const [isVisible, setIsVisible] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     
     // Form State
     const [clientId, setClientId] = useState('');
@@ -23,8 +24,8 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
     // Payment State
-    const [existingAmountPaid, setExistingAmountPaid] = useState<number>(0); // Somme déjà payée (historique)
-    const [newPaymentAmount, setNewPaymentAmount] = useState<number>(0); // Nouveau paiement lors de l'edit/création
+    const [existingAmountPaid, setExistingAmountPaid] = useState<number>(0); 
+    const [newPaymentAmount, setNewPaymentAmount] = useState<number>(0); 
     const [paymentMethod, setPaymentMethod] = useState('Virement');
     
     // Item Addition State
@@ -36,16 +37,14 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             setTimeout(() => setIsVisible(true), 10);
             
             if (invoiceToEdit) {
-                // Mode Modification
                 setClientId(invoiceToEdit.clientId);
                 setDate(invoiceToEdit.date);
                 setDueDate(invoiceToEdit.dueDate);
                 setSubject(invoiceToEdit.subject || '');
-                setLineItems(JSON.parse(JSON.stringify(invoiceToEdit.lineItems))); // Deep copy
+                setLineItems(JSON.parse(JSON.stringify(invoiceToEdit.lineItems)));
                 setExistingAmountPaid(invoiceToEdit.amountPaid || 0);
-                setNewPaymentAmount(0); // On reset le nouveau paiement
+                setNewPaymentAmount(0);
             } else {
-                // Mode Création
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
                 const nextMonth = new Date();
@@ -99,7 +98,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
         return { subTotal, vatAmount, totalTTC };
     }, [lineItems]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!clientId) {
             alert('Veuillez sélectionner un client.');
             return;
@@ -110,21 +109,14 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
         }
 
         const client = clients.find(c => c.id === clientId);
-        
-        // Calcul du statut automatique
         const totalPaid = existingAmountPaid + newPaymentAmount;
         let status = InvoiceStatus.Pending;
         
-        if (totalPaid >= totals.totalTTC - 0.1) { // Tolérance de 0.1 pour les arrondis
+        if (totalPaid >= totals.totalTTC - 0.1) {
             status = InvoiceStatus.Paid;
         } else if (totalPaid > 0) {
             status = InvoiceStatus.Partial;
-        } else {
-            status = InvoiceStatus.Pending; // Reste "En attente" si 0 payé, ou user peut définir Draft ailleurs
         }
-
-        // Si on édite une facture qui était 'Draft' et qu'on ne paie rien, on peut garder le statut Draft si voulu, 
-        // mais ici on applique une logique comptable stricte pour simplifier.
 
         const invoiceData = {
             clientId,
@@ -136,19 +128,26 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             status,
             subTotal: totals.subTotal,
             vatAmount: totals.vatAmount,
-            amount: totals.totalTTC, // Mise à jour explicite du montant total
-            amountPaid: totalPaid, // Mise à jour explicite du payé total
+            amount: totals.totalTTC, 
+            amountPaid: totalPaid, 
             
-            // Champ spécial pour créer un *nouveau* paiement dans la base
             initialPayment: newPaymentAmount > 0 ? {
                 amount: newPaymentAmount,
                 method: paymentMethod,
-                date: new Date().toISOString().split('T')[0] // Date du jour pour le nouveau paiement
+                date: new Date().toISOString().split('T')[0]
             } : undefined
         };
         
-        onSave(invoiceData, invoiceToEdit?.id);
-        handleClose();
+        setIsSubmitting(true);
+        try {
+            await onSave(invoiceData, invoiceToEdit?.id);
+            handleClose();
+        } catch (error) {
+            // Error is handled in App.tsx but we catch here to keep modal open
+            console.error("Save failed in modal", error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const remainingAmount = Math.max(0, totals.totalTTC - (existingAmountPaid + newPaymentAmount));
@@ -165,7 +164,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
                     <div>
                         <h3 className="text-lg font-semibold text-neutral-900">{invoiceToEdit ? 'Modifier la Facture' : 'Nouvelle Facture'}</h3>
-                        <p className="text-sm text-neutral-500">{invoiceToEdit ? `Modification de la facture #${invoiceToEdit.id}` : 'Création d\'une facture directe.'}</p>
+                        <p className="text-sm text-neutral-500">{invoiceToEdit ? `Modification de la facture #${invoiceToEdit.documentId || invoiceToEdit.id}` : 'Création d\'une facture directe.'}</p>
                     </div>
                     <button onClick={handleClose} className="p-1 text-neutral-400 hover:text-neutral-600 rounded-full hover:bg-neutral-100 transition-colors">
                         <X size={20} />
@@ -377,15 +376,18 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 <div className="flex justify-end gap-3 px-6 py-4 bg-neutral-50 border-t border-neutral-200 rounded-b-lg">
                      <button 
                         onClick={handleClose}
-                        className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg shadow-sm hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all"
+                        disabled={isSubmitting}
+                        className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg shadow-sm hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all disabled:opacity-50"
                     >
                         Annuler
                     </button>
                     <button 
                         onClick={handleSave}
-                        className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-lg shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all flex items-center gap-2"
+                        disabled={isSubmitting}
+                        className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-lg shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <FileText size={16} /> {invoiceToEdit ? 'Mettre à jour' : 'Enregistrer'}
+                        {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />} 
+                        {isSubmitting ? 'Enregistrement...' : (invoiceToEdit ? 'Mettre à jour' : 'Enregistrer')}
                     </button>
                 </div>
 

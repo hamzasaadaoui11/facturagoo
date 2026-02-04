@@ -230,7 +230,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                                     onClick={() => handleCreateFromInvoice(invoice.id)}
                                     className="w-full text-left p-3 rounded-lg border hover:bg-emerald-50 hover:border-emerald-500 transition-colors flex justify-between items-center"
                                 >
-                                    <span>#{invoice.id} - {invoice.clientName}</span>
+                                    <span>#{invoice.documentId || invoice.id} - {invoice.clientName}</span>
                                     <span className="text-xs bg-gray-100 px-2 py-1 rounded">{new Date(invoice.date).toLocaleDateString()}</span>
                                 </button>
                             ))}
@@ -267,7 +267,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                                     
                                     return (
                                     <tr key={note.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">BL-{note.id.split('-').pop()}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">{note.documentId || note.id}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{new Date(note.date).toLocaleDateString('fr-FR')}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-neutral-900">{note.clientName}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">

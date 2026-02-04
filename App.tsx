@@ -43,7 +43,6 @@ const MainContent: React.FC = () => {
     useEffect(() => {
         const loadData = async () => {
             try {
-                // Initialisation explicite de la DB avant tout appel
                 await initDB();
                 
                 const [clientsData, productsData, suppliersData, quotesData, invoicesData, settingsData, paymentsData, movementsData, deliveryData, purchaseOrdersData] = await Promise.all([
@@ -62,16 +61,16 @@ const MainContent: React.FC = () => {
                 setClients(clientsData.sort((a,b) => (b.clientCode || '').localeCompare(a.clientCode || '')));
                 setProducts(productsData.sort((a,b) => (b.productCode || '').localeCompare(a.productCode || '')));
                 setSuppliers(suppliersData.sort((a,b) => (b.supplierCode || '').localeCompare(a.supplierCode || '')));
-                setQuotes(quotesData.sort((a, b) => b.id.localeCompare(a.id)));
-                setInvoices(invoicesData.sort((a, b) => b.id.localeCompare(a.id)));
+                setQuotes(quotesData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+                setInvoices(invoicesData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
                 setPayments(paymentsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
                 setStockMovements(movementsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-                setDeliveryNotes(deliveryData.sort((a, b) => b.id.localeCompare(a.id)));
-                setPurchaseOrders(purchaseOrdersData.sort((a, b) => b.id.localeCompare(a.id)));
+                setDeliveryNotes(deliveryData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+                setPurchaseOrders(purchaseOrdersData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
                 setCompanySettings(settingsData);
             } catch (err: any) {
-                console.error("Failed to load data from the database:", err);
-                setError(`Impossible de charger les données locales. Détails: ${err.message || err}.`);
+                console.error("Failed to load data:", err);
+                setError(`Impossible de charger les données. Erreur: ${err.message || err}.`);
             } finally {
                 setIsLoading(false);
             }
@@ -86,8 +85,8 @@ const MainContent: React.FC = () => {
             setCompanySettings(updatedSettings);
         } catch (err: any) { 
             console.error(err); 
-            alert("Erreur lors de la sauvegarde des paramètres: " + (err.message || "Erreur inconnue"));
-            throw err; // Re-throw to let the component know it failed
+            alert("Erreur: " + (err.message || "Erreur inconnue"));
+            throw err;
         }
     };
 
@@ -104,51 +103,32 @@ const MainContent: React.FC = () => {
         return `${prefix}${(maxCode + 1).toString().padStart(3, '0')}`;
     };
 
-    /**
-     * Génère le prochain ID de document de manière incrémentale et formatée.
-     * Format: PREFIX + 00001 (5 chiffres)
-     */
-    const generateDocumentId = (type: 'quote' | 'invoice' | 'purchaseOrder' | 'deliveryNote', currentItems: { id: string }[]) => {
+    const generateDocumentId = (type: 'quote' | 'invoice' | 'purchaseOrder' | 'deliveryNote', currentItems: { id: string, documentId?: string }[]) => {
         let prefix = '';
-        
         switch (type) {
-            case 'invoice':
-                prefix = 'FA'; // Facture
-                break;
-            case 'deliveryNote':
-                prefix = 'BL'; // Bon de Livraison
-                break;
-            case 'quote':
-                prefix = 'DV'; // Devis
-                break;
-            case 'purchaseOrder':
-                prefix = 'BA'; // Bon d'Achat (ou BC pour Bon de Commande)
-                break;
-            default:
-                prefix = 'DOC';
+            case 'invoice': prefix = 'FA'; break;
+            case 'deliveryNote': prefix = 'BL'; break;
+            case 'quote': prefix = 'DV'; break;
+            case 'purchaseOrder': prefix = 'BC'; break;
+            default: prefix = 'DOC';
         }
 
-        // Filtrer les items qui correspondent exactement au préfixe actuel pour éviter les conflits avec d'anciens formats
-        const numbers = currentItems
-            .map(item => {
-                if (item.id.startsWith(prefix)) {
-                    const numberPart = item.id.replace(prefix, '');
-                    // On vérifie si c'est bien un nombre après le préfixe
-                    return !isNaN(Number(numberPart)) ? parseInt(numberPart, 10) : 0;
-                }
-                return 0;
-            });
+        const numbers = currentItems.map(item => {
+            const idToCheck = item.documentId || item.id;
+            if (idToCheck && idToCheck.startsWith(prefix)) {
+                const numberPart = idToCheck.replace(prefix, '');
+                return !isNaN(Number(numberPart)) ? parseInt(numberPart, 10) : 0;
+            }
+            return 0;
+        });
 
         const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
-        const nextNumber = maxNumber + 1;
-
-        // Formatage avec padding de 5 zéros (ex: FA00001)
-        return `${prefix}${nextNumber.toString().padStart(5, '0')}`;
+        return `${prefix}${(maxNumber + 1).toString().padStart(5, '0')}`;
     };
 
     // --- Core Logic ---
     
-    // 1. Clients
+    // Clients
     const addClient = async (client: Omit<Client, 'id' | 'clientCode'>) => {
         const newClient = { id: crypto.randomUUID(), clientCode: getNextCode('C', clients), ...client };
         await dbService.clients.add(newClient);
@@ -163,7 +143,7 @@ const MainContent: React.FC = () => {
         setClients(prev => prev.filter(c => c.id !== clientId));
     };
 
-    // 2. Products
+    // Products
     const updateProductStock = async (productId: string, quantityChange: number) => {
         const product = products.find(p => p.id === productId);
         if(product) {
@@ -205,7 +185,7 @@ const MainContent: React.FC = () => {
         setProducts(prev => prev.filter(p => p.id !== productId));
     };
 
-    // 3. Suppliers
+    // Suppliers
     const addSupplier = async (supplier: Omit<Supplier, 'id' | 'supplierCode'>) => {
         const newSupplier = { id: crypto.randomUUID(), supplierCode: getNextCode('F', suppliers), ...supplier };
         await dbService.suppliers.add(newSupplier);
@@ -220,16 +200,23 @@ const MainContent: React.FC = () => {
         setSuppliers(prev => prev.filter(s => s.id !== supplierId));
     };
 
-    // 4. Quotes
+    // Quotes
     const addQuote = async (quoteData: Omit<Quote, 'id' | 'amount'>) => {
-        // Generation ID : DV00001
-        const newQuote: Quote = { 
-            id: generateDocumentId('quote', quotes), 
-            amount: quoteData.subTotal + quoteData.vatAmount, 
-            ...quoteData 
-        };
-        await dbService.quotes.add(newQuote);
-        setQuotes(prev => [newQuote, ...prev].sort((a, b) => b.id.localeCompare(a.id)));
+        try {
+            const documentId = generateDocumentId('quote', quotes);
+            const newQuote: Quote = { 
+                id: crypto.randomUUID(),
+                documentId: documentId,
+                amount: quoteData.subTotal + quoteData.vatAmount, 
+                ...quoteData 
+            };
+            await dbService.quotes.add(newQuote);
+            setQuotes(prev => [newQuote, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+        } catch (e: any) {
+            console.error("Error creating quote", e);
+            alert("Erreur création devis: " + e.message);
+            throw e;
+        }
     };
     const updateQuote = async (updatedQuote: Quote) => {
         await dbService.quotes.update(updatedQuote);
@@ -244,29 +231,27 @@ const MainContent: React.FC = () => {
         }
     };
 
-    // 5. Invoices & Payments
+    // Invoices & Payments
     const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'amount' | 'amountPaid'> & { initialPayment?: any }) => {
         try {
-            // CRITICAL FIX: Extract 'initialPayment' as it's not in the Invoice table schema
             const { initialPayment, ...invoiceFields } = invoiceData;
-
-            // Generation ID : FA00001
+            const documentId = generateDocumentId('invoice', invoices);
             const newInvoice: Invoice = { 
-                id: generateDocumentId('invoice', invoices), 
+                id: crypto.randomUUID(),
+                documentId: documentId,
                 amount: invoiceFields.subTotal + invoiceFields.vatAmount, 
                 amountPaid: initialPayment ? initialPayment.amount : 0,
                 ...invoiceFields 
             };
             
             await dbService.invoices.add(newInvoice);
-            setInvoices(prev => [newInvoice, ...prev].sort((a, b) => b.id.localeCompare(a.id)));
+            setInvoices(prev => [newInvoice, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
 
-            // Handle initial payment separately
             if (initialPayment && initialPayment.amount > 0) {
                  const newPayment: Payment = {
                     id: crypto.randomUUID(),
                     invoiceId: newInvoice.id,
-                    invoiceNumber: newInvoice.id,
+                    invoiceNumber: newInvoice.documentId || newInvoice.id,
                     clientId: newInvoice.clientId,
                     clientName: newInvoice.clientName,
                     date: initialPayment.date,
@@ -277,11 +262,11 @@ const MainContent: React.FC = () => {
                 await dbService.payments.add(newPayment);
                 setPayments(prev => [newPayment, ...prev]);
             }
-
             return newInvoice;
         } catch (e: any) {
             console.error("Error creating invoice", e);
-            alert("Erreur lors de la création de la facture: " + e.message);
+            alert("Erreur création facture: " + e.message);
+            throw e;
         }
     };
 
@@ -290,21 +275,18 @@ const MainContent: React.FC = () => {
             const existingInvoice = invoices.find(i => i.id === id);
             if (!existingInvoice) return;
 
-            // CRITICAL FIX: Extract 'initialPayment'
             const { initialPayment, ...invoiceFields } = invoiceData;
-
             const updatedInvoice: Invoice = { ...existingInvoice, ...invoiceFields };
-            updatedInvoice.id = id;
+            updatedInvoice.id = id; // Ensure ID is kept
 
             await dbService.invoices.update(updatedInvoice);
             setInvoices(prev => prev.map(inv => inv.id === id ? updatedInvoice : inv));
 
-            // If extra payment was added during edit
             if (initialPayment && initialPayment.amount > 0) {
                  const newPayment: Payment = {
                     id: crypto.randomUUID(),
                     invoiceId: id,
-                    invoiceNumber: id,
+                    invoiceNumber: updatedInvoice.documentId || updatedInvoice.id,
                     clientId: updatedInvoice.clientId,
                     clientName: updatedInvoice.clientName,
                     date: initialPayment.date,
@@ -317,7 +299,8 @@ const MainContent: React.FC = () => {
             }
         } catch (e: any) {
             console.error("Error updating invoice", e);
-            alert("Erreur lors de la mise à jour de la facture: " + e.message);
+            alert("Erreur mise à jour facture: " + e.message);
+            throw e;
         }
     };
 
@@ -331,8 +314,6 @@ const MainContent: React.FC = () => {
             if (invoice) {
                 const newAmountPaid = (invoice.amountPaid || 0) + paymentData.amount;
                 let newStatus = invoice.status;
-                
-                // Tolerance for floating point calculation
                 if (newAmountPaid >= invoice.amount - 0.1) {
                     newStatus = InvoiceStatus.Paid;
                 } else if (newAmountPaid > 0) {
@@ -350,7 +331,8 @@ const MainContent: React.FC = () => {
             }
         } catch (e: any) {
             console.error("Error adding payment", e);
-            alert("Erreur lors de l'ajout du paiement: " + e.message);
+            alert("Erreur ajout paiement: " + e.message);
+            throw e;
         }
     };
 
@@ -367,44 +349,46 @@ const MainContent: React.FC = () => {
         const quote = quotes.find(q => q.id === quoteId);
         if (!quote) return;
         
-        // No initial payment for quotes usually
-        // Generation ID : FA00001
-        const newInvoiceId = generateDocumentId('invoice', invoices);
-
-        const newInvoiceData: Invoice = {
-            id: newInvoiceId,
-            quoteId: quote.id, 
-            clientId: quote.clientId, 
-            clientName: quote.clientName,
-            date: new Date().toISOString().split('T')[0],
-            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            status: InvoiceStatus.Pending, 
-            subject: quote.subject, 
-            reference: quote.reference,
-            lineItems: quote.lineItems, 
-            subTotal: quote.subTotal, 
-            vatAmount: quote.vatAmount,
-            amount: quote.amount,
-            amountPaid: 0
-        };
-        
-        await dbService.invoices.add(newInvoiceData);
-        setInvoices(prev => [newInvoiceData, ...prev].sort((a, b) => b.id.localeCompare(a.id)));
-        await updateQuoteStatus(quoteId, QuoteStatus.Converted);
+        try {
+            const documentId = generateDocumentId('invoice', invoices);
+            const newInvoiceData: Invoice = {
+                id: crypto.randomUUID(),
+                documentId: documentId,
+                quoteId: quote.id, 
+                clientId: quote.clientId, 
+                clientName: quote.clientName,
+                date: new Date().toISOString().split('T')[0],
+                dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                status: InvoiceStatus.Pending, 
+                subject: quote.subject, 
+                reference: quote.reference,
+                lineItems: quote.lineItems, 
+                subTotal: quote.subTotal, 
+                vatAmount: quote.vatAmount,
+                amount: quote.amount,
+                amountPaid: 0
+            };
+            
+            await dbService.invoices.add(newInvoiceData);
+            setInvoices(prev => [newInvoiceData, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+            await updateQuoteStatus(quoteId, QuoteStatus.Converted);
+        } catch (e: any) {
+            alert("Erreur conversion: " + e.message);
+        }
     };
 
-    // 6. Delivery Notes
+    // Delivery Notes
     const createDeliveryNote = async (noteData: Omit<DeliveryNote, 'id'>) => {
         try {
-            // Generation ID : BL00001
+            const documentId = generateDocumentId('deliveryNote', deliveryNotes);
             const newNote: DeliveryNote = { 
-                id: generateDocumentId('deliveryNote', deliveryNotes), 
+                id: crypto.randomUUID(),
+                documentId: documentId,
                 ...noteData 
             };
             await dbService.deliveryNotes.add(newNote);
             setDeliveryNotes(prev => [newNote, ...prev]);
 
-            // Decrease Stock
             for (const item of noteData.lineItems) {
                 if (item.productId) {
                     await addStockMovement({
@@ -413,13 +397,14 @@ const MainContent: React.FC = () => {
                         date: noteData.date,
                         quantity: -item.quantity, 
                         type: 'Vente',
-                        reference: `${newNote.id} ${noteData.invoiceId ? '(Facture ' + noteData.invoiceId + ')' : '(Manuel)'}`
+                        reference: `${documentId} ${noteData.invoiceId ? '(Facture ' + noteData.invoiceId + ')' : '(Manuel)'}`
                     });
                 }
             }
         } catch (e: any) {
             console.error("Error creating delivery note", e);
-            alert("Erreur lors de la création du BL: " + e.message);
+            alert("Erreur création BL: " + e.message);
+            throw e;
         }
     };
     
@@ -439,14 +424,12 @@ const MainContent: React.FC = () => {
             if (!note) return;
             if (note.invoiceId) return; 
 
-            // Generation ID : FA00001
-            const invoiceId = generateDocumentId('invoice', invoices);
+            const documentId = generateDocumentId('invoice', invoices);
+            const invoiceId = crypto.randomUUID();
             
-            // Recalculate totals to be safe
             const subTotal = note.subTotal ?? note.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
             const vatAmount = note.vatAmount ?? note.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * (item.vat / 100)), 0);
             const totalAmount = subTotal + vatAmount;
-
             const paidAmount = note.paymentAmount || 0;
             
             let status = InvoiceStatus.Pending;
@@ -458,13 +441,14 @@ const MainContent: React.FC = () => {
 
             const newInvoice: Invoice = {
                 id: invoiceId,
+                documentId: documentId,
                 clientId: note.clientId,
                 clientName: note.clientName,
                 date: new Date().toISOString().split('T')[0],
                 dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
                 status: status,
-                subject: `Facture issue du ${note.id}`,
-                reference: note.id,
+                subject: `Facture issue du ${note.documentId || note.id}`,
+                reference: note.documentId || note.id,
                 lineItems: note.lineItems,
                 subTotal: subTotal,
                 vatAmount: vatAmount,
@@ -474,13 +458,13 @@ const MainContent: React.FC = () => {
             };
 
             await dbService.invoices.add(newInvoice);
-            setInvoices(prev => [newInvoice, ...prev].sort((a, b) => b.id.localeCompare(a.id)));
+            setInvoices(prev => [newInvoice, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
 
             if (paidAmount > 0) {
                  const newPayment: Payment = {
                     id: crypto.randomUUID(),
                     invoiceId: invoiceId,
-                    invoiceNumber: invoiceId,
+                    invoiceNumber: documentId,
                     clientId: note.clientId,
                     clientName: note.clientName,
                     date: note.date,
@@ -495,21 +479,28 @@ const MainContent: React.FC = () => {
             const updatedNote = { ...note, invoiceId: invoiceId };
             await updateDeliveryNote(updatedNote);
             
-        } catch (error) {
-            console.error("Erreur lors de la conversion du BL en facture:", error);
-            alert("Une erreur est survenue lors de la création de la facture.");
+        } catch (error: any) {
+            console.error("Erreur conversion BL:", error);
+            alert("Erreur conversion: " + error.message);
         }
     };
 
-    // 7. Purchase Orders
+    // Purchase Orders
     const addPurchaseOrder = async (orderData: Omit<PurchaseOrder, 'id'>) => {
-        // Generation ID : BA00001
-        const newOrder: PurchaseOrder = { 
-            id: generateDocumentId('purchaseOrder', purchaseOrders), 
-            ...orderData 
-        };
-        await dbService.purchaseOrders.add(newOrder);
-        setPurchaseOrders(prev => [newOrder, ...prev].sort((a, b) => b.id.localeCompare(a.id)));
+        try {
+            const documentId = generateDocumentId('purchaseOrder', purchaseOrders);
+            const newOrder: PurchaseOrder = { 
+                id: crypto.randomUUID(), 
+                documentId: documentId,
+                ...orderData 
+            };
+            await dbService.purchaseOrders.add(newOrder);
+            setPurchaseOrders(prev => [newOrder, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+        } catch (e: any) {
+            console.error("Error creating purchase order", e);
+            alert("Erreur création BC: " + e.message);
+            throw e;
+        }
     };
     
     const updatePurchaseOrder = async (updatedOrder: PurchaseOrder) => {
@@ -524,7 +515,6 @@ const MainContent: React.FC = () => {
             await dbService.purchaseOrders.update(updatedOrder);
             setPurchaseOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
             
-            // If status is 'Received', increase stock
             if (newStatus === PurchaseOrderStatus.Received && order.status !== PurchaseOrderStatus.Received) {
                  for (const item of order.lineItems) {
                     if (item.productId) {
@@ -534,7 +524,7 @@ const MainContent: React.FC = () => {
                             date: new Date().toISOString().split('T')[0],
                             quantity: item.quantity, 
                             type: 'Achat',
-                            reference: `Reception ${order.id}`
+                            reference: `Reception ${order.documentId || order.id}`
                         });
                     }
                 }
@@ -685,15 +675,14 @@ const App: React.FC = () => {
             try {
                 const { data: { session }, error } = await supabase.auth.getSession();
                 if (error) {
-                    console.error("Session check failed, potentially invalid token:", error);
-                    // Force a local sign out to clear stale tokens
+                    console.error("Session error:", error);
                     await supabase.auth.signOut().catch(console.error);
                     setSession(null);
                 } else {
                     setSession(session);
                 }
             } catch (err) {
-                console.error("Unexpected error during session init:", err);
+                console.error("Auth error:", err);
                 setSession(null);
             } finally {
                 setLoading(false);
@@ -702,9 +691,7 @@ const App: React.FC = () => {
 
         initSession();
 
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
         });
 

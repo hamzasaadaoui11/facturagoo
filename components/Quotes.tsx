@@ -212,7 +212,7 @@ const Quotes: React.FC<QuotesProps> = ({
                             {quotes.length > 0 ? (
                                 quotes.map((quote) => (
                                     <tr key={quote.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">{quote.id}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">{quote.documentId || quote.id}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{new Date(quote.date).toLocaleDateString('fr-FR')}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{quote.clientName}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{quote.expiryDate}</td>
