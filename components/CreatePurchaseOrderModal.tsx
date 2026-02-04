@@ -23,8 +23,12 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const [notes, setNotes] = useState('');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
-    // Item Addition State
+    // Item Addition State (Free Text)
     const [selectedProductId, setSelectedProductId] = useState('');
+    const [tempName, setTempName] = useState('');
+    const [tempDesc, setTempDesc] = useState('');
+    const [tempPrice, setTempPrice] = useState(0);
+    const [tempVat, setTempVat] = useState(20);
     const [itemQuantity, setItemQuantity] = useState(1);
 
     useEffect(() => {
@@ -48,37 +52,58 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setExpectedDate(nextWeek.toISOString().split('T')[0]);
                 setNotes('');
                 setLineItems([]);
-                setSelectedProductId('');
-                setItemQuantity(1);
             }
+            resetItemForm();
         } else {
             setIsVisible(false);
         }
     }, [isOpen, orderToEdit]);
+
+    const resetItemForm = () => {
+        setSelectedProductId('');
+        setTempName('');
+        setTempDesc('');
+        setTempPrice(0);
+        setTempVat(20);
+        setItemQuantity(1);
+    };
 
     const handleClose = () => {
         setIsVisible(false);
         setTimeout(onClose, 200);
     };
 
+    // Auto-fill
+    useEffect(() => {
+        if (selectedProductId) {
+            const product = products.find(p => p.id === selectedProductId);
+            if (product) {
+                setTempName(product.name);
+                setTempDesc(product.description || '');
+                setTempPrice(product.purchasePrice);
+                setTempVat(product.vat);
+            }
+        }
+    }, [selectedProductId, products]);
+
     const handleAddItem = () => {
-        if (!selectedProductId) return;
-        const product = products.find(p => p.id === selectedProductId);
-        if (!product) return;
+        if (!tempName) {
+            alert("Veuillez entrer une désignation.");
+            return;
+        }
 
         const newItem: LineItem = {
             id: `temp-${Date.now()}`,
-            productId: product.id,
-            name: product.name,
-            description: product.description || '',
+            productId: selectedProductId || null,
+            name: tempName,
+            description: tempDesc,
             quantity: itemQuantity,
-            unitPrice: product.purchasePrice, // Use Purchase Price for Orders
-            vat: product.vat
+            unitPrice: tempPrice,
+            vat: tempVat
         };
 
         setLineItems(prev => [...prev, newItem]);
-        setSelectedProductId('');
-        setItemQuantity(1);
+        resetItemForm();
     };
 
     const handleRemoveItem = (id: string) => {
@@ -132,7 +157,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
         <div className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`} aria-modal="true">
             <div className="absolute inset-0 bg-neutral-900/75 backdrop-blur-sm" onClick={handleClose}></div>
             
-            <div className={`relative w-full max-w-3xl bg-white rounded-lg shadow-xl transition-all duration-200 ease-in-out flex flex-col max-h-[90vh] ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+            <div className={`relative w-full max-w-4xl bg-white rounded-lg shadow-xl transition-all duration-200 ease-in-out flex flex-col max-h-[90vh] ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
                 
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
@@ -199,25 +224,50 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                     <div className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 space-y-4">
                         <div className="flex justify-between items-center">
                             <h4 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
-                                <ScanLine size={16} className="text-emerald-600"/> Ajouter des articles
+                                <ScanLine size={16} className="text-emerald-600"/> Ajouter des articles (Sélection ou Saisie Libre)
                             </h4>
                         </div>
                         
-                        <div className="flex gap-3 items-end">
-                            <div className="flex-grow">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Produit</label>
+                        <div className="grid grid-cols-12 gap-3 items-end">
+                            {/* Product Selector */}
+                            <div className="col-span-12 md:col-span-3">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Produit (Auto)</label>
                                 <select 
                                     value={selectedProductId}
                                     onChange={(e) => setSelectedProductId(e.target.value)}
-                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm text-neutral-600"
                                 >
-                                    <option value="">-- Choisir Produit --</option>
+                                    <option value="">-- Libre / Manuel --</option>
                                     {products.map(product => (
                                         <option key={product.id} value={product.id}>{product.name} (P.A: {product.purchasePrice} MAD)</option>
                                     ))}
                                 </select>
                             </div>
-                            <div className="w-24">
+
+                            {/* Name Input */}
+                            <div className="col-span-12 md:col-span-4">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Désignation *</label>
+                                <input 
+                                    type="text" 
+                                    value={tempName}
+                                    onChange={(e) => setTempName(e.target.value)}
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm font-medium"
+                                />
+                            </div>
+
+                            {/* Price */}
+                            <div className="col-span-6 md:col-span-2">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">P.U (Achat)</label>
+                                <input 
+                                    type="number" 
+                                    value={tempPrice}
+                                    onChange={(e) => setTempPrice(parseFloat(e.target.value) || 0)}
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                                />
+                            </div>
+
+                            {/* Qty */}
+                            <div className="col-span-3 md:col-span-1">
                                 <label className="block text-xs font-medium text-neutral-500 mb-1">Qté</label>
                                 <input 
                                     type="number" 
@@ -227,13 +277,16 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                     className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm text-center"
                                 />
                             </div>
-                            <button 
-                                onClick={handleAddItem}
-                                disabled={!selectedProductId}
-                                className="inline-flex items-center justify-center h-[38px] px-4 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                            >
-                                <Plus size={20} />
-                            </button>
+
+                            {/* Button */}
+                            <div className="col-span-12 md:col-span-1">
+                                <button 
+                                    onClick={handleAddItem}
+                                    className="w-full inline-flex items-center justify-center h-[38px] rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
+                                >
+                                    <Plus size={20} />
+                                </button>
+                            </div>
                         </div>
                     </div>
 

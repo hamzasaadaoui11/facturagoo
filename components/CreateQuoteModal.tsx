@@ -23,8 +23,12 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
     const [reference, setReference] = useState('');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
-    // Item Addition State
+    // Item Addition State (Free Text)
     const [selectedProductId, setSelectedProductId] = useState('');
+    const [tempName, setTempName] = useState('');
+    const [tempDesc, setTempDesc] = useState('');
+    const [tempPrice, setTempPrice] = useState(0);
+    const [tempVat, setTempVat] = useState(20);
     const [itemQuantity, setItemQuantity] = useState(1);
 
     useEffect(() => {
@@ -50,37 +54,58 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setSubject('');
                 setReference('');
                 setLineItems([]);
-                setSelectedProductId('');
-                setItemQuantity(1);
             }
+            resetItemForm();
         } else {
             setIsVisible(false);
         }
     }, [isOpen, quoteToEdit]);
+
+    const resetItemForm = () => {
+        setSelectedProductId('');
+        setTempName('');
+        setTempDesc('');
+        setTempPrice(0);
+        setTempVat(20);
+        setItemQuantity(1);
+    };
 
     const handleClose = () => {
         setIsVisible(false);
         setTimeout(onClose, 200);
     };
 
+    // Auto-fill fields when a product is selected
+    useEffect(() => {
+        if (selectedProductId) {
+            const product = products.find(p => p.id === selectedProductId);
+            if (product) {
+                setTempName(product.name);
+                setTempDesc(product.description || '');
+                setTempPrice(product.salePrice);
+                setTempVat(product.vat);
+            }
+        }
+    }, [selectedProductId, products]);
+
     const handleAddItem = () => {
-        if (!selectedProductId) return;
-        const product = products.find(p => p.id === selectedProductId);
-        if (!product) return;
+        if (!tempName) {
+            alert("Veuillez entrer une désignation pour l'article.");
+            return;
+        }
 
         const newItem: LineItem = {
             id: `temp-${Date.now()}`,
-            productId: product.id,
-            name: product.name,
-            description: product.description || '',
+            productId: selectedProductId || null,
+            name: tempName,
+            description: tempDesc,
             quantity: itemQuantity,
-            unitPrice: product.salePrice,
-            vat: product.vat
+            unitPrice: tempPrice,
+            vat: tempVat
         };
 
         setLineItems(prev => [...prev, newItem]);
-        setSelectedProductId('');
-        setItemQuantity(1);
+        resetItemForm();
     };
 
     const handleRemoveItem = (id: string) => {
@@ -127,7 +152,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
         <div className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`} aria-modal="true">
             <div className="absolute inset-0 bg-neutral-900/75 backdrop-blur-sm" onClick={handleClose}></div>
             
-            <div className={`relative w-full max-w-3xl bg-white rounded-lg shadow-xl transition-all duration-200 ease-in-out flex flex-col max-h-[90vh] ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+            <div className={`relative w-full max-w-4xl bg-white rounded-lg shadow-xl transition-all duration-200 ease-in-out flex flex-col max-h-[90vh] ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
                 
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
@@ -201,29 +226,55 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                         </div>
                     </div>
 
-                    {/* Product Selection Area */}
+                    {/* Product Selection / Free Text Area */}
                     <div className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 space-y-4">
                         <div className="flex justify-between items-center">
                             <h4 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
-                                <ScanLine size={16} className="text-emerald-600"/> Ajouter des articles
+                                <ScanLine size={16} className="text-emerald-600"/> Ajouter des articles (Sélection ou Saisie Libre)
                             </h4>
                         </div>
                         
-                        <div className="flex gap-3 items-end">
-                            <div className="flex-grow">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Produit</label>
+                        <div className="grid grid-cols-12 gap-3 items-end">
+                            {/* Product Selector */}
+                            <div className="col-span-12 md:col-span-3">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Produit (Auto-remplissage)</label>
                                 <select 
                                     value={selectedProductId}
                                     onChange={(e) => setSelectedProductId(e.target.value)}
-                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm text-neutral-600"
                                 >
-                                    <option value="">-- Choisir Produit --</option>
+                                    <option value="">-- Libre / Manuel --</option>
                                     {products.map(product => (
-                                        <option key={product.id} value={product.id}>{product.name} ({product.salePrice} MAD)</option>
+                                        <option key={product.id} value={product.id}>{product.name}</option>
                                     ))}
                                 </select>
                             </div>
-                            <div className="w-24">
+
+                            {/* Name Input */}
+                            <div className="col-span-12 md:col-span-4">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Désignation *</label>
+                                <input 
+                                    type="text" 
+                                    value={tempName}
+                                    onChange={(e) => setTempName(e.target.value)}
+                                    placeholder="Désignation"
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm font-medium"
+                                />
+                            </div>
+
+                            {/* Price Input */}
+                            <div className="col-span-6 md:col-span-2">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Prix HT</label>
+                                <input 
+                                    type="number" 
+                                    value={tempPrice}
+                                    onChange={(e) => setTempPrice(parseFloat(e.target.value) || 0)}
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                                />
+                            </div>
+
+                            {/* Qty Input */}
+                            <div className="col-span-3 md:col-span-1">
                                 <label className="block text-xs font-medium text-neutral-500 mb-1">Qté</label>
                                 <input 
                                     type="number" 
@@ -233,13 +284,32 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                     className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm text-center"
                                 />
                             </div>
-                            <button 
-                                onClick={handleAddItem}
-                                disabled={!selectedProductId}
-                                className="inline-flex items-center justify-center h-[38px] px-4 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                            >
-                                <Plus size={20} />
-                            </button>
+
+                            {/* VAT */}
+                            <div className="col-span-3 md:col-span-1">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">TVA</label>
+                                <select 
+                                    value={tempVat} 
+                                    onChange={(e) => setTempVat(parseInt(e.target.value))} 
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-1.5"
+                                >
+                                    <option value="20">20%</option>
+                                    <option value="14">14%</option>
+                                    <option value="10">10%</option>
+                                    <option value="7">7%</option>
+                                    <option value="0">0%</option>
+                                </select>
+                            </div>
+
+                            {/* Add Button */}
+                            <div className="col-span-12 md:col-span-1">
+                                <button 
+                                    onClick={handleAddItem}
+                                    className="w-full inline-flex items-center justify-center h-[38px] rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
+                                >
+                                    <Plus size={20} />
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -251,7 +321,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                     <tr>
                                         <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase">Désignation</th>
                                         <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase">Qté</th>
-                                        <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Prix</th>
+                                        <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Prix HT</th>
                                         <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Total</th>
                                         <th className="px-4 py-2 w-10"></th>
                                     </tr>
@@ -287,7 +357,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 <span>{totals.subTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                             <div className="flex justify-between text-sm text-neutral-600">
-                                <span>TVA (20%)</span>
+                                <span>TVA (Estimée)</span>
                                 <span>{totals.vatAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                             <div className="h-px bg-neutral-200 my-1"></div>

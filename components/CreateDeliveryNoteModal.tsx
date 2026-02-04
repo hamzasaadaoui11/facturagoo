@@ -21,8 +21,12 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
-    // Item Addition State
+    // Item Addition State (Free Text)
     const [selectedProductId, setSelectedProductId] = useState('');
+    const [tempName, setTempName] = useState('');
+    const [tempDesc, setTempDesc] = useState('');
+    const [tempPrice, setTempPrice] = useState(0);
+    const [tempVat, setTempVat] = useState(20);
     const [itemQuantity, setItemQuantity] = useState(1);
     
     // Payment State
@@ -46,37 +50,58 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setDate(new Date().toISOString().split('T')[0]);
                 setLineItems([]);
                 setPaymentAmount(0);
-                setSelectedProductId('');
-                setItemQuantity(1);
             }
+            resetItemForm();
         } else {
             setIsVisible(false);
         }
     }, [isOpen, noteToEdit]);
+
+    const resetItemForm = () => {
+        setSelectedProductId('');
+        setTempName('');
+        setTempDesc('');
+        setTempPrice(0);
+        setTempVat(20);
+        setItemQuantity(1);
+    };
 
     const handleClose = () => {
         setIsVisible(false);
         setTimeout(onClose, 200);
     };
 
+    // Auto-fill fields
+    useEffect(() => {
+        if (selectedProductId) {
+            const product = products.find(p => p.id === selectedProductId);
+            if (product) {
+                setTempName(product.name);
+                setTempDesc(product.description || '');
+                setTempPrice(product.salePrice);
+                setTempVat(product.vat);
+            }
+        }
+    }, [selectedProductId, products]);
+
     const handleAddItem = () => {
-        if (!selectedProductId) return;
-        const product = products.find(p => p.id === selectedProductId);
-        if (!product) return;
+        if (!tempName) {
+            alert("Veuillez entrer une désignation.");
+            return;
+        }
 
         const newItem: LineItem = {
             id: `temp-${Date.now()}`,
-            productId: product.id,
-            name: product.name,
-            description: product.description || '',
+            productId: selectedProductId || null,
+            name: tempName,
+            description: tempDesc,
             quantity: itemQuantity,
-            unitPrice: product.salePrice,
-            vat: product.vat
+            unitPrice: tempPrice,
+            vat: tempVat
         };
 
         setLineItems(prev => [...prev, newItem]);
-        setSelectedProductId('');
-        setItemQuantity(1);
+        resetItemForm();
     };
 
     const handleRemoveItem = (id: string) => {
@@ -142,7 +167,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
             
             <div className={`relative w-full max-w-2xl bg-white rounded-lg shadow-xl transition-all duration-200 ease-in-out flex flex-col max-h-[90vh] ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
                 
-                {/* Header Standard Zenith */}
+                {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
                     <div>
                         <h3 className="text-lg font-semibold text-neutral-900">{noteToEdit ? 'Modifier Bon de Livraison' : 'Nouveau Bon de Livraison'}</h3>
@@ -153,9 +178,9 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                     </button>
                 </div>
 
-                {/* Body - Scrollable */}
+                {/* Body */}
                 <div className="px-6 py-6 overflow-y-auto custom-scrollbar space-y-6 flex-1">
-                    {/* ... (Existing Body Content same as before) ... */}
+                    
                     {/* Client & Date */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
@@ -182,29 +207,47 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                         </div>
                     </div>
 
-                    {/* Product Selection Area */}
+                    {/* Item Entry Area */}
                     <div className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 space-y-4">
                         <div className="flex justify-between items-center">
                             <h4 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
-                                <ScanLine size={16} className="text-emerald-600"/> Ajouter des articles
+                                <ScanLine size={16} className="text-emerald-600"/> Ajouter (Sélection ou Saisie Libre)
                             </h4>
                         </div>
                         
-                        <div className="flex gap-3 items-end">
-                            <div className="flex-grow">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Produit</label>
+                        <div className="grid grid-cols-12 gap-3 items-end">
+                            <div className="col-span-12 md:col-span-4">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Produit (Auto)</label>
                                 <select 
                                     value={selectedProductId}
                                     onChange={(e) => setSelectedProductId(e.target.value)}
-                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm text-neutral-600"
                                 >
-                                    <option value="">-- Choisir Produit --</option>
+                                    <option value="">-- Saisie Manuelle --</option>
                                     {products.map(product => (
-                                        <option key={product.id} value={product.id}>{product.name} ({product.salePrice} MAD)</option>
+                                        <option key={product.id} value={product.id}>{product.name}</option>
                                     ))}
                                 </select>
                             </div>
-                            <div className="w-24">
+                            <div className="col-span-12 md:col-span-5">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Désignation *</label>
+                                <input 
+                                    type="text" 
+                                    value={tempName}
+                                    onChange={(e) => setTempName(e.target.value)}
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm font-medium"
+                                />
+                            </div>
+                            <div className="col-span-6 md:col-span-2">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Prix</label>
+                                <input 
+                                    type="number" 
+                                    value={tempPrice}
+                                    onChange={(e) => setTempPrice(parseFloat(e.target.value) || 0)}
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                                />
+                            </div>
+                            <div className="col-span-4 md:col-span-1">
                                 <label className="block text-xs font-medium text-neutral-500 mb-1">Qté</label>
                                 <input 
                                     type="number" 
@@ -214,13 +257,14 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                     className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm text-center"
                                 />
                             </div>
-                            <button 
-                                onClick={handleAddItem}
-                                disabled={!selectedProductId}
-                                className="inline-flex items-center justify-center h-[38px] px-4 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                            >
-                                <Plus size={20} />
-                            </button>
+                            <div className="col-span-2 md:col-span-12 flex justify-end">
+                                <button 
+                                    onClick={handleAddItem}
+                                    className="inline-flex items-center justify-center h-[38px] px-4 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm w-full md:w-auto"
+                                >
+                                    <Plus size={20} /> <span className="ml-1 md:hidden">Ajouter</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -263,7 +307,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                     {/* Footer Calculation Section */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-neutral-200 pt-6">
                         
-                        {/* Payment Input Section */}
+                        {/* Payment Input */}
                         <div className="space-y-4">
                             <h4 className="text-sm font-semibold text-neutral-900 flex items-center gap-2">
                                 <CreditCard size={16} className="text-emerald-600"/> Règlement immédiat

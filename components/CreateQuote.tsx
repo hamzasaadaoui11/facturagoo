@@ -3,7 +3,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Client, Product, Quote, LineItem, QuoteStatus } from '../types';
-import { X, Check, Eye, Save, Trash2, Plus } from 'lucide-react';
+import { X, Check, Eye, Save, Trash2, Plus, ChevronDown } from 'lucide-react';
 
 interface CreateQuoteProps {
   clients: Client[];
@@ -56,21 +56,14 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
     setLineItems(lineItems.map(item => item.id === id ? { ...item, ...updatedField } : item));
   };
   
-  const handleProductSelect = (lineId: string, productId: string | null) => {
-      const product = products.find(p => p.id === productId);
-      if(product) {
-          updateLineItem(lineId, { 
-              productId: product.id,
-              name: product.name,
-              description: product.description,
-              unitPrice: product.salePrice,
-              vat: product.vat,
-          });
-      } else {
-        updateLineItem(lineId, { 
-            productId: null, name: '', description: '', unitPrice: 0, vat: 20,
-        });
-      }
+  const handleProductSelect = (lineId: string, product: Product) => {
+      updateLineItem(lineId, { 
+          productId: product.id,
+          name: product.name,
+          description: product.description,
+          unitPrice: product.salePrice,
+          vat: product.vat,
+      });
   };
 
   const totals = useMemo(() => {
@@ -148,6 +141,8 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
         alert(previewText);
     };
 
+  // --- Components for Searchable Dropdowns ---
+
   const SearchableSelect = ({ items, selectedItem, onSelect, placeholder, displayField, addNewPath, addNewLabel }: any) => {
       const [searchTerm, setSearchTerm] = useState('');
       const [isOpen, setIsOpen] = useState(false);
@@ -155,7 +150,6 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
       const dropdownRef = useRef<HTMLUListElement>(null);
       const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
-      // --- Position and State Management ---
       const updateDropdownPosition = () => {
           if (wrapperRef.current) {
               const rect = wrapperRef.current.getBoundingClientRect();
@@ -182,7 +176,6 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
           handleClose();
       };
       
-      // --- Event Handlers ---
       const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
           setSearchTerm(e.target.value);
           if (!isOpen) {
@@ -198,11 +191,6 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
           }
       };
 
-      const handleAddNew = () => {
-          if (addNewPath) { navigate(addNewPath); }
-      };
-
-      // --- Effects for managing position and outside clicks ---
       useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (isOpen &&
@@ -211,13 +199,11 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
                 handleClose();
             }
         }
-        
         if (isOpen) {
             document.addEventListener("mousedown", handleClickOutside);
             window.addEventListener('resize', updateDropdownPosition);
             window.addEventListener('scroll', updateDropdownPosition, true);
         }
-        
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
             window.removeEventListener('resize', updateDropdownPosition);
@@ -225,41 +211,14 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
         };
       }, [isOpen]);
       
-      // --- Filtering and Rendering ---
       const filteredItems = items.filter((item: any) =>
           (item[displayField] || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
       
       const inputValue = isOpen ? searchTerm : (selectedItem ? selectedItem[displayField] : '');
 
-      const DropdownList = (
-          <ul ref={dropdownRef} style={dropdownStyle} className="fixed z-50 max-h-60 overflow-auto rounded-lg bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-              {addNewPath && (
-                  <li onClick={handleAddNew} className="flex items-center gap-x-2 sticky top-0 bg-white cursor-pointer select-none py-2 pl-3 pr-9 text-emerald-600 hover:bg-emerald-50 border-b z-10">
-                      <Plus size={16} />
-                      <span className="block truncate font-semibold">{addNewLabel}</span>
-                  </li>
-              )}
-              {items.length === 0 ? (
-                  <li className="relative cursor-default select-none py-2 px-3 text-neutral-500">
-                      Aucun élément disponible.
-                  </li>
-              ) : filteredItems.length === 0 ? (
-                  <li className="relative cursor-default select-none py-2 px-3 text-neutral-500">
-                      Aucun résultat trouvé.
-                  </li>
-              ) : (
-                  filteredItems.map((item: any) => (
-                      <li key={item.id} onMouseDown={() => handleSelect(item)} className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-neutral-900 hover:bg-neutral-100">
-                          <span className="block truncate">{item[displayField]}</span>
-                      </li>
-                  ))
-              )}
-          </ul>
-      );
-
       return (
-          <div ref={wrapperRef}>
+          <div ref={wrapperRef} className="relative">
               <input 
                   type="text"
                   value={inputValue}
@@ -268,7 +227,114 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
                   placeholder={placeholder}
                   className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
               />
-              {isOpen && createPortal(DropdownList, document.body)}
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                  <ChevronDown className="h-4 w-4 text-neutral-400" />
+              </div>
+              {isOpen && createPortal(
+                  <ul ref={dropdownRef} style={dropdownStyle} className="fixed z-50 max-h-60 overflow-auto rounded-lg bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                      {addNewPath && (
+                          <li onClick={() => { if(addNewPath) navigate(addNewPath); }} className="flex items-center gap-x-2 sticky top-0 bg-white cursor-pointer select-none py-2 pl-3 pr-9 text-emerald-600 hover:bg-emerald-50 border-b z-10">
+                              <Plus size={16} />
+                              <span className="block truncate font-semibold">{addNewLabel}</span>
+                          </li>
+                      )}
+                      {items.length === 0 ? (
+                          <li className="relative cursor-default select-none py-2 px-3 text-neutral-500">Aucun élément disponible.</li>
+                      ) : filteredItems.length === 0 ? (
+                          <li className="relative cursor-default select-none py-2 px-3 text-neutral-500">Aucun résultat trouvé.</li>
+                      ) : (
+                          filteredItems.map((item: any) => (
+                              <li key={item.id} onMouseDown={() => handleSelect(item)} className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-neutral-900 hover:bg-neutral-100">
+                                  <span className="block truncate">{item[displayField]}</span>
+                              </li>
+                          ))
+                      )}
+                  </ul>,
+                  document.body
+              )}
+          </div>
+      );
+  };
+
+  // --- Search or Free Text Input for Line Items ---
+  
+  const ItemNameInput = ({ value, products, onChange, onSelectProduct }: any) => {
+      const [isOpen, setIsOpen] = useState(false);
+      const wrapperRef = useRef<HTMLDivElement>(null);
+      const dropdownRef = useRef<HTMLUListElement>(null);
+      const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+
+      const updateDropdownPosition = () => {
+          if (wrapperRef.current) {
+              const rect = wrapperRef.current.getBoundingClientRect();
+              setDropdownStyle({
+                  top: `${rect.bottom + 4}px`,
+                  left: `${rect.left}px`,
+                  width: `${rect.width}px`,
+              });
+          }
+      };
+
+      const handleOpen = () => {
+          updateDropdownPosition();
+          setIsOpen(true);
+      };
+
+      const handleClose = () => setIsOpen(false);
+
+      useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (isOpen &&
+                wrapperRef.current && !wrapperRef.current.contains(event.target as Node) &&
+                dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                handleClose();
+            }
+        }
+        if (isOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+            window.addEventListener('resize', updateDropdownPosition);
+            window.addEventListener('scroll', updateDropdownPosition, true);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            window.removeEventListener('resize', updateDropdownPosition);
+            window.removeEventListener('scroll', updateDropdownPosition, true);
+        };
+      }, [isOpen]);
+
+      // Filter products based on what user types
+      const filteredProducts = products.filter((p: Product) => 
+          p.name.toLowerCase().includes(value.toLowerCase())
+      );
+
+      return (
+          <div ref={wrapperRef} className="relative">
+              <input 
+                  type="text" 
+                  value={value} 
+                  onChange={(e) => { onChange(e.target.value); if(!isOpen) handleOpen(); }}
+                  onFocus={handleOpen}
+                  className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                  placeholder="Désignation"
+              />
+              {isOpen && filteredProducts.length > 0 && createPortal(
+                  <ul ref={dropdownRef} style={dropdownStyle} className="fixed z-50 max-h-48 overflow-auto rounded-lg bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                      <li className="px-3 py-1 text-xs text-neutral-400 font-semibold uppercase tracking-wider bg-neutral-50 sticky top-0">Produits existants</li>
+                      {filteredProducts.map((product: Product) => (
+                          <li 
+                            key={product.id} 
+                            onMouseDown={() => { onSelectProduct(product); handleClose(); }}
+                            className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-neutral-900 hover:bg-emerald-50"
+                          >
+                              <div className="flex justify-between">
+                                <span className="font-medium truncate">{product.name}</span>
+                                <span className="text-neutral-500 text-xs">{product.salePrice} MAD</span>
+                              </div>
+                          </li>
+                      ))}
+                  </ul>,
+                  document.body
+              )}
           </div>
       );
   };
@@ -307,6 +373,8 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
                     onSelect={setSelectedClient}
                     placeholder="Sélectionner ou rechercher un client"
                     displayField="name"
+                    addNewPath="/clients"
+                    addNewLabel="Ajouter un client"
                 />
             </div>
              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -334,7 +402,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
             <table className="min-w-full">
                 <thead className="bg-neutral-50">
                     <tr>
-                        <th className="px-6 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider w-2/5">Article</th>
+                        <th className="px-6 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider w-2/5">Article (Libre ou Catalogue)</th>
                         <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Qté</th>
                         <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">P.U. HT</th>
                         <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">TVA</th>
@@ -345,18 +413,14 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
                 <tbody className="bg-white">
                 {lineItems.map(item => {
                     const lineTotal = item.quantity * item.unitPrice;
-                    const selectedProduct = products.find(p => p.id === item.productId);
                     return (
                         <tr key={item.id} className="border-b border-neutral-200">
                             <td className="px-6 py-3 whitespace-nowrap">
-                                <SearchableSelect 
-                                    items={products}
-                                    selectedItem={selectedProduct}
-                                    onSelect={(product: Product) => handleProductSelect(item.id, product ? product.id : null)}
-                                    placeholder="Sélectionner un produit"
-                                    displayField="name"
-                                    addNewPath="/products/new"
-                                    addNewLabel="Ajouter un produit"
+                                <ItemNameInput 
+                                    value={item.name} 
+                                    products={products}
+                                    onChange={(val: string) => updateLineItem(item.id, { name: val, productId: null })}
+                                    onSelectProduct={(p: Product) => handleProductSelect(item.id, p)}
                                 />
                             </td>
                             <td className="px-3 py-3 whitespace-nowrap">
