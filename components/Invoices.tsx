@@ -2,9 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Header from './Header';
-import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical } from 'lucide-react';
+import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical, Trash2 } from 'lucide-react';
 import { Invoice, InvoiceStatus, Payment, Client, Product, CompanySettings } from '../types';
 import CreateInvoiceModal from './CreateInvoiceModal';
+import ConfirmationModal from './ConfirmationModal';
 import { generatePDF, printDocument } from '../services/pdfService';
 
 const statusColors: { [key in InvoiceStatus]: string } = {
@@ -21,18 +22,23 @@ interface InvoicesProps {
     onAddPayment: (payment: Omit<Payment, 'id'>) => void;
     onCreateInvoice?: (invoice: any) => Promise<any> | void;
     onUpdateInvoice?: (invoice: any, id: string) => Promise<any> | void;
+    onDeleteInvoice?: (id: string) => Promise<void> | void;
     clients?: Client[];
     products?: Product[];
     companySettings?: CompanySettings | null;
 }
 
-const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, onAddPayment, onCreateInvoice, onUpdateInvoice, clients = [], products = [], companySettings }) => {
+const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, onAddPayment, onCreateInvoice, onUpdateInvoice, onDeleteInvoice, clients = [], products = [], companySettings }) => {
     const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
     const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState<'Virement' | 'Chèque' | 'Espèces' | 'Carte Bancaire'>('Virement');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+    // Delete Modal State
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [invoiceIdToDelete, setInvoiceIdToDelete] = useState<string | null>(null);
 
     // Menu Dropdown State
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -81,6 +87,20 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
     const handleCreateClick = () => {
         setInvoiceToEdit(null);
         setIsCreateModalOpen(true);
+    };
+
+    const handleDeleteClick = (id: string) => {
+        setInvoiceIdToDelete(id);
+        setIsDeleteModalOpen(true);
+        setActiveMenuId(null);
+    };
+
+    const confirmDelete = () => {
+        if (invoiceIdToDelete && onDeleteInvoice) {
+            onDeleteInvoice(invoiceIdToDelete);
+        }
+        setIsDeleteModalOpen(false);
+        setInvoiceIdToDelete(null);
     };
 
     const handlePaymentSubmit = (e: React.FormEvent) => {
@@ -153,6 +173,14 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                 clients={clients}
                 products={products}
                 invoiceToEdit={invoiceToEdit}
+            />
+
+            <ConfirmationModal 
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Supprimer la facture"
+                message="Êtes-vous sûr de vouloir supprimer cette facture ? Attention, cela supprimera également tous les paiements associés, ce qui réduira votre chiffre d'affaires affiché."
             />
 
             {/* Payment Modal */}
@@ -298,6 +326,13 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                         >
                             {isDownloading ? <Loader2 size={16} className="mr-3 animate-spin" /> : <Download size={16} className="mr-3 text-neutral-500" />} Télécharger PDF
+                        </button>
+
+                        <button 
+                            onClick={() => handleDeleteClick(activeInvoice.id)} 
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                        >
+                            <Trash2 size={16} className="mr-3 text-red-600" /> Supprimer
                         </button>
                     </div>
                 </div>,

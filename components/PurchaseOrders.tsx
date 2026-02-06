@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Header from './Header';
 import CreatePurchaseOrderModal from './CreatePurchaseOrderModal';
-import { Plus, Search, Pencil, RefreshCw, Download, FileText, MoreVertical, Truck, Loader2, Printer } from 'lucide-react';
+import ConfirmationModal from './ConfirmationModal';
+import { Plus, Search, Pencil, RefreshCw, Download, FileText, MoreVertical, Truck, Loader2, Printer, Trash2 } from 'lucide-react';
 import { PurchaseOrder, PurchaseOrderStatus, Supplier, Product, CompanySettings } from '../types';
 import { generatePDF, printDocument } from '../services/pdfService';
 
@@ -21,6 +22,7 @@ interface PurchaseOrdersProps {
     onAddOrder: (order: Omit<PurchaseOrder, 'id'>) => void;
     onUpdateOrder: (order: PurchaseOrder) => void;
     onUpdateStatus: (id: string, status: PurchaseOrderStatus) => void;
+    onDeleteOrder?: (id: string) => void;
     companySettings?: CompanySettings | null;
 }
 
@@ -31,11 +33,16 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
     onAddOrder,
     onUpdateOrder,
     onUpdateStatus,
+    onDeleteOrder,
     companySettings
 }) => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [orderToEdit, setOrderToEdit] = useState<PurchaseOrder | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+    // Delete Modal State
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [orderIdToDelete, setOrderIdToDelete] = useState<string | null>(null);
 
     // Menu Dropdown State
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -80,6 +87,20 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
         setOrderToEdit(order);
         setIsCreateModalOpen(true);
         setActiveMenuId(null);
+    };
+
+    const handleDeleteClick = (id: string) => {
+        setOrderIdToDelete(id);
+        setIsDeleteModalOpen(true);
+        setActiveMenuId(null);
+    };
+
+    const confirmDelete = () => {
+        if (orderIdToDelete && onDeleteOrder) {
+            onDeleteOrder(orderIdToDelete);
+        }
+        setIsDeleteModalOpen(false);
+        setOrderIdToDelete(null);
     };
 
     const handleStatusChange = (id: string, newStatus: PurchaseOrderStatus) => {
@@ -147,6 +168,14 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                 suppliers={suppliers}
                 products={products}
                 orderToEdit={orderToEdit}
+            />
+
+            <ConfirmationModal 
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Supprimer la commande"
+                message="Êtes-vous sûr de vouloir supprimer ce bon de commande ? Cette action est irréversible."
             />
 
             <div className="rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
@@ -265,6 +294,13 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                         >
                             {isDownloading ? <Loader2 size={16} className="mr-3 animate-spin" /> : <Download size={16} className="mr-3 text-neutral-500" />} Télécharger PDF
+                        </button>
+
+                        <button 
+                            onClick={() => handleDeleteClick(activeOrder.id)} 
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                        >
+                            <Trash2 size={16} className="mr-3 text-red-600" /> Supprimer
                         </button>
                     </div>
                 </div>,

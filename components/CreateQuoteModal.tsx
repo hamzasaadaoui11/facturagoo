@@ -125,10 +125,12 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
         }
 
         const client = clients.find(c => c.id === clientId);
+        // Utiliser le nom de la société si disponible, sinon le nom du contact
+        const clientNameDisplay = client ? (client.company || client.name) : 'Client inconnu';
         
         onSave({
             clientId,
-            clientName: client?.name || 'Client inconnu',
+            clientName: clientNameDisplay,
             date,
             expiryDate: date, // Set to same date as hidden field
             subject,
@@ -174,7 +176,9 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             >
                                 <option value="">-- Sélectionner --</option>
                                 {clients.map(client => (
-                                    <option key={client.id} value={client.id}>{client.name}</option>
+                                    <option key={client.id} value={client.id}>
+                                        {client.company || client.name}
+                                    </option>
                                 ))}
                             </select>
                         </div>

@@ -130,6 +130,9 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
         }
 
         const client = clients.find(c => c.id === clientId);
+        // Utiliser le nom de la société si disponible, sinon le nom du contact
+        const clientNameDisplay = client ? (client.company || client.name) : 'Client inconnu';
+
         const totalPaid = existingAmountPaid + newPaymentAmount;
         let status = InvoiceStatus.Pending;
         
@@ -141,7 +144,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
 
         const invoiceData = {
             clientId,
-            clientName: client?.name || 'Client inconnu',
+            clientName: clientNameDisplay,
             date,
             dueDate: date, // Default due date to same as issue date since field is hidden
             subject,
@@ -205,7 +208,9 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                             >
                                 <option value="">-- Sélectionner --</option>
                                 {clients.map(client => (
-                                    <option key={client.id} value={client.id}>{client.name}</option>
+                                    <option key={client.id} value={client.id}>
+                                        {client.company || client.name}
+                                    </option>
                                 ))}
                             </select>
                         </div>

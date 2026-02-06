@@ -32,13 +32,23 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
     { id: `line-${Date.now()}`, productId: null, name: '', description: '', quantity: 1, unitPrice: 0, vat: 20 },
   ]);
 
+  // Prepare client list with display name priority (Company > Name)
+  const clientOptions = useMemo(() => {
+      return clients.map(c => ({
+          ...c,
+          displayName: c.company || c.name // PRIORITÉ SOCIÉTÉ
+      })).sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [clients]);
+
   useEffect(() => {
     if (isEditMode && quoteToEdit) {
         setDate(quoteToEdit.date);
         setSubject(quoteToEdit.subject || '');
         setReference(quoteToEdit.reference || '');
         const client = clients.find(c => c.id === quoteToEdit.clientId);
-        setSelectedClient(client || null);
+        // Map the found client to include displayName for consistency
+        const clientWithDisplay = client ? { ...client, displayName: client.company || client.name } : null;
+        setSelectedClient(clientWithDisplay || null);
         setLineItems(quoteToEdit.lineItems);
     }
   }, [isEditMode, quoteToEdit, clients]);
@@ -82,11 +92,13 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
             return;
         }
 
+        const clientNameDisplay = selectedClient.company || selectedClient.name;
+
         if (isEditMode && quoteToEdit && onUpdateQuote) {
             const updatedQuote: Quote = {
                 ...quoteToEdit,
                 clientId: selectedClient.id,
-                clientName: selectedClient.name,
+                clientName: clientNameDisplay,
                 date,
                 expiryDate: date, // Internal logic: same as date
                 subject: subject || '',
@@ -101,7 +113,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
         } else {
             const newQuote = {
                 clientId: selectedClient.id,
-                clientName: selectedClient.name,
+                clientName: clientNameDisplay,
                 date,
                 expiryDate: date, // Internal logic
                 subject: subject || '',
@@ -122,10 +134,11 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
             alert("Veuillez sélectionner un client pour l'aperçu.");
             return;
         }
+        const clientNameDisplay = selectedClient.company || selectedClient.name;
         const previewText = `
             Aperçu du Devis
             -------------------
-            Client: ${selectedClient.name}
+            Client: ${clientNameDisplay}
             Date: ${date}
             Objet: ${subject || 'N/A'}
             -------------------
@@ -366,11 +379,11 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
             <div className="lg:col-span-1">
                 <label className="block text-sm font-medium text-neutral-700 mb-1">Client *</label>
                  <SearchableSelect 
-                    items={clients}
+                    items={clientOptions}
                     selectedItem={selectedClient}
                     onSelect={setSelectedClient}
                     placeholder="Sélectionner ou rechercher un client"
-                    displayField="name"
+                    displayField="displayName"
                     addNewPath="/clients"
                     addNewLabel="Ajouter un client"
                 />

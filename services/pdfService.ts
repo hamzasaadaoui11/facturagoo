@@ -270,7 +270,7 @@ const generateDocumentHTML = (
 
     // 3. Template HTML
     return `
-    <div style="width: 210mm; min-height: 295mm; padding: 12mm 15mm; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; background: white; box-sizing: border-box; display: flex; flex-direction: column; position: relative; overflow: hidden;">
+    <div style="width: 210mm; min-height: 295mm; padding: 12mm 15mm; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; background: white; box-sizing: border-box; display: flex; flex-direction: column; position: relative;">
         
         <!-- WATERMARK BACKGROUND -->
         ${settings.logo ? `
@@ -363,7 +363,7 @@ const generateDocumentHTML = (
                         <span>Total TVA</span>
                         <span>${vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 16px; color: ${primaryColor}; font-weight: bold; margin-top: 5px;">
+                    <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 16px; color: #000000; font-weight: bold; margin-top: 5px;">
                         <span>Net à Payer</span>
                         <span>${totalAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                     </div>
@@ -384,8 +384,8 @@ const generateDocumentHTML = (
 
             <!-- FOOTER (Pushed to bottom via flex layout) -->
             <div style="text-align: center; margin-top: auto;">
-                ${settings.footerNotes ? `<div style="font-size: 12px; color: #4b5563; margin-bottom: 10px; white-space: pre-wrap;">${settings.footerNotes}</div>` : ''}
-                <div style="font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px;">
+                ${settings.footerNotes ? `<div style="font-size: 12px; color: #000000; margin-bottom: 10px; white-space: pre-wrap;">${settings.footerNotes}</div>` : ''}
+                <div style="font-size: 11px; color: #000000; font-weight: 600; border-top: 2px solid #374151; padding-top: 8px;">
                     ${legalIds}
                 </div>
             </div>

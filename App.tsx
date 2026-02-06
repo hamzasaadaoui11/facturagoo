@@ -107,7 +107,6 @@ const MainContent: React.FC = () => {
         const currentYear = new Date().getFullYear();
         let prefix = '';
         
-        // Définition des préfixes
         switch (type) {
             case 'invoice': prefix = 'FAC'; break;
             case 'quote': prefix = 'DEV'; break;
@@ -116,10 +115,8 @@ const MainContent: React.FC = () => {
             default: prefix = 'DOC';
         }
 
-        // Format: PREFIX/ANNEE/ (ex: FAC/2025/)
         const pattern = `${prefix}/${currentYear}/`;
 
-        // 1. On cherche le numéro le plus élevé parmi les documents qui suivent DÉJÀ le nouveau format
         const numbers = currentItems.map(item => {
             const idToCheck = item.documentId || item.id;
             if (idToCheck && idToCheck.startsWith(pattern)) {
@@ -129,18 +126,12 @@ const MainContent: React.FC = () => {
             return 0;
         });
 
-        // 2. On calcule le prochain numéro
         let nextNumber = (numbers.length > 0 ? Math.max(...numbers) : 0) + 1;
 
-        // 3. LOGIQUE DE CONTINUITÉ : 
-        // Si nextNumber est à 1 (donc aucun document trouvé avec le format FAC/2025/...),
-        // mais qu'il y a quand même des documents existants (ex: anciennes factures),
-        // on prend le nombre total de documents + 1 pour continuer la suite logique.
         if (nextNumber === 1 && currentItems.length > 0) {
             nextNumber = currentItems.length + 1;
         }
 
-        // On génère le numéro suivant avec 5 chiffres (ex: 00001 ou 00012)
         return `${pattern}${nextNumber.toString().padStart(5, '0')}`;
     };
 
@@ -248,6 +239,14 @@ const MainContent: React.FC = () => {
             setQuotes(prev => prev.map(q => q.id === quoteId ? updatedQuote : q));
         }
     };
+    const deleteQuote = async (quoteId: string) => {
+        try {
+            await dbService.quotes.delete(quoteId);
+            setQuotes(prev => prev.filter(q => q.id !== quoteId));
+        } catch (e: any) {
+            alert("Erreur suppression devis: " + e.message);
+        }
+    };
 
     // Invoices & Payments
     const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'amount' | 'amountPaid'> & { initialPayment?: any }) => {
@@ -295,7 +294,7 @@ const MainContent: React.FC = () => {
 
             const { initialPayment, ...invoiceFields } = invoiceData;
             const updatedInvoice: Invoice = { ...existingInvoice, ...invoiceFields };
-            updatedInvoice.id = id; // Ensure ID is kept
+            updatedInvoice.id = id; 
 
             await dbService.invoices.update(updatedInvoice);
             setInvoices(prev => prev.map(inv => inv.id === id ? updatedInvoice : inv));
@@ -319,6 +318,26 @@ const MainContent: React.FC = () => {
             console.error("Error updating invoice", e);
             alert("Erreur mise à jour facture: " + e.message);
             throw e;
+        }
+    };
+
+    const deleteInvoice = async (invoiceId: string) => {
+        try {
+            // 1. Delete associated payments first (if any) to clean up and adjust revenue
+            const relatedPayments = payments.filter(p => p.invoiceId === invoiceId);
+            for(const p of relatedPayments) {
+                await dbService.payments.delete(p.id);
+            }
+            
+            // 2. Delete the invoice
+            await dbService.invoices.delete(invoiceId);
+            
+            // 3. Update local state
+            setPayments(prev => prev.filter(p => p.invoiceId !== invoiceId));
+            setInvoices(prev => prev.filter(inv => inv.id !== invoiceId));
+            
+        } catch (e: any) {
+            alert("Erreur suppression facture: " + e.message);
         }
     };
 
@@ -550,13 +569,20 @@ const MainContent: React.FC = () => {
         }
     };
 
+    const deletePurchaseOrder = async (orderId: string) => {
+        try {
+            await dbService.purchaseOrders.delete(orderId);
+            setPurchaseOrders(prev => prev.filter(o => o.id !== orderId));
+        } catch (e: any) {
+            alert("Erreur suppression commande: " + e.message);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="flex h-screen items-center justify-center bg-slate-100">
-                <div className="flex flex-col items-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
-                    <p className="mt-4 text-lg font-semibold text-neutral-700">Chargement des données...</p>
-                </div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+                <p className="mt-4 text-lg font-semibold text-neutral-700">Chargement des données...</p>
             </div>
         );
     }
@@ -620,6 +646,7 @@ const MainContent: React.FC = () => {
                                     onCreateInvoice={createInvoiceFromQuote} 
                                     onAddQuote={addQuote}
                                     onUpdateQuote={updateQuote}
+                                    onDeleteQuote={deleteQuote}
                                     clients={clients}
                                     products={products}
                                     companySettings={companySettings}
@@ -633,6 +660,7 @@ const MainContent: React.FC = () => {
                                     onAddPayment={addPayment}
                                     onCreateInvoice={addInvoice}
                                     onUpdateInvoice={updateInvoice}
+                                    onDeleteInvoice={deleteInvoice}
                                     clients={clients}
                                     products={products}
                                     companySettings={companySettings}
@@ -661,6 +689,7 @@ const MainContent: React.FC = () => {
                                     onAddOrder={addPurchaseOrder} 
                                     onUpdateOrder={updatePurchaseOrder}
                                     onUpdateStatus={updatePurchaseOrderStatus}
+                                    onDeleteOrder={deletePurchaseOrder}
                                     companySettings={companySettings}
                                 />
                             } />

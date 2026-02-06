@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import Header from './Header';
 import ChangeStatusModal from './ChangeStatusModal';
 import CreateQuoteModal from './CreateQuoteModal';
-import { Plus, Search, Pencil, RefreshCw, Download, FileText, MoreVertical, CheckCircle, Loader2, Printer } from 'lucide-react';
+import ConfirmationModal from './ConfirmationModal';
+import { Plus, Search, Pencil, RefreshCw, Download, FileText, MoreVertical, CheckCircle, Loader2, Printer, Trash2 } from 'lucide-react';
 import { Quote, QuoteStatus, Client, Product, CompanySettings } from '../types';
 import { generatePDF, printDocument } from '../services/pdfService';
 
@@ -24,6 +25,7 @@ interface QuotesProps {
     onCreateInvoice: (quoteId: string) => Promise<void> | void;
     onAddQuote: (quote: Omit<Quote, 'id' | 'amount'>) => void;
     onUpdateQuote: (quote: Quote) => void;
+    onDeleteQuote?: (id: string) => void;
     clients?: Client[];
     products?: Product[];
     companySettings?: CompanySettings | null;
@@ -35,6 +37,7 @@ const Quotes: React.FC<QuotesProps> = ({
     onCreateInvoice,
     onAddQuote,
     onUpdateQuote,
+    onDeleteQuote,
     clients = [],
     products = [],
     companySettings
@@ -46,6 +49,10 @@ const Quotes: React.FC<QuotesProps> = ({
     const [quoteToEdit, setQuoteToEdit] = useState<Quote | null>(null);
     const [convertingId, setConvertingId] = useState<string | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+    // Delete Modal State
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [quoteIdToDelete, setQuoteIdToDelete] = useState<string | null>(null);
 
     // Menu Dropdown State
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -93,6 +100,20 @@ const Quotes: React.FC<QuotesProps> = ({
         }
         setIsStatusModalOpen(false);
         setQuoteToUpdate(null);
+    };
+
+    const handleDeleteClick = (id: string) => {
+        setQuoteIdToDelete(id);
+        setIsDeleteModalOpen(true);
+        setActiveMenuId(null);
+    };
+
+    const confirmDelete = () => {
+        if (quoteIdToDelete && onDeleteQuote) {
+            onDeleteQuote(quoteIdToDelete);
+        }
+        setIsDeleteModalOpen(false);
+        setQuoteIdToDelete(null);
     };
 
     const handleDownload = async (quote: Quote) => {
@@ -190,6 +211,14 @@ const Quotes: React.FC<QuotesProps> = ({
                 clients={clients}
                 products={products}
                 quoteToEdit={quoteToEdit}
+            />
+
+            <ConfirmationModal 
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Supprimer le devis"
+                message="Êtes-vous sûr de vouloir supprimer ce devis ? Cette action est irréversible."
             />
 
             <div className="rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
@@ -306,6 +335,13 @@ const Quotes: React.FC<QuotesProps> = ({
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                         >
                             {isDownloading ? <Loader2 size={16} className="mr-3 animate-spin" /> : <Download size={16} className="mr-3 text-neutral-500" />} Télécharger PDF
+                        </button>
+
+                        <button 
+                            onClick={() => handleDeleteClick(activeQuote.id)} 
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                        >
+                            <Trash2 size={16} className="mr-3 text-red-600" /> Supprimer
                         </button>
                     </div>
                 </div>,

@@ -163,7 +163,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                 <span className="font-medium">{(document as Invoice).vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                             <div className="h-px bg-neutral-200 my-2"></div>
-                            <div className="flex justify-between text-lg font-bold bg-neutral-50 p-2 rounded" style={{ color: primaryColor }}>
+                            <div className="flex justify-between text-lg font-bold bg-neutral-50 p-2 rounded" style={{ color: '#000000' }}>
                                 <span>Net à Payer</span>
                                 <span>{((document as any).amount || (document as any).totalAmount).toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
@@ -182,9 +182,9 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                 
                 {/* Footer */}
                 <footer className="mt-auto pt-8 text-center">
-                    {settings.footerNotes && <p className="text-sm text-neutral-600 mb-4 whitespace-pre-line">{settings.footerNotes}</p>}
+                    {settings.footerNotes && <p className="text-sm text-black mb-4 whitespace-pre-line">{settings.footerNotes}</p>}
                     
-                    <div className="border-t border-neutral-200 pt-4 text-[10px] text-neutral-400 uppercase tracking-wider">
+                    <div className="border-t border-neutral-800 pt-4 text-[10px] text-black font-bold uppercase tracking-wider">
                          <p>{settings.companyName} {settings.ice ? `- ICE: ${settings.ice}` : ''} {settings.rc ? `- RC: ${settings.rc}` : ''}</p>
                     </div>
                 </footer>
