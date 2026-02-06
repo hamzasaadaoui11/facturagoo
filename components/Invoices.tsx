@@ -1,10 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Header from './Header';
-import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil } from 'lucide-react';
+import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical } from 'lucide-react';
 import { Invoice, InvoiceStatus, Payment, Client, Product, CompanySettings } from '../types';
 import CreateInvoiceModal from './CreateInvoiceModal';
-import { generatePDF } from '../services/pdfService';
+import { generatePDF, printDocument } from '../services/pdfService';
 
 const statusColors: { [key in InvoiceStatus]: string } = {
     [InvoiceStatus.Paid]: 'bg-green-100 text-green-700',
@@ -32,6 +33,40 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
     const [paymentMethod, setPaymentMethod] = useState<'Virement' | 'Chèque' | 'Espèces' | 'Carte Bancaire'>('Virement');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+    // Menu Dropdown State
+    const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{top: number, left: number} | null>(null);
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => setActiveMenuId(null);
+        if(activeMenuId) {
+            document.addEventListener('click', handleClickOutside);
+            window.addEventListener('scroll', handleClickOutside, true);
+            window.addEventListener('resize', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('click', handleClickOutside);
+            window.removeEventListener('scroll', handleClickOutside, true);
+            window.removeEventListener('resize', handleClickOutside);
+        };
+    }, [activeMenuId]);
+
+    const toggleMenu = (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        if (activeMenuId === id) {
+            setActiveMenuId(null);
+            setMenuPosition(null);
+        } else {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setActiveMenuId(id);
+            setMenuPosition({
+                top: rect.bottom + window.scrollY + 5,
+                left: rect.right + window.scrollX - 192 // 192px width
+            });
+        }
+    };
 
     const openPaymentModal = (invoice: Invoice) => {
         setSelectedInvoiceForPayment(invoice);
@@ -84,6 +119,19 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
             setDownloadingId(null);
         }
     };
+
+    const handlePrint = (invoice: Invoice) => {
+        try {
+            const client = clients.find(c => c.id === invoice.clientId);
+            printDocument('Facture', invoice, companySettings || null, client);
+        } catch (error: any) {
+            alert(error.message);
+        }
+    };
+
+    const activeInvoice = invoices.find(inv => inv.id === activeMenuId);
+    const activeInvoiceRemaining = activeInvoice ? activeInvoice.amount - (activeInvoice.amountPaid || 0) : 0;
+    const isDownloading = activeInvoice ? downloadingId === activeInvoice.id : false;
 
     return (
         <div>
@@ -157,7 +205,6 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Client</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Montant</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Reste à payer</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Échéance</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Statut</th>
                                 <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">Actions</span></th>
                             </tr>
@@ -166,55 +213,24 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                             {invoices.length > 0 ? (
                                 invoices.map((invoice) => {
                                     const remaining = invoice.amount - (invoice.amountPaid || 0);
-                                    const isDownloading = downloadingId === invoice.id;
                                     return (
                                     <tr key={invoice.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">{invoice.documentId || invoice.id}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-600">{invoice.clientName}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-medium">{invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-red-600">{remaining > 0 ? remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-600">{new Date(invoice.dueDate).toLocaleDateString('fr-FR')}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[invoice.status]}`}>
                                                 {invoice.status}
                                             </span>
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                            <div className="flex items-center justify-end space-x-2">
-                                                <button 
-                                                    onClick={() => handleEditClick(invoice)} 
-                                                    className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors"
-                                                    title="Modifier"
-                                                >
-                                                    <Pencil size={18} />
-                                                </button>
-                                                {invoice.status === InvoiceStatus.Draft && (
-                                                     <button 
-                                                        onClick={() => onUpdateInvoiceStatus(invoice.id, InvoiceStatus.Pending)} 
-                                                        className="p-1.5 text-green-600 hover:bg-green-100 rounded-md transition-colors"
-                                                        title="Valider la facture"
-                                                    >
-                                                        <CheckCircle size={18} />
-                                                    </button>
-                                                )}
-                                                {remaining > 0 && (
-                                                    <button 
-                                                        onClick={() => openPaymentModal(invoice)} 
-                                                        className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors"
-                                                        title="Enregistrer un paiement"
-                                                    >
-                                                        <CreditCard size={18} />
-                                                    </button>
-                                                )}
-                                                 <button 
-                                                    onClick={() => handleDownload(invoice)} 
-                                                    disabled={isDownloading}
-                                                    className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors disabled:opacity-50"
-                                                    title="Télécharger PDF"
-                                                >
-                                                    {isDownloading ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                                                </button>
-                                            </div>
+                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium relative">
+                                            <button 
+                                                onClick={(e) => toggleMenu(e, invoice.id)}
+                                                className={`p-1.5 rounded-full transition-colors ${activeMenuId === invoice.id ? 'bg-neutral-200 text-neutral-800' : 'text-neutral-500 hover:bg-neutral-100'}`}
+                                            >
+                                                <MoreVertical size={20} />
+                                            </button>
                                         </td>
                                     </tr>
                                 )})
@@ -233,6 +249,60 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                     </table>
                 </div>
             </div>
+
+            {/* Menu Dropdown via Portal */}
+            {activeMenuId && activeInvoice && menuPosition && createPortal(
+                <div 
+                    className="absolute z-50 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    style={{ top: menuPosition.top, left: menuPosition.left }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="py-1">
+                        <button 
+                            onClick={() => { handleEditClick(activeInvoice); setActiveMenuId(null); }} 
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                        >
+                            <Pencil size={16} className="mr-3 text-emerald-600" /> Modifier
+                        </button>
+
+                        {activeInvoice.status === InvoiceStatus.Draft && (
+                             <button 
+                                onClick={() => { onUpdateInvoiceStatus(activeInvoice.id, InvoiceStatus.Pending); setActiveMenuId(null); }} 
+                                className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                            >
+                                <CheckCircle size={16} className="mr-3 text-green-600" /> Valider
+                            </button>
+                        )}
+
+                        {activeInvoiceRemaining > 0 && (
+                            <button 
+                                onClick={() => { openPaymentModal(activeInvoice); setActiveMenuId(null); }} 
+                                className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                            >
+                                <CreditCard size={16} className="mr-3 text-emerald-600" /> Paiement
+                            </button>
+                        )}
+                        
+                        <div className="border-t border-gray-100 my-1"></div>
+
+                        <button 
+                            onClick={() => { handlePrint(activeInvoice); setActiveMenuId(null); }}
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                        >
+                            <Printer size={16} className="mr-3 text-neutral-500" /> Imprimer
+                        </button>
+
+                        <button 
+                            onClick={() => { handleDownload(activeInvoice); setActiveMenuId(null); }}
+                            disabled={isDownloading}
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
+                        >
+                            {isDownloading ? <Loader2 size={16} className="mr-3 animate-spin" /> : <Download size={16} className="mr-3 text-neutral-500" />} Télécharger PDF
+                        </button>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     );
 };

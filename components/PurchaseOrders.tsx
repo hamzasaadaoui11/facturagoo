@@ -3,9 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Header from './Header';
 import CreatePurchaseOrderModal from './CreatePurchaseOrderModal';
-import { Plus, Search, Pencil, RefreshCw, Download, FileText, MoreVertical, Truck, Loader2 } from 'lucide-react';
+import { Plus, Search, Pencil, RefreshCw, Download, FileText, MoreVertical, Truck, Loader2, Printer } from 'lucide-react';
 import { PurchaseOrder, PurchaseOrderStatus, Supplier, Product, CompanySettings } from '../types';
-import { generatePDF } from '../services/pdfService';
+import { generatePDF, printDocument } from '../services/pdfService';
 
 const statusColors: { [key in PurchaseOrderStatus]: string } = {
     [PurchaseOrderStatus.Draft]: 'bg-neutral-100 text-neutral-600',
@@ -97,6 +97,16 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
             alert(error.message);
         } finally {
             setDownloadingId(null);
+        }
+    };
+
+    const handlePrint = (order: PurchaseOrder) => {
+        setActiveMenuId(null);
+        try {
+            const supplier = suppliers.find(s => s.id === order.supplierId);
+            printDocument('Bon de Commande', order, companySettings || null, supplier);
+        } catch (error: any) {
+            alert(error.message);
         }
     };
 
@@ -242,6 +252,13 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
 
                         <div className="border-t border-gray-100 my-1"></div>
                         
+                        <button 
+                            onClick={() => handlePrint(activeOrder)}
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                        >
+                            <Printer size={16} className="mr-3 text-neutral-500" /> Imprimer
+                        </button>
+
                         <button 
                             onClick={() => handleDownload(activeOrder)}
                             disabled={isDownloading}

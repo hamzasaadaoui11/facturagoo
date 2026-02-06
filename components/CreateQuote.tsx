@@ -24,7 +24,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
   }, [quotes, quoteId, isEditMode]);
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [expiryDate, setExpiryDate] = useState('');
+  // expiryDate removed from UI
   const [subject, setSubject] = useState('');
   const [reference, setReference] = useState('');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -35,7 +35,6 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
   useEffect(() => {
     if (isEditMode && quoteToEdit) {
         setDate(quoteToEdit.date);
-        setExpiryDate(quoteToEdit.expiryDate === 'Non spécifiée' ? '' : quoteToEdit.expiryDate);
         setSubject(quoteToEdit.subject || '');
         setReference(quoteToEdit.reference || '');
         const client = clients.find(c => c.id === quoteToEdit.clientId);
@@ -89,7 +88,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
                 clientId: selectedClient.id,
                 clientName: selectedClient.name,
                 date,
-                expiryDate: expiryDate || 'Non spécifiée',
+                expiryDate: date, // Internal logic: same as date
                 subject: subject || '',
                 reference: reference || '',
                 lineItems,
@@ -104,7 +103,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
                 clientId: selectedClient.id,
                 clientName: selectedClient.name,
                 date,
-                expiryDate: expiryDate || 'Non spécifiée',
+                expiryDate: date, // Internal logic
                 subject: subject || '',
                 reference: reference || '',
                 lineItems,
@@ -128,7 +127,6 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
             -------------------
             Client: ${selectedClient.name}
             Date: ${date}
-            Échéance: ${expiryDate || 'N/A'}
             Objet: ${subject || 'N/A'}
             -------------------
             Articles:
@@ -382,10 +380,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
                     <label className="block text-sm font-medium text-neutral-700 mb-1">Date d'émission</label>
                     <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
                 </div>
-                <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1">Date d'échéance</label>
-                    <input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)} className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
-                </div>
+                {/* Expiry Date Removed */}
              </div>
              <div className="lg:col-span-2">
                 <label className="block text-sm font-medium text-neutral-700 mb-1">Objet</label>

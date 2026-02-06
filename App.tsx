@@ -104,26 +104,44 @@ const MainContent: React.FC = () => {
     };
 
     const generateDocumentId = (type: 'quote' | 'invoice' | 'purchaseOrder' | 'deliveryNote', currentItems: { id: string, documentId?: string }[]) => {
+        const currentYear = new Date().getFullYear();
         let prefix = '';
+        
+        // Définition des préfixes
         switch (type) {
-            case 'invoice': prefix = 'FA'; break;
+            case 'invoice': prefix = 'FAC'; break;
+            case 'quote': prefix = 'DEV'; break;
             case 'deliveryNote': prefix = 'BL'; break;
-            case 'quote': prefix = 'DV'; break;
             case 'purchaseOrder': prefix = 'BC'; break;
             default: prefix = 'DOC';
         }
 
+        // Format: PREFIX/ANNEE/ (ex: FAC/2025/)
+        const pattern = `${prefix}/${currentYear}/`;
+
+        // 1. On cherche le numéro le plus élevé parmi les documents qui suivent DÉJÀ le nouveau format
         const numbers = currentItems.map(item => {
             const idToCheck = item.documentId || item.id;
-            if (idToCheck && idToCheck.startsWith(prefix)) {
-                const numberPart = idToCheck.replace(prefix, '');
+            if (idToCheck && idToCheck.startsWith(pattern)) {
+                const numberPart = idToCheck.replace(pattern, '');
                 return !isNaN(Number(numberPart)) ? parseInt(numberPart, 10) : 0;
             }
             return 0;
         });
 
-        const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
-        return `${prefix}${(maxNumber + 1).toString().padStart(5, '0')}`;
+        // 2. On calcule le prochain numéro
+        let nextNumber = (numbers.length > 0 ? Math.max(...numbers) : 0) + 1;
+
+        // 3. LOGIQUE DE CONTINUITÉ : 
+        // Si nextNumber est à 1 (donc aucun document trouvé avec le format FAC/2025/...),
+        // mais qu'il y a quand même des documents existants (ex: anciennes factures),
+        // on prend le nombre total de documents + 1 pour continuer la suite logique.
+        if (nextNumber === 1 && currentItems.length > 0) {
+            nextNumber = currentItems.length + 1;
+        }
+
+        // On génère le numéro suivant avec 5 chiffres (ex: 00001 ou 00012)
+        return `${pattern}${nextNumber.toString().padStart(5, '0')}`;
     };
 
     // --- Core Logic ---

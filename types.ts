@@ -184,6 +184,7 @@ export interface CompanySettings {
     fiscalId?: string; // Identifiant Fiscal (IF)
     patente?: string;  // Taxe Professionnelle
     cnss?: string;     // CNSS
+    capital?: string;  // Capital Social
     logo?: string;
     primaryColor?: string;
     footerNotes?: string;

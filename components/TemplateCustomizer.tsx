@@ -212,6 +212,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                     <InputField icon={Hash} label="I.F" name="fiscalId" value={localSettings.fiscalId || ''} onChange={handleInputChange} placeholder="Identifiant Fiscal" />
                                     <InputField icon={Hash} label="T.P / Patente" name="patente" value={localSettings.patente || ''} onChange={handleInputChange} placeholder="Taxe Professionnelle" />
                                     <InputField icon={Hash} label="CNSS" name="cnss" value={localSettings.cnss || ''} onChange={handleInputChange} placeholder="Numéro d'affiliation" />
+                                    <InputField icon={Hash} label="Capital Social" name="capital" value={localSettings.capital || ''} onChange={handleInputChange} placeholder="100 000 MAD" />
                                 </div>
                             </div>
                         </div>

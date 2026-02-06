@@ -15,7 +15,6 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
     const [name, setName] = useState(''); // Nom du contact ou Nom complet
     const [company, setCompany] = useState(''); // Nom de la société
     const [ice, setIce] = useState('');
-    const [rc, setRc] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [address, setAddress] = useState('');
@@ -31,7 +30,6 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                 setName(clientToEdit.name);
                 setCompany(clientToEdit.company || '');
                 setIce(clientToEdit.ice || '');
-                setRc(clientToEdit.rc || '');
                 setEmail(clientToEdit.email);
                 setPhone(clientToEdit.phone);
                 setAddress(clientToEdit.address || '');
@@ -40,7 +38,6 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                 setName('');
                 setCompany('');
                 setIce('');
-                setRc('');
                 setEmail('');
                 setPhone('');
                 setAddress('');
@@ -74,7 +71,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
             name, 
             company: type === 'Entreprise' ? company : undefined,
             ice,
-            rc,
+            rc: '', // Champ supprimé de l'interface mais conservé dans le type
             email, 
             phone,
             address
@@ -132,15 +129,9 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                                     <label htmlFor="company" className="block text-sm font-medium text-neutral-700">Nom de la Société <span className="text-red-500">*</span></label>
                                     <input type="text" id="company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Ex: Facturago SARL" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="ice" className="block text-sm font-medium text-neutral-700">ICE</label>
-                                        <input type="text" id="ice" value={ice} onChange={(e) => setIce(e.target.value)} placeholder="Identifiant Commun" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="rc" className="block text-sm font-medium text-neutral-700">RC</label>
-                                        <input type="text" id="rc" value={rc} onChange={(e) => setRc(e.target.value)} placeholder="Registre Commerce" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                    </div>
+                                <div>
+                                    <label htmlFor="ice" className="block text-sm font-medium text-neutral-700">ICE</label>
+                                    <input type="text" id="ice" value={ice} onChange={(e) => setIce(e.target.value)} placeholder="Identifiant Commun" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                                 </div>
                             </div>
                         )}
@@ -148,9 +139,17 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                         {/* Common Fields */}
                         <div>
                             <label htmlFor="name" className="block text-sm font-medium text-neutral-700">
-                                {type === 'Entreprise' ? 'Personne de contact' : 'Nom complet'} <span className="text-red-500">*</span>
+                                {type === 'Entreprise' ? 'Personne de contact' : 'Nom complet'} {type === 'Particulier' && <span className="text-red-500">*</span>}
                             </label>
-                            <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={type === 'Entreprise' ? "Ex: M. Alami" : "Ex: Ahmed Alami"} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" required/>
+                            <input 
+                                type="text" 
+                                id="name" 
+                                value={name} 
+                                onChange={(e) => setName(e.target.value)} 
+                                placeholder={type === 'Entreprise' ? "Ex: M. Alami (Optionnel)" : "Ex: Ahmed Alami"} 
+                                className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
+                                required={type === 'Particulier'}
+                            />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

@@ -3,11 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import Header from './Header';
-import { Truck, FileText, Plus, Pencil, Download, Trash2, CheckCircle, AlertCircle, Clock, Loader2, FileCheck, MoreVertical } from 'lucide-react';
+import { Truck, FileText, Plus, Pencil, Download, Trash2, CheckCircle, AlertCircle, Clock, Loader2, FileCheck, MoreVertical, Printer } from 'lucide-react';
 import { DeliveryNote, Invoice, Client, Product, CompanySettings } from '../types';
 import CreateDeliveryNoteModal from './CreateDeliveryNoteModal';
 import ConfirmationModal from './ConfirmationModal';
-import { generatePDF } from '../services/pdfService';
+import { generatePDF, printDocument } from '../services/pdfService';
 
 interface DeliveryNotesProps {
     deliveryNotes: DeliveryNote[];
@@ -120,6 +120,16 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
             alert(error.message);
         } finally {
             setDownloadingId(null);
+        }
+    };
+
+    const handlePrintClick = (note: DeliveryNote) => {
+        setActiveMenuId(null);
+        try {
+            const client = clients.find(c => c.id === note.clientId);
+            printDocument('Bon de Livraison', note, companySettings || null, client);
+        } catch (error: any) {
+            alert(error.message);
         }
     };
     
@@ -346,6 +356,13 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                             </button>
                         )}
                         
+                        <button 
+                            onClick={() => handlePrintClick(activeNote)}
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                        >
+                            <Printer size={16} className="mr-3 text-neutral-500" /> Imprimer
+                        </button>
+
                         <button 
                             onClick={() => handlePDFClick(activeNote)}
                             disabled={isDownloading}

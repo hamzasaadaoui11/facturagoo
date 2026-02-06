@@ -15,7 +15,6 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ isOpen, onClose, on
     const [name, setName] = useState('');
     const [company, setCompany] = useState('');
     const [ice, setIce] = useState('');
-    const [rc, setRc] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [address, setAddress] = useState('');
@@ -30,7 +29,6 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ isOpen, onClose, on
                 setName(supplierToEdit.name);
                 setCompany(supplierToEdit.company || '');
                 setIce(supplierToEdit.ice || '');
-                setRc(supplierToEdit.rc || '');
                 setEmail(supplierToEdit.email);
                 setPhone(supplierToEdit.phone);
                 setAddress(supplierToEdit.address || '');
@@ -39,7 +37,6 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ isOpen, onClose, on
                 setName('');
                 setCompany('');
                 setIce('');
-                setRc('');
                 setEmail('');
                 setPhone('');
                 setAddress('');
@@ -72,7 +69,7 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ isOpen, onClose, on
             name, 
             company: type === 'Entreprise' ? company : undefined,
             ice,
-            rc,
+            rc: '', // Champ supprimé de l'interface mais conservé dans le type
             email, 
             phone,
             address
@@ -130,15 +127,9 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ isOpen, onClose, on
                                     <label htmlFor="company" className="block text-sm font-medium text-neutral-700">Nom de la Société <span className="text-red-500">*</span></label>
                                     <input type="text" id="company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Ex: Fournisseur SARL" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="ice" className="block text-sm font-medium text-neutral-700">ICE</label>
-                                        <input type="text" id="ice" value={ice} onChange={(e) => setIce(e.target.value)} placeholder="Identifiant Commun" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="rc" className="block text-sm font-medium text-neutral-700">RC</label>
-                                        <input type="text" id="rc" value={rc} onChange={(e) => setRc(e.target.value)} placeholder="Registre Commerce" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                    </div>
+                                <div>
+                                    <label htmlFor="ice" className="block text-sm font-medium text-neutral-700">ICE</label>
+                                    <input type="text" id="ice" value={ice} onChange={(e) => setIce(e.target.value)} placeholder="Identifiant Commun" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                                 </div>
                             </div>
                         )}
@@ -146,9 +137,17 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ isOpen, onClose, on
                         {/* Common Fields */}
                         <div>
                             <label htmlFor="name" className="block text-sm font-medium text-neutral-700">
-                                {type === 'Entreprise' ? 'Personne de contact' : 'Nom complet'} <span className="text-red-500">*</span>
+                                {type === 'Entreprise' ? 'Personne de contact' : 'Nom complet'} {type === 'Particulier' && <span className="text-red-500">*</span>}
                             </label>
-                            <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={type === 'Entreprise' ? "Ex: M. Responsable" : "Ex: Ahmed Fournisseur"} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" required/>
+                            <input 
+                                type="text" 
+                                id="name" 
+                                value={name} 
+                                onChange={(e) => setName(e.target.value)} 
+                                placeholder={type === 'Entreprise' ? "Ex: M. Responsable (Optionnel)" : "Ex: Ahmed Fournisseur"} 
+                                className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
+                                required={type === 'Particulier'}
+                            />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

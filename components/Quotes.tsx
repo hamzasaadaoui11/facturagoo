@@ -5,9 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import Header from './Header';
 import ChangeStatusModal from './ChangeStatusModal';
 import CreateQuoteModal from './CreateQuoteModal';
-import { Plus, Search, Pencil, RefreshCw, Download, FileText, MoreVertical, CheckCircle, Loader2 } from 'lucide-react';
+import { Plus, Search, Pencil, RefreshCw, Download, FileText, MoreVertical, CheckCircle, Loader2, Printer } from 'lucide-react';
 import { Quote, QuoteStatus, Client, Product, CompanySettings } from '../types';
-import { generatePDF } from '../services/pdfService';
+import { generatePDF, printDocument } from '../services/pdfService';
 
 const statusColors: { [key in QuoteStatus]: string } = {
     [QuoteStatus.Created]: 'bg-blue-100 text-blue-700',
@@ -107,6 +107,16 @@ const Quotes: React.FC<QuotesProps> = ({
             setDownloadingId(null);
         }
     };
+
+    const handlePrint = (quote: Quote) => {
+        setActiveMenuId(null);
+        try {
+            const client = clients.find(c => c.id === quote.clientId);
+            printDocument('Devis', quote, companySettings || null, client);
+        } catch (error: any) {
+            alert(error.message);
+        }
+    };
     
     const handleConvert = async (quoteId: string) => {
         if (!convertingId) {
@@ -202,7 +212,6 @@ const Quotes: React.FC<QuotesProps> = ({
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Numéro</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Date</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Client</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Échéance</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Montant</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Statut</th>
                                 <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">Actions</span></th>
@@ -215,7 +224,6 @@ const Quotes: React.FC<QuotesProps> = ({
                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">{quote.documentId || quote.id}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{new Date(quote.date).toLocaleDateString('fr-FR')}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{quote.clientName}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{quote.expiryDate}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{quote.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[quote.status]}`}>
@@ -285,6 +293,13 @@ const Quotes: React.FC<QuotesProps> = ({
                             </button>
                         )}
                         
+                        <button 
+                            onClick={() => handlePrint(activeQuote)}
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                        >
+                            <Printer size={16} className="mr-3 text-neutral-500" /> Imprimer
+                        </button>
+
                         <button 
                             onClick={() => handleDownload(activeQuote)}
                             disabled={isDownloading}

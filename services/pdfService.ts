@@ -122,13 +122,13 @@ const DEFAULT_COLUMNS: DocumentColumn[] = [
     { id: 'total', label: 'Total HT', visible: true, order: 5 },
 ];
 
-export const generatePDF = async (
+// Helper function to generate the HTML string
+const generateDocumentHTML = (
     docType: DocumentType,
     doc: DocumentData,
     settings: CompanySettings | null,
     recipient: Client | Supplier | undefined
-): Promise<void> => {
-    
+): string => {
     // 1. Validation Stricte
     if (!settings || !settings.companyName) {
         throw new Error("Impossible de générer le document : Les informations de l'entreprise (Nom) sont manquantes dans les paramètres.");
@@ -136,11 +136,6 @@ export const generatePDF = async (
 
     if (!recipient) {
         throw new Error("Impossible de générer le document : Les informations du client/fournisseur sont introuvables.");
-    }
-
-    // Check library
-    if (typeof (window as any).html2pdf === 'undefined') {
-        throw new Error("Le module de génération PDF n'est pas encore chargé. Veuillez vérifier votre connexion internet et rafraîchir la page.");
     }
 
     // 2. Préparation des données
@@ -171,13 +166,7 @@ export const generatePDF = async (
     // Calcul date échéance / validité
     let extraDateLabel = '';
     let extraDateValue = '';
-    if (docType === 'Facture' && doc.dueDate) {
-        extraDateLabel = 'Échéance';
-        extraDateValue = new Date(doc.dueDate).toLocaleDateString('fr-FR');
-    } else if (docType === 'Devis' && doc.expiryDate) {
-        extraDateLabel = 'Validité';
-        extraDateValue = doc.expiryDate !== 'Non spécifiée' ? new Date(doc.expiryDate).toLocaleDateString('fr-FR') : 'Illimitée';
-    } else if (docType === 'Bon de Commande' && doc.expectedDate) {
+    if (docType === 'Bon de Commande' && doc.expectedDate) {
         extraDateLabel = 'Livraison prévue';
         extraDateValue = new Date(doc.expectedDate).toLocaleDateString('fr-FR');
     }
@@ -192,18 +181,22 @@ export const generatePDF = async (
     const recipientCompany = recipient.company ? `<div style="font-weight: bold;">${recipient.company}</div>` : '';
     const recipientEmail = recipient.email ? `<div>${recipient.email}</div>` : '';
     const recipientPhone = recipient.phone ? `<div>${recipient.phone}</div>` : '';
+    const recipientAddress = recipient.address ? `<div style="margin-bottom:4px;">${recipient.address.replace(/\n/g, '<br/>')}</div>` : '';
+    const recipientIce = recipient.ice ? `<div>ICE: ${recipient.ice}</div>` : '';
 
     // Company Address HTML
     const companyAddress = settings.address ? settings.address.replace(/\n/g, '<br/>') : '';
     const companyContact = [settings.phone, settings.email, settings.website].filter(Boolean).join(' | ');
 
     // Legal Identifiers
+    const capitalDisplay = settings.capital ? `Capital: ${settings.capital}` : '';
     const legalIds = [
         settings.ice ? `ICE: ${settings.ice}` : '',
         settings.rc ? `RC: ${settings.rc}` : '',
         settings.fiscalId ? `IF: ${settings.fiscalId}` : '',
         settings.patente ? `TP: ${settings.patente}` : '',
-        settings.cnss ? `CNSS: ${settings.cnss}` : ''
+        settings.cnss ? `CNSS: ${settings.cnss}` : '',
+        capitalDisplay
     ].filter(Boolean).join(' &nbsp;|&nbsp; ');
 
     // --- Dynamic Table Construction ---
@@ -262,7 +255,6 @@ export const generatePDF = async (
 
     // Payment Info (if invoice/DL)
     let paymentInfoHtml = '';
-    // On n'affiche pas les infos de paiement sur le BL PDF par défaut (standard métier)
     if (docType === 'Facture') {
         const paid = doc.amountPaid || doc.paymentAmount || 0;
         const remaining = totalAmount - paid;
@@ -277,12 +269,18 @@ export const generatePDF = async (
     }
 
     // 3. Template HTML
-    // Utilisation de Flexbox pour gérer la hauteur de la page et éviter la page vide
-    const template = `
-    <div style="width: 210mm; min-height: 295mm; padding: 12mm 15mm; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; background: white; box-sizing: border-box; display: flex; flex-direction: column;">
+    return `
+    <div style="width: 210mm; min-height: 295mm; padding: 12mm 15mm; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; background: white; box-sizing: border-box; display: flex; flex-direction: column; position: relative; overflow: hidden;">
         
+        <!-- WATERMARK BACKGROUND -->
+        ${settings.logo ? `
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 0; pointer-events: none;">
+                <img src="${settings.logo}" style="width: 80%; max-height: 60%; object-fit: contain; opacity: 0.08; filter: grayscale(100%); margin-top: 120px;" />
+            </div>
+        ` : ''}
+
         <!-- CONTENT WRAPPER (grows to push footer down) -->
-        <div style="flex: 1;">
+        <div style="flex: 1; display: flex; flex-direction: column; position: relative; z-index: 10;">
             <!-- HEADER -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
                 <div style="width: 50%;">
@@ -313,6 +311,8 @@ export const generatePDF = async (
                         <div>${recipientName}</div>
                     </div>
                     <div style="margin-top: 8px; font-size: 12px; color: #4b5563;">
+                        ${recipientAddress}
+                        ${recipientIce}
                         ${recipientEmail}
                         ${recipientPhone}
                     </div>
@@ -381,18 +381,34 @@ export const generatePDF = async (
                     </div>
                 </div>
             `}
-        </div>
 
-        <!-- FOOTER (Pushed to bottom via flex layout) -->
-        <div style="text-align: center; margin-top: auto;">
-            ${settings.footerNotes ? `<div style="font-size: 12px; color: #4b5563; margin-bottom: 10px; white-space: pre-wrap;">${settings.footerNotes}</div>` : ''}
-            <div style="font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px;">
-                ${legalIds}
+            <!-- FOOTER (Pushed to bottom via flex layout) -->
+            <div style="text-align: center; margin-top: auto;">
+                ${settings.footerNotes ? `<div style="font-size: 12px; color: #4b5563; margin-bottom: 10px; white-space: pre-wrap;">${settings.footerNotes}</div>` : ''}
+                <div style="font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px;">
+                    ${legalIds}
+                </div>
             </div>
         </div>
 
     </div>
     `;
+};
+
+// Generates PDF and triggers Download
+export const generatePDF = async (
+    docType: DocumentType,
+    doc: DocumentData,
+    settings: CompanySettings | null,
+    recipient: Client | Supplier | undefined
+): Promise<void> => {
+    // Check library
+    if (typeof (window as any).html2pdf === 'undefined') {
+        throw new Error("Le module de génération PDF n'est pas encore chargé. Veuillez vérifier votre connexion internet et rafraîchir la page.");
+    }
+
+    const template = generateDocumentHTML(docType, doc, settings, recipient);
+    const displayId = doc.documentId || doc.id;
 
     // 4. Conversion HTML to PDF with DOM mounting
     const container = document.createElement('div');
@@ -425,5 +441,48 @@ export const generatePDF = async (
     } finally {
         // Clean up
         document.body.removeChild(container);
+    }
+};
+
+// Opens Print Dialog Directly
+export const printDocument = (
+    docType: DocumentType,
+    doc: DocumentData,
+    settings: CompanySettings | null,
+    recipient: Client | Supplier | undefined
+): void => {
+    const htmlContent = generateDocumentHTML(docType, doc, settings, recipient);
+    const displayId = doc.documentId || doc.id;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>${docType} #${displayId}</title>
+                    <style>
+                        body { margin: 0; padding: 0; }
+                        @media print {
+                            @page { margin: 0; size: A4; }
+                            body { -webkit-print-color-adjust: exact; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${htmlContent}
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        
+        // Wait for content (and images) to load slightly before printing
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 500);
+    } else {
+        alert("Veuillez autoriser les pop-ups pour utiliser la fonction d'impression directe.");
     }
 };

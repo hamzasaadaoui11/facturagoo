@@ -19,7 +19,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     // Form State
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [dueDate, setDueDate] = useState('');
+    // dueDate removed from UI, will be handled internally
     const [subject, setSubject] = useState('');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
@@ -43,7 +43,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             if (invoiceToEdit) {
                 setClientId(invoiceToEdit.clientId);
                 setDate(invoiceToEdit.date);
-                setDueDate(invoiceToEdit.dueDate);
                 setSubject(invoiceToEdit.subject || '');
                 setLineItems(JSON.parse(JSON.stringify(invoiceToEdit.lineItems)));
                 setExistingAmountPaid(invoiceToEdit.amountPaid || 0);
@@ -51,9 +50,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             } else {
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
-                const nextMonth = new Date();
-                nextMonth.setDate(nextMonth.getDate() + 30);
-                setDueDate(nextMonth.toISOString().split('T')[0]);
                 setSubject('');
                 setLineItems([]);
                 setExistingAmountPaid(0);
@@ -147,7 +143,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             clientId,
             clientName: client?.name || 'Client inconnu',
             date,
-            dueDate,
+            dueDate: date, // Default due date to same as issue date since field is hidden
             subject,
             lineItems,
             status,
@@ -199,8 +195,8 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 <div className="px-6 py-6 overflow-y-auto custom-scrollbar space-y-6 flex-1">
                     
                     {/* Client & Dates */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <div className="sm:col-span-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
                             <label className="block text-sm font-medium text-neutral-700 mb-1">Client *</label>
                             <select 
                                 value={clientId}
@@ -219,15 +215,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                 type="date" 
                                 value={date}
                                 onChange={(e) => setDate(e.target.value)}
-                                className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Date d'échéance *</label>
-                            <input 
-                                type="date" 
-                                value={dueDate}
-                                onChange={(e) => setDueDate(e.target.value)}
                                 className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                             />
                         </div>

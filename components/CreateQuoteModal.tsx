@@ -18,7 +18,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
     // Form State
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [expiryDate, setExpiryDate] = useState('');
+    // expiryDate removed from UI
     const [subject, setSubject] = useState('');
     const [reference, setReference] = useState('');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -39,7 +39,6 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 // Edit Mode
                 setClientId(quoteToEdit.clientId);
                 setDate(quoteToEdit.date);
-                setExpiryDate(quoteToEdit.expiryDate === 'Non spécifiée' ? '' : quoteToEdit.expiryDate);
                 setSubject(quoteToEdit.subject || '');
                 setReference(quoteToEdit.reference || '');
                 setLineItems(quoteToEdit.lineItems);
@@ -47,10 +46,6 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 // Create Mode
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
-                // Default expiry: 30 days from now
-                const nextMonth = new Date();
-                nextMonth.setDate(nextMonth.getDate() + 30);
-                setExpiryDate(nextMonth.toISOString().split('T')[0]);
                 setSubject('');
                 setReference('');
                 setLineItems([]);
@@ -135,7 +130,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
             clientId,
             clientName: client?.name || 'Client inconnu',
             date,
-            expiryDate: expiryDate || 'Non spécifiée',
+            expiryDate: date, // Set to same date as hidden field
             subject,
             reference,
             lineItems,
@@ -169,7 +164,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 <div className="px-6 py-6 overflow-y-auto custom-scrollbar space-y-6 flex-1">
                     
                     {/* Client & Dates */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="sm:col-span-1">
                             <label className="block text-sm font-medium text-neutral-700 mb-1">Client *</label>
                             <select 
@@ -189,15 +184,6 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 type="date" 
                                 value={date}
                                 onChange={(e) => setDate(e.target.value)}
-                                className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Date d'échéance</label>
-                            <input 
-                                type="date" 
-                                value={expiryDate}
-                                onChange={(e) => setExpiryDate(e.target.value)}
                                 className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                             />
                         </div>
