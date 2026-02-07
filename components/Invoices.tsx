@@ -66,10 +66,12 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
             setMenuPosition(null);
         } else {
             const rect = e.currentTarget.getBoundingClientRect();
+            // Calculate position to prevent overflow on mobile
+            const leftPos = rect.right + window.scrollX - 192; // 192px width
             setActiveMenuId(id);
             setMenuPosition({
                 top: rect.bottom + window.scrollY + 5,
-                left: rect.right + window.scrollX - 192 // 192px width
+                left: Math.max(10, leftPos) // Ensure it doesn't go off-screen left
             });
         }
     };
@@ -185,7 +187,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
 
             {/* Payment Modal */}
             {selectedInvoiceForPayment && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
                         <h3 className="text-lg font-bold mb-4">Enregistrer un paiement</h3>
                         <p className="text-sm text-gray-500 mb-4">Pour la facture {selectedInvoiceForPayment.documentId || selectedInvoiceForPayment.id}</p>
@@ -232,7 +234,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">N° Facture</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Client</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Montant</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Reste à payer</th>
+                                <th scope="col" className="hidden md:table-cell px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Reste</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Statut</th>
                                 <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">Actions</span></th>
                             </tr>
@@ -244,9 +246,9 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                     return (
                                     <tr key={invoice.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">{invoice.documentId || invoice.id}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-600">{invoice.clientName}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-600 max-w-[120px] truncate">{invoice.clientName}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-medium">{invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-red-600">{remaining > 0 ? remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}</td>
+                                        <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-sm font-medium text-red-600">{remaining > 0 ? remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[invoice.status]}`}>
                                                 {invoice.status}

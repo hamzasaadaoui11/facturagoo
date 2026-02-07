@@ -250,11 +250,11 @@ const Quotes: React.FC<QuotesProps> = ({
                             {quotes.length > 0 ? (
                                 quotes.map((quote) => (
                                     <tr key={quote.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">{quote.documentId || quote.id}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{new Date(quote.date).toLocaleDateString('fr-FR')}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{quote.clientName}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{quote.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-emerald-600">{quote.documentId || quote.id}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{new Date(quote.date).toLocaleDateString('fr-FR')}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{quote.clientName}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{quote.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[quote.status]}`}>
                                                 {quote.status}
                                             </span>

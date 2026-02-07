@@ -130,14 +130,14 @@ const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, onUpdateClient,
                                     
                                     return (
                                     <tr key={client.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500 font-mono">{client.clientCode}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 font-mono">{client.clientCode}</td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center">
                                                 <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${isCompany ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
                                                     {isCompany ? <Building2 size={16} /> : <User size={16} />}
                                                 </div>
                                                 <div className="ml-3">
-                                                    <div className="text-sm font-medium text-neutral-900">
+                                                    <div className="text-sm md:text-base font-medium text-neutral-900">
                                                         {isCompany ? client.company : client.name}
                                                     </div>
                                                     {isCompany && client.ice && (
@@ -146,14 +146,14 @@ const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, onUpdateClient,
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-600">
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-600">
                                             {isCompany ? client.name : '-'}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-neutral-500">
+                                        <td className="px-6 py-4 text-sm md:text-base text-neutral-500">
                                             <div>{client.email}</div>
                                             <div>{client.phone}</div>
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isCompany ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}`}>
                                                 {isCompany ? 'Entreprise' : 'Particulier'}
                                             </span>

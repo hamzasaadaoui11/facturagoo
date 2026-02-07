@@ -89,7 +89,7 @@ const Sidebar: React.FC = () => {
                                         <li key={item.name}>
                                             <button
                                                 onClick={() => toggleMenu(item.name)}
-                                                className="group flex w-full items-center gap-x-3 rounded-lg p-2 text-sm leading-6 font-medium text-emerald-100 hover:bg-emerald-700 hover:text-white transition-colors duration-200"
+                                                className="group flex w-full items-center gap-x-3 rounded-lg p-2 text-sm font-medium text-emerald-100 hover:bg-emerald-700 hover:text-white transition-colors duration-200"
                                             >
                                                 <item.icon className="h-6 w-6 shrink-0" aria-hidden="true" />
                                                 <span>{item.name}</span>
@@ -105,7 +105,7 @@ const Sidebar: React.FC = () => {
                                                         <li key={child.name}>
                                                             <Link
                                                                 to={child.href}
-                                                                className={`group flex gap-x-3 rounded-lg p-2 text-sm leading-6 font-medium transition-colors duration-200 ${
+                                                                className={`group flex gap-x-3 rounded-lg p-2 text-sm font-medium transition-colors duration-200 ${
                                                                         isActive
                                                                             ? 'text-white'
                                                                             : 'text-emerald-100 hover:text-white'
@@ -129,7 +129,7 @@ const Sidebar: React.FC = () => {
                                     <li key={item.name}>
                                         <Link
                                             to={item.href!}
-                                            className={`group relative flex gap-x-3 rounded-lg p-2 text-sm leading-6 font-medium transition-colors duration-200 ${
+                                            className={`group relative flex gap-x-3 rounded-lg p-2 text-sm font-medium transition-colors duration-200 ${
                                                     isActive
                                                         ? 'bg-emerald-700 text-white'
                                                         : 'text-emerald-100 hover:bg-emerald-700 hover:text-white'
@@ -149,14 +149,14 @@ const Sidebar: React.FC = () => {
                     <li className="mt-auto">
                         <Link
                             to="/profile"
-                            className={`group -mx-2 flex gap-x-3 rounded-lg p-2 text-sm leading-6 font-medium hover:bg-emerald-700 hover:text-white transition-colors duration-200 ${location.pathname === '/profile' ? 'bg-emerald-700 text-white' : 'text-emerald-100'}`}
+                            className={`group -mx-2 flex gap-x-3 rounded-lg p-2 text-sm font-medium hover:bg-emerald-700 hover:text-white transition-colors duration-200 ${location.pathname === '/profile' ? 'bg-emerald-700 text-white' : 'text-emerald-100'}`}
                         >
                             <UserCircle className="h-6 w-6 shrink-0" aria-hidden="true" />
                             Mon Profil
                         </Link>
                         <button
                             onClick={handleLogout}
-                            className="group -mx-2 flex w-full gap-x-3 rounded-lg p-2 text-sm leading-6 font-medium text-emerald-100 hover:bg-emerald-700 hover:text-white transition-colors duration-200 mt-2"
+                            className="group -mx-2 flex w-full gap-x-3 rounded-lg p-2 text-sm font-medium text-emerald-100 hover:bg-emerald-700 hover:text-white transition-colors duration-200 mt-2"
                         >
                             <LogOut className="h-6 w-6 shrink-0" aria-hidden="true" />
                             Déconnexion

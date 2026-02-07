@@ -208,12 +208,12 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                             {orders.length > 0 ? (
                                 orders.map((order) => (
                                     <tr key={order.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">{order.documentId || order.id}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{new Date(order.date).toLocaleDateString('fr-FR')}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{order.supplierName}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{order.expectedDate ? new Date(order.expectedDate).toLocaleDateString('fr-FR') : '-'}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{order.totalAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-emerald-600">{order.documentId || order.id}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{new Date(order.date).toLocaleDateString('fr-FR')}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{order.supplierName}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{order.expectedDate ? new Date(order.expectedDate).toLocaleDateString('fr-FR') : '-'}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{order.totalAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[order.status]}`}>
                                                 {order.status}
                                             </span>

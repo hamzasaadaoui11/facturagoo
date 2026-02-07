@@ -602,15 +602,25 @@ const MainContent: React.FC = () => {
     }
 
     return (
-        <div className="flex h-full bg-slate-100 text-neutral-800 overflow-hidden">
-            <div className="hidden md:flex md:w-64 md:flex-col md:shrink-0"><Sidebar /></div>
+        <div className="flex h-screen bg-slate-100 text-neutral-800 overflow-hidden">
+            <div className="hidden md:flex md:w-64 md:flex-col md:shrink-0 transition-all duration-300">
+                <Sidebar />
+            </div>
             
+            {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
-                <div className="fixed inset-0 z-40 flex md:hidden">
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out" onClick={() => setSidebarOpen(false)}></div>
-                    <div className="relative flex w-64 max-w-xs flex-1 flex-col bg-emerald-600 transition-transform duration-300 ease-in-out transform">
+                <div className="fixed inset-0 z-50 flex md:hidden">
+                    <div 
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out" 
+                        onClick={() => setSidebarOpen(false)}
+                    ></div>
+                    <div className="relative flex w-64 max-w-xs flex-1 flex-col bg-emerald-600 shadow-2xl transition-transform duration-300 ease-in-out transform translate-x-0">
                         <div className="absolute top-0 right-0 -mr-12 pt-2">
-                            <button type="button" className="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white" onClick={() => setSidebarOpen(false)}>
+                            <button 
+                                type="button" 
+                                className="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white" 
+                                onClick={() => setSidebarOpen(false)}
+                            >
                                 <X className="h-6 w-6 text-white" />
                             </button>
                         </div>
@@ -619,14 +629,21 @@ const MainContent: React.FC = () => {
                 </div>
             )}
 
-            <div className="flex flex-1 flex-col min-h-0">
-                <div className="flex-1 overflow-y-auto bg-slate-100">
-                    <div className="sticky top-0 z-10 bg-slate-100/75 backdrop-blur-sm pl-1 pt-1 sm:pl-3 sm:pt-3 md:hidden border-b border-slate-200">
-                        <button type="button" className="-ml-0.5 -mt-0.5 inline-flex h-12 w-12 items-center justify-center rounded-md text-neutral-500 hover:text-neutral-900 focus:outline-none" onClick={() => setSidebarOpen(true)}>
+            <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+                <div className="flex-1 overflow-y-auto bg-slate-50">
+                    {/* Mobile Header Toggle */}
+                    <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md px-4 py-3 md:hidden border-b border-slate-200 shadow-sm flex items-center justify-between">
+                        <h1 className="text-lg font-bold text-emerald-700">Facturago</h1>
+                        <button 
+                            type="button" 
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-neutral-600 hover:bg-neutral-100 focus:outline-none" 
+                            onClick={() => setSidebarOpen(true)}
+                        >
                             <Menu className="h-6 w-6" />
                         </button>
                     </div>
-                    <main className="p-4 sm:p-6 lg:p-8">
+                    
+                    <main className="p-4 sm:p-6 lg:p-8 flex-1">
                         <Routes>
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
                             <Route path="/dashboard" element={<Dashboard invoices={invoices} clients={clients} products={products} companySettings={companySettings} />} />

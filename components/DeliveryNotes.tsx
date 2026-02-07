@@ -277,16 +277,16 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                                     
                                     return (
                                     <tr key={note.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">{note.documentId || note.id}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{new Date(note.date).toLocaleDateString('fr-FR')}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-neutral-900">{note.clientName}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-emerald-600">{note.documentId || note.id}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{new Date(note.date).toLocaleDateString('fr-FR')}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-neutral-900">{note.clientName}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">
                                             {note.invoiceId ? `#${note.invoiceId}` : 'Manuel'}
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-neutral-900">
+                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm md:text-base font-medium text-neutral-900">
                                             {note.totalAmount ? note.totalAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusInfo.color}`}>
                                                 <StatusIcon size={12} className="mr-1" /> {statusInfo.label}
                                             </span>

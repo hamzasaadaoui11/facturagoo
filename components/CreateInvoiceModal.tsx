@@ -181,13 +181,13 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
         <div className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`} aria-modal="true">
             <div className="absolute inset-0 bg-neutral-900/75 backdrop-blur-sm" onClick={handleClose}></div>
             
-            <div className={`relative w-full max-w-4xl bg-white rounded-lg shadow-xl transition-all duration-200 ease-in-out flex flex-col max-h-[90vh] ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+            <div className={`relative w-full md:max-w-4xl bg-white md:rounded-lg shadow-xl transition-all duration-200 ease-in-out flex flex-col h-full md:h-auto md:max-h-[90vh] ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
                 
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
+                <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-neutral-200">
                     <div>
                         <h3 className="text-lg font-semibold text-neutral-900">{invoiceToEdit ? 'Modifier la Facture' : 'Nouvelle Facture'}</h3>
-                        <p className="text-sm text-neutral-500">{invoiceToEdit ? `Modification de la facture #${invoiceToEdit.documentId || invoiceToEdit.id}` : 'Création d\'une facture directe.'}</p>
+                        <p className="text-sm text-neutral-500 hidden md:block">{invoiceToEdit ? `Modification de la facture #${invoiceToEdit.documentId || invoiceToEdit.id}` : 'Création d\'une facture directe.'}</p>
                     </div>
                     <button onClick={handleClose} className="p-1 text-neutral-400 hover:text-neutral-600 rounded-full hover:bg-neutral-100 transition-colors">
                         <X size={20} />
@@ -195,7 +195,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 </div>
 
                 {/* Body - Scrollable */}
-                <div className="px-6 py-6 overflow-y-auto custom-scrollbar space-y-6 flex-1">
+                <div className="px-4 md:px-6 py-6 overflow-y-auto custom-scrollbar space-y-6 flex-1 pb-24 md:pb-6">
                     
                     {/* Client & Dates */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -240,7 +240,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                     <div className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 space-y-4">
                         <div className="flex justify-between items-center">
                             <h4 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
-                                <ScanLine size={16} className="text-emerald-600"/> Ajouter des articles (Sélection ou Saisie Libre)
+                                <ScanLine size={16} className="text-emerald-600"/> Ajouter des articles
                             </h4>
                         </div>
                         
@@ -326,14 +326,14 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
 
                     {/* Items Table */}
                     {lineItems.length > 0 ? (
-                        <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                        <div className="border border-neutral-200 rounded-lg overflow-hidden overflow-x-auto">
                             <table className="min-w-full divide-y divide-neutral-200">
                                 <thead className="bg-neutral-50">
                                     <tr>
                                         <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase">Désignation</th>
                                         <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase">Qté</th>
                                         <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Prix HT</th>
-                                        <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase">TVA</th>
+                                        <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase hidden md:table-cell">TVA</th>
                                         <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Total HT</th>
                                         <th className="px-4 py-2 w-10"></th>
                                     </tr>
@@ -344,7 +344,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                             <td className="px-4 py-2 text-sm text-neutral-900">{item.name}</td>
                                             <td className="px-4 py-2 text-sm text-center text-neutral-600">{item.quantity}</td>
                                             <td className="px-4 py-2 text-sm text-right text-neutral-600">{item.unitPrice.toLocaleString('fr-FR')}</td>
-                                            <td className="px-4 py-2 text-sm text-center text-neutral-600">{item.vat}%</td>
+                                            <td className="px-4 py-2 text-sm text-center text-neutral-600 hidden md:table-cell">{item.vat}%</td>
                                             <td className="px-4 py-2 text-sm text-right font-medium text-neutral-900">{(item.quantity * item.unitPrice).toLocaleString('fr-FR')}</td>
                                             <td className="px-4 py-2 text-center">
                                                 <button onClick={() => handleRemoveItem(item.id)} className="text-neutral-400 hover:text-red-500 transition-colors">

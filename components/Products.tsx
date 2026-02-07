@@ -298,9 +298,9 @@ const ProductList = ({ products, onDeleteProduct }: ProductListProps) => {
                             {products.length > 0 ? (
                                 products.map((product: Product) => (
                                     <tr key={product.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{product.productCode}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-neutral-900">{product.name}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{product.productCode}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-neutral-900">{product.name}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base">
                                             {product.productType === 'Service' ? (
                                                 <span className="text-neutral-400 italic">Service</span>
                                             ) : (
@@ -310,8 +310,8 @@ const ProductList = ({ products, onDeleteProduct }: ProductListProps) => {
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{product.salePrice.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{product.vat}%</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{product.salePrice.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{product.vat}%</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                                             <div className="flex items-center justify-end space-x-2">
                                                 <button 
