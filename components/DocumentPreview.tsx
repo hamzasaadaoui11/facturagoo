@@ -36,6 +36,15 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
         ));
     };
 
+    const legalIds = [
+        settings.ice ? `ICE: ${settings.ice}` : '',
+        settings.rc ? `RC: ${settings.rc}` : '',
+        settings.fiscalId ? `IF: ${settings.fiscalId}` : '',
+        settings.patente ? `TP: ${settings.patente}` : '',
+        settings.cnss ? `CNSS: ${settings.cnss}` : '',
+        settings.capital ? `Capital: ${settings.capital}` : ''
+    ].filter(Boolean).join(' | ');
+
     return (
         <div className="bg-white p-12 shadow-2xl font-sans text-sm text-neutral-800 relative overflow-hidden flex flex-col" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
             
@@ -67,15 +76,6 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                  {settings.phone && <p>Tél: {settings.phone}</p>}
                                  {settings.email && <p>Email: {settings.email}</p>}
                                  {settings.website && <p>Web: {settings.website}</p>}
-                            </div>
-
-                            {/* Legal Identifiers Block */}
-                            <div className="mt-3 pt-3 border-t border-dashed border-neutral-200 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-neutral-500 uppercase tracking-wide">
-                                {settings.ice && <span>ICE: <span className="font-semibold text-neutral-700">{settings.ice}</span></span>}
-                                {settings.rc && <span>RC: <span className="font-semibold text-neutral-700">{settings.rc}</span></span>}
-                                {settings.fiscalId && <span>IF: <span className="font-semibold text-neutral-700">{settings.fiscalId}</span></span>}
-                                {settings.patente && <span>TP: <span className="font-semibold text-neutral-700">{settings.patente}</span></span>}
-                                {settings.cnss && <span>CNSS: <span className="font-semibold text-neutral-700">{settings.cnss}</span></span>}
                             </div>
                         </div>
                     </div>
@@ -184,8 +184,8 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                 <footer className="mt-auto pt-8 text-center">
                     {settings.footerNotes && <p className="text-sm text-black mb-4 whitespace-pre-line">{settings.footerNotes}</p>}
                     
-                    <div className="border-t border-neutral-800 pt-4 text-[10px] text-black font-bold uppercase tracking-wider">
-                         <p>{settings.companyName} {settings.ice ? `- ICE: ${settings.ice}` : ''} {settings.rc ? `- RC: ${settings.rc}` : ''}</p>
+                    <div className="border-t border-black pt-2 text-[10px] text-black font-normal uppercase tracking-wider">
+                         <p>{legalIds}</p>
                     </div>
                 </footer>
             </div>

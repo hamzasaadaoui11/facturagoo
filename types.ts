@@ -171,6 +171,15 @@ export interface DocumentColumn {
     width?: string; // Optional width hint
 }
 
+export interface DocumentLabels {
+    totalHt?: string;
+    totalTax?: string;
+    totalNet?: string;
+    amountInWordsPrefix?: string;
+    signatureSender?: string;
+    signatureRecipient?: string;
+}
+
 export interface CompanySettings {
     id: string; // Changed from fixed string literal to generic string to support UUIDs
     companyName?: string;
@@ -190,4 +199,5 @@ export interface CompanySettings {
     footerNotes?: string;
     defaultPaymentTerms?: string; // Added field
     documentColumns?: DocumentColumn[]; // New field for custom columns
+    documentLabels?: DocumentLabels;
 }

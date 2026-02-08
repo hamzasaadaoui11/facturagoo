@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Files } from 'lucide-react';
 import { Client, Product, Supplier, Quote, QuoteStatus, Invoice, InvoiceStatus, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, PurchaseOrderStatus } from './types';
 import { dbService, initDB } from './db';
 import { supabase } from './supabaseClient';
@@ -23,6 +23,34 @@ import Statistics from './components/Statistics';
 import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import UserProfile from './components/UserProfile';
+
+const LoadingScreen = () => (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white relative overflow-hidden">
+        {/* Background decorative blobs */}
+        <div className="absolute top-0 left-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+
+        <div className="relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-500">
+            {/* Animated Logo Container */}
+            <div className="relative mb-8">
+                <div className="absolute inset-0 bg-emerald-200 rounded-2xl blur-xl opacity-40 animate-pulse"></div>
+                <div className="relative h-24 w-24 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white shadow-2xl">
+                    <Files size={48} />
+                </div>
+            </div>
+
+            <h1 className="text-3xl font-bold text-slate-800 tracking-tight mb-4">Facturago</h1>
+            
+            <div className="flex items-center gap-2 mb-2">
+                <div className="h-2 w-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div className="h-2 w-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div className="h-2 w-2 bg-emerald-500 rounded-full animate-bounce"></div>
+            </div>
+            
+            <p className="text-sm text-slate-400 font-medium">Chargement de votre espace...</p>
+        </div>
+    </div>
+);
 
 const MainContent: React.FC = () => {
     const navigate = useNavigate();
@@ -579,12 +607,7 @@ const MainContent: React.FC = () => {
     };
 
     if (isLoading) {
-        return (
-            <div className="flex h-screen items-center justify-center bg-slate-100">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
-                <p className="mt-4 text-lg font-semibold text-neutral-700">Chargement des données...</p>
-            </div>
-        );
+        return <LoadingScreen />;
     }
 
     if (error) {
@@ -763,11 +786,7 @@ const App: React.FC = () => {
     }, []);
 
     if (loading) {
-        return (
-            <div className="flex h-screen items-center justify-center bg-slate-100">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
-            </div>
-        );
+        return <LoadingScreen />;
     }
 
     return (

@@ -3,21 +3,21 @@ import { CompanySettings, Invoice, Quote, DeliveryNote, PurchaseOrder, Client, S
 
 interface DocumentData {
     id: string;
-    documentId?: string; // Added documentId
+    documentId?: string; 
     date: string;
     lineItems: LineItem[];
     subTotal?: number;
     vatAmount?: number;
-    totalAmount?: number; // For PO/DN
-    amount?: number; // For Invoice/Quote
-    amountPaid?: number; // For Invoice
-    paymentAmount?: number; // For DN
+    totalAmount?: number; 
+    amount?: number; 
+    amountPaid?: number; 
+    paymentAmount?: number; 
     notes?: string;
     subject?: string;
     reference?: string;
-    dueDate?: string; // Invoice
-    expiryDate?: string; // Quote
-    expectedDate?: string; // PO
+    dueDate?: string; 
+    expiryDate?: string; 
+    expectedDate?: string; 
 }
 
 type DocumentType = 'Facture' | 'Devis' | 'Bon de Livraison' | 'Bon de Commande';
@@ -94,14 +94,13 @@ const numberToWordsFr = (amount: number): string => {
 
         if (hundreds > 0) {
             if (hundreds === 1) str += 'cent ';
-            else str += `${UNITS[hundreds]} cents `; // Simplification: accord pluriel toujours mis ici
+            else str += `${UNITS[hundreds]} cents `; 
         }
 
         if (remainder > 0) {
             str += convertGroup(remainder);
         }
         
-        // Fix grammar for "cents" at end vs middle (e.g. 200 vs 201) - Simplified here
         return str.trim();
     };
 
@@ -110,7 +109,6 @@ const numberToWordsFr = (amount: number): string => {
         result += ` et ${convertInteger(decimalPart)} centimes`;
     }
 
-    // Capitalize first letter
     return result.charAt(0).toUpperCase() + result.slice(1);
 };
 
@@ -122,14 +120,12 @@ const DEFAULT_COLUMNS: DocumentColumn[] = [
     { id: 'total', label: 'Total HT', visible: true, order: 5 },
 ];
 
-// Helper function to generate the HTML string
 const generateDocumentHTML = (
     docType: DocumentType,
     doc: DocumentData,
     settings: CompanySettings | null,
     recipient: Client | Supplier | undefined
 ): string => {
-    // 1. Validation Stricte
     if (!settings || !settings.companyName) {
         throw new Error("Impossible de générer le document : Les informations de l'entreprise (Nom) sont manquantes dans les paramètres.");
     }
@@ -138,7 +134,15 @@ const generateDocumentHTML = (
         throw new Error("Impossible de générer le document : Les informations du client/fournisseur sont introuvables.");
     }
 
-    // 2. Préparation des données
+    // Extract custom labels with defaults
+    const labels = settings.documentLabels || {};
+    const txtTotalHt = labels.totalHt || 'Total HT';
+    const txtTotalTax = labels.totalTax || 'Total TVA';
+    const txtTotalNet = labels.totalNet || 'Net à Payer';
+    const txtAmountInWords = labels.amountInWordsPrefix || 'Arrêté le présent document à la somme de :';
+    const txtSigSender = labels.signatureSender || 'Signature Expéditeur';
+    const txtSigRecipient = labels.signatureRecipient || 'Signature & Cachet Client';
+
     const primaryColor = settings.primaryColor || '#10b981';
     const totalAmount = doc.amount !== undefined ? doc.amount : (doc.totalAmount || 0);
     const subTotal = doc.subTotal || 0;
@@ -146,24 +150,19 @@ const generateDocumentHTML = (
     const dateStr = new Date(doc.date).toLocaleDateString('fr-FR');
     const amountInLetters = numberToWordsFr(totalAmount);
     
-    // Utiliser documentId s'il existe, sinon l'id technique
     const displayId = doc.documentId || doc.id;
-    
     const isDeliveryNote = docType === 'Bon de Livraison';
 
-    // Config des colonnes
     let activeColumns = (settings.documentColumns && settings.documentColumns.length > 0) 
         ? settings.documentColumns.filter(c => c.visible).sort((a, b) => a.order - b.order)
         : DEFAULT_COLUMNS;
 
-    // LOGIQUE SPÉCIALE BON DE LIVRAISON : On force le masquage des colonnes de prix
     if (isDeliveryNote) {
         activeColumns = activeColumns.filter(col => 
             col.id === 'name' || col.id === 'quantity'
         );
     }
 
-    // Calcul date échéance / validité
     let extraDateLabel = '';
     let extraDateValue = '';
     if (docType === 'Bon de Commande' && doc.expectedDate) {
@@ -171,12 +170,10 @@ const generateDocumentHTML = (
         extraDateValue = new Date(doc.expectedDate).toLocaleDateString('fr-FR');
     }
 
-    // Logo HTML
     const logoHtml = settings.logo 
         ? `<img src="${settings.logo}" style="max-height: 80px; max-width: 200px; object-fit: contain;" />` 
         : `<h1 style="font-size: 24px; font-weight: bold; color: ${primaryColor}; margin: 0;">${settings.companyName}</h1>`;
 
-    // Recipient Address HTML
     const recipientName = recipient.name;
     const recipientCompany = recipient.company ? `<div style="font-weight: bold;">${recipient.company}</div>` : '';
     const recipientEmail = recipient.email ? `<div>${recipient.email}</div>` : '';
@@ -184,11 +181,9 @@ const generateDocumentHTML = (
     const recipientAddress = recipient.address ? `<div style="margin-bottom:4px;">${recipient.address.replace(/\n/g, '<br/>')}</div>` : '';
     const recipientIce = recipient.ice ? `<div>ICE: ${recipient.ice}</div>` : '';
 
-    // Company Address HTML
     const companyAddress = settings.address ? settings.address.replace(/\n/g, '<br/>') : '';
     const companyContact = [settings.phone, settings.email, settings.website].filter(Boolean).join(' | ');
 
-    // Legal Identifiers
     const capitalDisplay = settings.capital ? `Capital: ${settings.capital}` : '';
     const legalIds = [
         settings.ice ? `ICE: ${settings.ice}` : '',
@@ -199,20 +194,18 @@ const generateDocumentHTML = (
         capitalDisplay
     ].filter(Boolean).join(' &nbsp;|&nbsp; ');
 
-    // --- Dynamic Table Construction ---
-
-    // Generate Header Row
     const headerRowHtml = activeColumns.map(col => {
         let align = 'left';
         let width = '';
-        if (col.id === 'quantity') { align = 'center'; width = 'width: 80px;'; }
-        else if (col.id === 'vat') { align = 'center'; width = 'width: 40px;'; }
-        else if (col.id === 'unitPrice' || col.id === 'total') { align = 'right'; width = 'width: 90px;'; }
+        // Adjusted widths and padding for better spacing
+        if (col.id === 'quantity') { align = 'center'; width = 'width: 11%;'; }
+        else if (col.id === 'vat') { align = 'center'; width = 'width: 11%;'; }
+        else if (col.id === 'unitPrice') { align = 'right'; width = 'width: 18%;'; }
+        else if (col.id === 'total') { align = 'right'; width = 'width: 18%;'; }
         
-        return `<th style="padding: 8px 10px; text-align: ${align}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${width}">${col.label}</th>`;
+        return `<th style="padding: 10px 22px; text-align: ${align}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${width}">${col.label}</th>`;
     }).join('');
 
-    // Generate Body Rows
     const rowsHtml = doc.lineItems.map((item, index) => {
         const cellsHtml = activeColumns.map(col => {
             let content = '';
@@ -246,14 +239,12 @@ const generateDocumentHTML = (
                     break;
             }
 
-            return `<td style="padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; ${style}">${content}</td>`;
+            return `<td style="padding: 12px 22px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; ${style}">${content}</td>`;
         }).join('');
 
-        return `<tr style="background-color: ${index % 2 === 0 ? '#fff' : '#f9fafb'};">${cellsHtml}</tr>`;
+        return `<tr class="item-row" style="background-color: ${index % 2 === 0 ? '#fff' : '#f9fafb'};">${cellsHtml}</tr>`;
     }).join('');
 
-
-    // Payment Info (if invoice/DL)
     let paymentInfoHtml = '';
     if (docType === 'Facture') {
         const paid = doc.amountPaid || doc.paymentAmount || 0;
@@ -268,129 +259,149 @@ const generateDocumentHTML = (
         }
     }
 
-    // 3. Template HTML
-    return `
-    <div style="width: 210mm; min-height: 295mm; padding: 12mm 15mm; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; background: white; box-sizing: border-box; display: flex; flex-direction: column; position: relative;">
-        
-        <!-- WATERMARK BACKGROUND -->
-        ${settings.logo ? `
-            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 0; pointer-events: none;">
-                <img src="${settings.logo}" style="width: 80%; max-height: 60%; object-fit: contain; opacity: 0.08; filter: grayscale(100%); margin-top: 120px;" />
-            </div>
-        ` : ''}
-
-        <!-- CONTENT WRAPPER (grows to push footer down) -->
-        <div style="flex: 1; display: flex; flex-direction: column; position: relative; z-index: 10;">
-            <!-- HEADER -->
-            <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
-                <div style="width: 50%;">
-                    ${logoHtml}
-                    <div style="margin-top: 15px; font-size: 12px; line-height: 1.5;">
-                        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${settings.companyName}</div>
-                        ${companyAddress}<br/>
-                        <div style="margin-top: 5px; color: #6b7280;">${companyContact}</div>
-                    </div>
-                </div>
-                <div style="width: 40%; text-align: right;">
-                    <div style="font-size: 26px; font-weight: bold; text-transform: uppercase; color: ${primaryColor}; margin-bottom: 10px;">${docType}</div>
-                    <div style="font-size: 16px; font-weight: 600; color: #111827;">N° ${displayId}</div>
-                    <div style="margin-top: 10px; font-size: 12px;">
-                        <div>Date : <b>${dateStr}</b></div>
-                        ${extraDateLabel ? `<div>${extraDateLabel} : <b>${extraDateValue}</b></div>` : ''}
-                        ${doc.reference ? `<div>Réf : <b>${doc.reference}</b></div>` : ''}
-                    </div>
+    const topHeaderHtml = `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div style="width: 50%;">
+                ${logoHtml}
+                <div style="margin-top: 15px; font-size: 12px; line-height: 1.5;">
+                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${settings.companyName}</div>
+                    ${companyAddress}<br/>
+                    <div style="margin-top: 5px; color: #6b7280;">${companyContact}</div>
                 </div>
             </div>
-
-            <!-- RECIPIENT -->
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 30px;">
-                <div style="width: 45%; background-color: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
-                    <div style="font-size: 10px; text-transform: uppercase; font-weight: 700; color: #9ca3af; margin-bottom: 8px;">Adressé à</div>
-                    <div style="font-size: 14px; color: #111827;">
-                        ${recipientCompany}
-                        <div>${recipientName}</div>
-                    </div>
-                    <div style="margin-top: 8px; font-size: 12px; color: #4b5563;">
-                        ${recipientAddress}
-                        ${recipientIce}
-                        ${recipientEmail}
-                        ${recipientPhone}
-                    </div>
-                </div>
-            </div>
-
-            <!-- SUBJECT -->
-            ${doc.subject ? `<div style="margin-bottom: 15px; font-weight: 600;">Objet : <span style="font-weight: normal;">${doc.subject}</span></div>` : ''}
-
-            <!-- TABLE -->
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                <thead>
-                    <tr style="background-color: ${primaryColor}; color: white;">
-                        ${headerRowHtml}
-                    </tr>
-                </thead>
-                <tbody>
-                    ${rowsHtml}
-                </tbody>
-            </table>
-
-            <!-- TOTALS & AMOUNT IN LETTERS (HIDDEN FOR DELIVERY NOTES) -->
-            ${!isDeliveryNote ? `
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-                
-                <!-- Amount in letters (Left side) -->
-                <div style="width: 55%; padding-top: 10px;">
-                    <div style="background-color: #f3f4f6; padding: 10px; border-radius: 4px; border-left: 3px solid ${primaryColor};">
-                        <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">Arrêté le présent document à la somme de :</div>
-                        <div style="font-size: 13px; color: #111827; font-weight: 600; font-style: italic;">
-                            ${amountInLetters}
-                        </div>
-                    </div>
-                    ${doc.notes ? `
-                        <div style="margin-top: 15px; font-size: 11px; color: #6b7280;">
-                            <span style="font-weight: 600;">Notes:</span> ${doc.notes}
-                        </div>
-                    ` : ''}
-                </div>
-
-                <!-- Totals (Right side) -->
-                <div style="width: 40%;">
-                    <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #e5e7eb;">
-                        <span>Total HT</span>
-                        <span style="font-weight: 600;">${subTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #e5e7eb;">
-                        <span>Total TVA</span>
-                        <span>${vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 16px; color: #000000; font-weight: bold; margin-top: 5px;">
-                        <span>Net à Payer</span>
-                        <span>${totalAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
-                    </div>
-                    ${paymentInfoHtml}
-                </div>
-            </div>
-            ` : `
-                <!-- Delivery Note Footer (Minimal) -->
-                <div style="display: flex; justify-content: space-between; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-                    <div style="width: 45%;">
-                        <div style="font-weight: bold; margin-bottom: 40px;">Signature Expéditeur</div>
-                    </div>
-                    <div style="width: 45%; text-align: right;">
-                        <div style="font-weight: bold; margin-bottom: 40px;">Signature & Cachet Client</div>
-                    </div>
-                </div>
-            `}
-
-            <!-- FOOTER (Pushed to bottom via flex layout) -->
-            <div style="text-align: center; margin-top: auto;">
-                ${settings.footerNotes ? `<div style="font-size: 12px; color: #000000; margin-bottom: 10px; white-space: pre-wrap;">${settings.footerNotes}</div>` : ''}
-                <div style="font-size: 11px; color: #000000; font-weight: 600; border-top: 2px solid #374151; padding-top: 8px;">
-                    ${legalIds}
+            <div style="width: 45%; text-align: right;">
+                <div style="font-size: 26px; font-weight: bold; text-transform: uppercase; color: ${primaryColor}; margin-bottom: 10px;">${docType}</div>
+                <div style="font-size: 16px; font-weight: 600; color: #111827;">N° ${displayId}</div>
+                <div style="margin-top: 10px; font-size: 12px;">
+                    <div>Date : <b>${dateStr}</b></div>
+                    ${extraDateLabel ? `<div>${extraDateLabel} : <b>${extraDateValue}</b></div>` : ''}
+                    ${doc.reference ? `<div>Réf : <b>${doc.reference}</b></div>` : ''}
                 </div>
             </div>
         </div>
+    `;
 
+    const clientInfoHtml = `
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+            <div style="width: 45%; background-color: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
+                <div style="font-size: 10px; text-transform: uppercase; font-weight: 700; color: #9ca3af; margin-bottom: 8px;">Adressé à</div>
+                <div style="font-size: 14px; color: #111827;">
+                    ${recipientCompany}
+                    <div>${recipientName}</div>
+                </div>
+                <div style="margin-top: 8px; font-size: 12px; color: #4b5563;">
+                    ${recipientAddress}
+                    ${recipientIce}
+                    ${recipientEmail}
+                    ${recipientPhone}
+                </div>
+            </div>
+        </div>
+    `;
+
+    const subjectHtml = doc.subject ? `<div style="margin-bottom: 15px; font-weight: 600;">Objet : <span style="font-weight: normal;">${doc.subject}</span></div>` : '';
+
+    const itemsTableHtml = `
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+                <tr style="background-color: ${primaryColor}; color: white; -webkit-print-color-adjust: exact;">
+                    ${headerRowHtml}
+                </tr>
+            </thead>
+            <tbody>
+                ${rowsHtml}
+            </tbody>
+        </table>
+    `;
+
+    const totalsHtml = !isDeliveryNote ? `
+        <div class="totals-section" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+            <div style="width: 55%; padding-top: 10px;">
+                <div style="background-color: #f3f4f6; padding: 10px; border-radius: 4px; border-left: 3px solid ${primaryColor};">
+                    <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">${txtAmountInWords}</div>
+                    <div style="font-size: 13px; color: #111827; font-weight: 600; font-style: italic;">
+                        ${amountInLetters}
+                    </div>
+                </div>
+                ${doc.notes ? `
+                    <div style="margin-top: 15px; font-size: 11px; color: #6b7280;">
+                        <span style="font-weight: 600;">Notes:</span> ${doc.notes}
+                    </div>
+                ` : ''}
+            </div>
+            <div style="width: 40%;">
+                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span>${txtTotalHt}</span>
+                    <span style="font-weight: 600;">${subTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span>${txtTotalTax}</span>
+                    <span>${vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 16px; color: #000000; font-weight: bold; margin-top: 5px;">
+                    <span>${txtTotalNet}</span>
+                    <span>${totalAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                </div>
+                ${paymentInfoHtml}
+            </div>
+        </div>
+    ` : `
+        <div class="totals-section" style="display: flex; justify-content: space-between; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+            <div style="width: 45%;">
+                <div style="font-weight: bold; margin-bottom: 40px;">${txtSigSender}</div>
+            </div>
+            <div style="width: 45%; text-align: right;">
+                <div style="font-weight: bold; margin-bottom: 40px;">${txtSigRecipient}</div>
+            </div>
+        </div>
+    `;
+
+    const footerHtml = `
+        <div style="text-align: center;">
+            ${settings.footerNotes ? `<div style="font-size: 12px; color: #000000; margin-bottom: 5px; white-space: pre-wrap;">${settings.footerNotes}</div>` : ''}
+            <div style="font-size: 10px; color: #000000; font-weight: normal;">
+                ${legalIds}
+            </div>
+        </div>
+    `;
+
+    return `
+    <div style="width: 210mm; min-height: 296mm; background: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; display: flex; flex-direction: column; box-sizing: border-box; padding: 15mm 15mm 8mm 15mm; position: relative; overflow: hidden;">
+        <style>
+            @media print {
+                @page { margin: 0; size: A4; }
+                body { margin: 0; }
+            }
+            * { box-sizing: border-box; }
+            .content-grow { flex: 1; z-index: 2; position: relative; }
+            tr.item-row { page-break-inside: avoid; break-inside: avoid; }
+            .totals-section { page-break-inside: avoid; break-inside: avoid; }
+        </style>
+        
+        <!-- WATERMARK -->
+        ${settings.logo ? `
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; z-index: 0; opacity: 0.08; pointer-events: none;">
+                <img src="${settings.logo}" style="width: 100%; height: auto; object-fit: contain; filter: grayscale(100%);" />
+            </div>
+        ` : ''}
+
+        <!-- HEADER -->
+        <div style="position: relative; z-index: 2;">
+            ${topHeaderHtml}
+            ${clientInfoHtml}
+            ${subjectHtml}
+        </div>
+
+        <!-- CONTENT (Grows to push footer) -->
+        <div class="content-grow">
+            ${itemsTableHtml}
+            ${totalsHtml}
+        </div>
+
+        <!-- FOOTER (Pushed to bottom) -->
+        <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #000000; position: relative; z-index: 2;">
+            ${footerHtml}
+        </div>
     </div>
     `;
 };
@@ -402,7 +413,6 @@ export const generatePDF = async (
     settings: CompanySettings | null,
     recipient: Client | Supplier | undefined
 ): Promise<void> => {
-    // Check library
     if (typeof (window as any).html2pdf === 'undefined') {
         throw new Error("Le module de génération PDF n'est pas encore chargé. Veuillez vérifier votre connexion internet et rafraîchir la page.");
     }
@@ -410,10 +420,9 @@ export const generatePDF = async (
     const template = generateDocumentHTML(docType, doc, settings, recipient);
     const displayId = doc.documentId || doc.id;
 
-    // 4. Conversion HTML to PDF with DOM mounting
     const container = document.createElement('div');
     container.style.position = 'absolute';
-    container.style.left = '-9999px'; // Hide off-screen
+    container.style.left = '-9999px'; 
     container.style.top = '0';
     container.innerHTML = template;
     
@@ -422,24 +431,34 @@ export const generatePDF = async (
     try {
         const contentElement = container.firstElementChild;
         
-        // Configurations html2pdf
         const opt = {
-            margin: 0, // No margin, handled by CSS padding
+            margin: 0, // Zero margin here, handling padding inside CSS to control height better
             filename: `${docType}_${displayId}.pdf`,
-            image: { type: 'jpeg', quality: 1 }, // Quality 1.0 (Max)
+            image: { type: 'jpeg', quality: 1 },
+            // CSS mode respects flexbox better for footer positioning
+            pagebreak: { mode: ['css', 'legacy'] },
             html2canvas: { 
-                scale: 4, // Increased scale for high resolution (was 2)
+                scale: 2, 
                 useCORS: true, 
                 logging: false,
-                letterRendering: true // Better text rendering
+                letterRendering: true
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
-        // Trigger download
-        await (window as any).html2pdf().set(opt).from(contentElement).save();
+        await (window as any).html2pdf().set(opt).from(contentElement).toPdf().get('pdf').then((pdf: any) => {
+            const totalPages = pdf.internal.getNumberOfPages();
+            for (let i = 1; i <= totalPages; i++) {
+                pdf.setPage(i);
+                pdf.setFontSize(9);
+                pdf.setTextColor(100);
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                // Right aligned page numbering
+                pdf.text(`Page ${i} / ${totalPages}`, pageWidth - 15, pageHeight - 10, { align: 'right' });
+            }
+        }).save();
     } finally {
-        // Clean up
         document.body.removeChild(container);
     }
 };
@@ -466,6 +485,8 @@ export const printDocument = (
                         @media print {
                             @page { margin: 0; size: A4; }
                             body { -webkit-print-color-adjust: exact; }
+                            tr.item-row { page-break-inside: avoid; }
+                            .totals-section { page-break-inside: avoid; }
                         }
                     </style>
                 </head>
@@ -476,7 +497,6 @@ export const printDocument = (
         `);
         printWindow.document.close();
         
-        // Wait for content (and images) to load slightly before printing
         printWindow.focus();
         setTimeout(() => {
             printWindow.print();
