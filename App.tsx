@@ -20,6 +20,7 @@ import StockManagement from './components/StockManagement';
 import DeliveryNotesComponent from './components/DeliveryNotes';
 import PurchaseOrders from './components/PurchaseOrders';
 import CreditNotesComponent from './components/CreditNotes';
+import PaymentTracking from './components/PaymentTracking';
 import Statistics from './components/Statistics';
 import LandingPage from './components/LandingPage';
 import Login from './components/Login';
@@ -795,6 +796,14 @@ const MainContent: React.FC = () => {
                                     clients={clients}
                                     products={products}
                                     companySettings={companySettings}
+                                />
+                            } />
+
+                            <Route path="/sales/payments" element={
+                                <PaymentTracking
+                                    invoices={invoices}
+                                    payments={payments}
+                                    onAddPayment={addPayment}
                                 />
                             } />
                             
