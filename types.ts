@@ -7,6 +7,12 @@ export enum InvoiceStatus {
     Partial = 'Partiellement payée'
 }
 
+export enum CreditNoteStatus {
+    Draft = 'Brouillon',
+    Validated = 'Validé',
+    Refunded = 'Remboursé'
+}
+
 export interface Client {
     id: string;
     clientCode: string;
@@ -117,6 +123,22 @@ export interface Invoice {
     amountPaid: number; // Track received payments
     status: InvoiceStatus;
     subject?: string;
+    reference?: string;
+    lineItems: LineItem[];
+    subTotal: number;
+    vatAmount: number;
+}
+
+export interface CreditNote {
+    id: string;
+    documentId?: string; // Human readable ID (AV00001)
+    invoiceId?: string; // Link to original invoice
+    clientId: string;
+    clientName: string;
+    date: string;
+    amount: number;
+    status: CreditNoteStatus;
+    subject?: string; // Reason
     reference?: string;
     lineItems: LineItem[];
     subTotal: number;

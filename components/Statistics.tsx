@@ -8,18 +8,19 @@ import {
     Calendar, TrendingUp, TrendingDown, DollarSign, 
     CreditCard, ShoppingBag, ArrowUpRight, ArrowDownRight, Filter, PieChart as PieIcon, Activity
 } from 'lucide-react';
-import { Invoice, Payment, PurchaseOrder, Product, PurchaseOrderStatus, InvoiceStatus } from '../types';
+import { Invoice, Payment, PurchaseOrder, Product, PurchaseOrderStatus, InvoiceStatus, CreditNote, CreditNoteStatus } from '../types';
 
 interface StatisticsProps {
     invoices: Invoice[];
     payments: Payment[];
     purchaseOrders: PurchaseOrder[];
     products: Product[];
+    creditNotes?: CreditNote[];
 }
 
 type DateRangeType = 'today' | 'week' | 'month' | 'year' | 'custom';
 
-const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrders, products }) => {
+const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrders, products, creditNotes = [] }) => {
     // State for filtering
     const [rangeType, setRangeType] = useState<DateRangeType>('month');
     const [startDate, setStartDate] = useState<string>('');
@@ -79,13 +80,23 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             const periodPayments = payments.filter(p => isInRange(p.date, s, e));
             const revenue = periodPayments.reduce((sum, p) => sum + p.amount, 0);
 
+            // Deduct Validated Credit Notes
+            const periodCreditNotes = creditNotes.filter(cn => 
+                (cn.status === CreditNoteStatus.Validated || cn.status === CreditNoteStatus.Refunded) &&
+                isInRange(cn.date, s, e)
+            );
+            const totalCreditNotes = periodCreditNotes.reduce((sum, cn) => sum + cn.amount, 0);
+
             const periodExpenses = purchaseOrders.filter(po => 
                 (po.status === PurchaseOrderStatus.Received || po.status === PurchaseOrderStatus.Sent) && 
                 isInRange(po.date, s, e)
             );
             const expenses = periodExpenses.reduce((sum, po) => sum + po.totalAmount, 0);
 
-            return { revenue, expenses, profit: revenue - expenses };
+            // Net Revenue = Payments - Credit Notes
+            const netRevenue = revenue - totalCreditNotes;
+
+            return { revenue: netRevenue, expenses, profit: netRevenue - expenses };
         };
 
         const current = calculateFinancials(start, end);
@@ -94,6 +105,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
         // Evolution Chart Data
         const chartDataMap = new Map<string, { date: string, revenue: number, expense: number, profit: number }>();
         
+        // Add Payments
         payments.filter(p => isInRange(p.date, start, end)).forEach(p => {
             const d = p.date;
             if (!chartDataMap.has(d)) chartDataMap.set(d, { date: d, revenue: 0, expense: 0, profit: 0 });
@@ -102,6 +114,16 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             entry.profit += p.amount;
         });
 
+        // Subtract Credit Notes
+        creditNotes.filter(cn => (cn.status === CreditNoteStatus.Validated || cn.status === CreditNoteStatus.Refunded) && isInRange(cn.date, start, end)).forEach(cn => {
+            const d = cn.date;
+            if (!chartDataMap.has(d)) chartDataMap.set(d, { date: d, revenue: 0, expense: 0, profit: 0 });
+            const entry = chartDataMap.get(d)!;
+            entry.revenue -= cn.amount;
+            entry.profit -= cn.amount;
+        });
+
+        // Add Expenses
         purchaseOrders.filter(po => (po.status === PurchaseOrderStatus.Received || po.status === PurchaseOrderStatus.Sent) && isInRange(po.date, start, end)).forEach(po => {
             const d = po.date;
             if (!chartDataMap.has(d)) chartDataMap.set(d, { date: d, revenue: 0, expense: 0, profit: 0 });
@@ -138,7 +160,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
 
         return { currentMetrics: current, previousMetrics: previous, evolutionData, productPerformance };
 
-    }, [invoices, payments, purchaseOrders, products, rangeType, startDate, endDate]);
+    }, [invoices, payments, purchaseOrders, products, creditNotes, rangeType, startDate, endDate]);
 
     // --- Render Helpers ---
 
@@ -234,7 +256,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                 );
                             })()}
                         </div>
-                        <p className="text-slate-500 text-sm font-medium">Chiffre d'Affaires</p>
+                        <p className="text-slate-500 text-sm font-medium">Chiffre d'Affaires (Net)</p>
                         <h3 className="text-3xl font-extrabold text-slate-900 mt-1">{formatMoney(currentMetrics.revenue)}</h3>
                     </div>
                 </div>

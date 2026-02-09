@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { Invoice, InvoiceStatus, Client, Product, CompanySettings } from '../types';
+import { Invoice, InvoiceStatus, Client, Product, CompanySettings, CreditNote, CreditNoteStatus } from '../types';
 import { Users, Package, FileText, AlertCircle, AlertTriangle, DollarSign, Gift, Archive, CheckCircle, ArrowRight, UserPlus, List, ChevronRight, TrendingUp, ShoppingBag, CalendarDays, Clock, Filter } from 'lucide-react';
 
 interface DashboardProps {
@@ -10,6 +10,7 @@ interface DashboardProps {
     clients: Client[];
     products: Product[];
     companySettings?: CompanySettings | null;
+    creditNotes?: CreditNote[];
 }
 
 const StatCard: React.FC<{
@@ -49,7 +50,7 @@ const ShortcutCard = ({ icon: Icon, label, desc, onClick, colorClass }: { icon: 
 
 type ChartPeriod = 'day' | 'week' | 'month' | 'year' | 'custom';
 
-const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, companySettings }) => {
+const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, companySettings, creditNotes = [] }) => {
     const navigate = useNavigate();
     const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('year');
     const [customStartDate, setCustomStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
@@ -78,8 +79,16 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                 unpaidAmount += (inv.amount - (inv.amountPaid || 0));
             }
         });
+
+        // Subtract validated credit notes from unpaid amount (Financial Impact)
+        const validatedCreditNotesAmount = creditNotes
+            .filter(cn => cn.status === CreditNoteStatus.Validated)
+            .reduce((sum, cn) => sum + cn.amount, 0);
+        
+        unpaidAmount = Math.max(0, unpaidAmount - validatedCreditNotesAmount);
+
         return { totalRevenue, unpaidInvoicesCount, unpaidAmount };
-    }, [invoices]);
+    }, [invoices, creditNotes]);
 
     const stats = [
         { 

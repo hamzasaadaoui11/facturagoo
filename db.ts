@@ -1,5 +1,5 @@
 
-import { Client, Product, Supplier, Quote, Invoice, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder } from './types';
+import { Client, Product, Supplier, Quote, Invoice, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, CreditNote } from './types';
 import { supabase } from './supabaseClient';
 
 // Correspondance entre les noms utilisés dans le service et les noms de tables Supabase
@@ -9,6 +9,7 @@ const TABLE_MAP: Record<string, string> = {
     'suppliers': 'suppliers',
     'quotes': 'quotes',
     'invoices': 'invoices',
+    'credit_notes': 'credit_notes',
     'settings': 'settings',
     'payments': 'payments',
     'stock_movements': 'stock_movements',
@@ -172,6 +173,12 @@ export const dbService = {
         add: (item: Invoice) => add<Invoice>('invoices', item),
         update: (item: Invoice) => update<Invoice>('invoices', item),
         delete: (id: string) => remove('invoices', id),
+    },
+    creditNotes: {
+        getAll: () => getAll<CreditNote>('credit_notes'),
+        add: (item: CreditNote) => add<CreditNote>('credit_notes', item),
+        update: (item: CreditNote) => update<CreditNote>('credit_notes', item),
+        delete: (id: string) => remove('credit_notes', id),
     },
     payments: {
         getAll: () => getAll<Payment>('payments'),

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Menu, X, Files } from 'lucide-react';
-import { Client, Product, Supplier, Quote, QuoteStatus, Invoice, InvoiceStatus, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, PurchaseOrderStatus } from './types';
+import { Client, Product, Supplier, Quote, QuoteStatus, Invoice, InvoiceStatus, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, PurchaseOrderStatus, CreditNote, CreditNoteStatus } from './types';
 import { dbService, initDB } from './db';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
@@ -19,6 +19,7 @@ import TemplateCustomizer from './components/TemplateCustomizer';
 import StockManagement from './components/StockManagement';
 import DeliveryNotesComponent from './components/DeliveryNotes';
 import PurchaseOrders from './components/PurchaseOrders';
+import CreditNotesComponent from './components/CreditNotes';
 import Statistics from './components/Statistics';
 import LandingPage from './components/LandingPage';
 import Login from './components/Login';
@@ -61,6 +62,7 @@ const MainContent: React.FC = () => {
     const [quotes, setQuotes] = useState<Quote[]>([]);
     const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [creditNotes, setCreditNotes] = useState<CreditNote[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
     const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
     const [deliveryNotes, setDeliveryNotes] = useState<DeliveryNote[]>([]);
@@ -73,12 +75,13 @@ const MainContent: React.FC = () => {
             try {
                 await initDB();
                 
-                const [clientsData, productsData, suppliersData, quotesData, invoicesData, settingsData, paymentsData, movementsData, deliveryData, purchaseOrdersData] = await Promise.all([
+                const [clientsData, productsData, suppliersData, quotesData, invoicesData, creditNotesData, settingsData, paymentsData, movementsData, deliveryData, purchaseOrdersData] = await Promise.all([
                     dbService.clients.getAll(),
                     dbService.products.getAll(),
                     dbService.suppliers.getAll(),
                     dbService.quotes.getAll(),
                     dbService.invoices.getAll(),
+                    dbService.creditNotes.getAll().catch(() => []), // Fail gracefully if table missing
                     dbService.settings.get(),
                     dbService.payments.getAll(),
                     dbService.stockMovements.getAll(),
@@ -91,6 +94,7 @@ const MainContent: React.FC = () => {
                 setSuppliers(suppliersData.sort((a,b) => (b.supplierCode || '').localeCompare(a.supplierCode || '')));
                 setQuotes(quotesData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
                 setInvoices(invoicesData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+                setCreditNotes(creditNotesData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
                 setPayments(paymentsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
                 setStockMovements(movementsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
                 setDeliveryNotes(deliveryData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
@@ -131,7 +135,7 @@ const MainContent: React.FC = () => {
         return `${prefix}${(maxCode + 1).toString().padStart(3, '0')}`;
     };
 
-    const generateDocumentId = (type: 'quote' | 'invoice' | 'purchaseOrder' | 'deliveryNote', currentItems: { id: string, documentId?: string }[]) => {
+    const generateDocumentId = (type: 'quote' | 'invoice' | 'purchaseOrder' | 'deliveryNote' | 'creditNote', currentItems: { id: string, documentId?: string }[]) => {
         const currentYear = new Date().getFullYear();
         let prefix = '';
         
@@ -140,6 +144,7 @@ const MainContent: React.FC = () => {
             case 'quote': prefix = 'DEV'; break;
             case 'deliveryNote': prefix = 'BL'; break;
             case 'purchaseOrder': prefix = 'BC'; break;
+            case 'creditNote': prefix = 'AV'; break;
             default: prefix = 'DOC';
         }
 
@@ -442,6 +447,77 @@ const MainContent: React.FC = () => {
         }
     };
 
+    // --- Credit Notes Logic ---
+    const addCreditNote = async (creditNoteData: Omit<CreditNote, 'id'>) => {
+        try {
+            const documentId = generateDocumentId('creditNote', creditNotes);
+            const newCreditNote: CreditNote = {
+                id: crypto.randomUUID(),
+                documentId: documentId,
+                ...creditNoteData
+            };
+            await dbService.creditNotes.add(newCreditNote);
+            setCreditNotes(prev => [newCreditNote, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+        } catch (e: any) {
+            console.error("Error creating credit note", e);
+            alert("Erreur création avoir: " + e.message);
+            throw e;
+        }
+    };
+
+    const updateCreditNote = async (updatedCreditNote: CreditNote) => {
+        await dbService.creditNotes.update(updatedCreditNote);
+        setCreditNotes(prev => prev.map(cn => cn.id === updatedCreditNote.id ? updatedCreditNote : cn));
+    };
+
+    const deleteCreditNote = async (id: string) => {
+        try {
+            await dbService.creditNotes.delete(id);
+            setCreditNotes(prev => prev.filter(cn => cn.id !== id));
+        } catch (e: any) {
+            alert("Erreur suppression avoir: " + e.message);
+        }
+    };
+
+    const updateCreditNoteStatus = async (id: string, newStatus: CreditNoteStatus) => {
+        const cn = creditNotes.find(c => c.id === id);
+        if (cn) {
+            const updatedCn = { ...cn, status: newStatus };
+            await dbService.creditNotes.update(updatedCn);
+            setCreditNotes(prev => prev.map(c => c.id === id ? updatedCn : c));
+        }
+    };
+
+    const createCreditNoteFromInvoice = async (invoiceId: string) => {
+        const invoice = invoices.find(inv => inv.id === invoiceId);
+        if (!invoice) return;
+
+        try {
+            const documentId = generateDocumentId('creditNote', creditNotes);
+            const newCreditNote: CreditNote = {
+                id: crypto.randomUUID(),
+                documentId: documentId,
+                invoiceId: invoice.documentId || invoice.id,
+                clientId: invoice.clientId,
+                clientName: invoice.clientName,
+                date: new Date().toISOString().split('T')[0],
+                status: CreditNoteStatus.Draft,
+                subject: `Avoir sur facture ${invoice.documentId || invoice.id}`,
+                reference: invoice.reference,
+                lineItems: invoice.lineItems,
+                subTotal: invoice.subTotal,
+                vatAmount: invoice.vatAmount,
+                amount: invoice.amount
+            };
+            await dbService.creditNotes.add(newCreditNote);
+            setCreditNotes(prev => [newCreditNote, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+            // Redirect to credit notes page optionally or show success
+            navigate('/sales/credit-notes');
+        } catch (e: any) {
+            alert("Erreur création avoir: " + e.message);
+        }
+    };
+
     // Delivery Notes
     const createDeliveryNote = async (noteData: Omit<DeliveryNote, 'id'>) => {
         try {
@@ -669,13 +745,14 @@ const MainContent: React.FC = () => {
                     <main className="p-4 sm:p-6 lg:p-8 flex-1">
                         <Routes>
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                            <Route path="/dashboard" element={<Dashboard invoices={invoices} clients={clients} products={products} companySettings={companySettings} />} />
+                            <Route path="/dashboard" element={<Dashboard invoices={invoices} clients={clients} products={products} companySettings={companySettings} creditNotes={creditNotes} />} />
                             <Route path="/statistics" element={
                                 <Statistics 
                                     invoices={invoices} 
                                     payments={payments} 
                                     purchaseOrders={purchaseOrders} 
                                     products={products}
+                                    creditNotes={creditNotes}
                                 />
                             } />
                             
@@ -701,6 +778,20 @@ const MainContent: React.FC = () => {
                                     onCreateInvoice={addInvoice}
                                     onUpdateInvoice={updateInvoice}
                                     onDeleteInvoice={deleteInvoice}
+                                    onCreateCreditNote={createCreditNoteFromInvoice}
+                                    clients={clients}
+                                    products={products}
+                                    companySettings={companySettings}
+                                />
+                            } />
+
+                            <Route path="/sales/credit-notes" element={
+                                <CreditNotesComponent
+                                    creditNotes={creditNotes}
+                                    onUpdateCreditNoteStatus={updateCreditNoteStatus}
+                                    onCreateCreditNote={addCreditNote}
+                                    onUpdateCreditNote={updateCreditNote}
+                                    onDeleteCreditNote={deleteCreditNote}
                                     clients={clients}
                                     products={products}
                                     companySettings={companySettings}

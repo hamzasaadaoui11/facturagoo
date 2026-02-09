@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Header from './Header';
-import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical, Trash2 } from 'lucide-react';
+import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical, Trash2, ArrowLeftRight } from 'lucide-react';
 import { Invoice, InvoiceStatus, Payment, Client, Product, CompanySettings } from '../types';
 import CreateInvoiceModal from './CreateInvoiceModal';
 import ConfirmationModal from './ConfirmationModal';
@@ -23,12 +23,13 @@ interface InvoicesProps {
     onCreateInvoice?: (invoice: any) => Promise<any> | void;
     onUpdateInvoice?: (invoice: any, id: string) => Promise<any> | void;
     onDeleteInvoice?: (id: string) => Promise<void> | void;
+    onCreateCreditNote?: (invoiceId: string) => void;
     clients?: Client[];
     products?: Product[];
     companySettings?: CompanySettings | null;
 }
 
-const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, onAddPayment, onCreateInvoice, onUpdateInvoice, onDeleteInvoice, clients = [], products = [], companySettings }) => {
+const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, onAddPayment, onCreateInvoice, onUpdateInvoice, onDeleteInvoice, onCreateCreditNote, clients = [], products = [], companySettings }) => {
     const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
     const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
@@ -148,6 +149,13 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
             printDocument('Facture', invoice, companySettings || null, client);
         } catch (error: any) {
             alert(error.message);
+        }
+    };
+
+    const handleCreateCreditNote = (invoiceId: string) => {
+        if(onCreateCreditNote) {
+            onCreateCreditNote(invoiceId);
+            setActiveMenuId(null);
         }
     };
 
@@ -310,6 +318,15 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                 className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                             >
                                 <CreditCard size={16} className="mr-3 text-emerald-600" /> Paiement
+                            </button>
+                        )}
+
+                        {onCreateCreditNote && (
+                            <button 
+                                onClick={() => handleCreateCreditNote(activeInvoice.id)} 
+                                className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                            >
+                                <ArrowLeftRight size={16} className="mr-3 text-purple-600" /> Créer un avoir
                             </button>
                         )}
                         

@@ -1,5 +1,5 @@
 
-import { CompanySettings, Invoice, Quote, DeliveryNote, PurchaseOrder, Client, Supplier, LineItem, DocumentColumn } from '../types';
+import { CompanySettings, Invoice, Quote, DeliveryNote, PurchaseOrder, Client, Supplier, LineItem, DocumentColumn, CreditNote } from '../types';
 
 interface DocumentData {
     id: string;
@@ -18,9 +18,10 @@ interface DocumentData {
     dueDate?: string; 
     expiryDate?: string; 
     expectedDate?: string; 
+    invoiceId?: string; // For Credit Notes
 }
 
-type DocumentType = 'Facture' | 'Devis' | 'Bon de Livraison' | 'Bon de Commande';
+type DocumentType = 'Facture' | 'Devis' | 'Bon de Livraison' | 'Bon de Commande' | 'Avoir';
 
 // --- Utilitaires de conversion Chiffres vers Lettres (Français) ---
 
@@ -138,7 +139,7 @@ const generateDocumentHTML = (
     const labels = settings.documentLabels || {};
     const txtTotalHt = labels.totalHt || 'Total HT';
     const txtTotalTax = labels.totalTax || 'Total TVA';
-    const txtTotalNet = labels.totalNet || 'Net à Payer';
+    const txtTotalNet = labels.totalNet || (docType === 'Avoir' ? 'Total Avoir' : 'Net à Payer');
     const txtAmountInWords = labels.amountInWordsPrefix || 'Arrêté le présent document à la somme de :';
     const txtSigSender = labels.signatureSender || 'Signature Expéditeur';
     const txtSigRecipient = labels.signatureRecipient || 'Signature & Cachet Client';
@@ -152,6 +153,10 @@ const generateDocumentHTML = (
     
     const displayId = doc.documentId || doc.id;
     const isDeliveryNote = docType === 'Bon de Livraison';
+
+    // Ensure document type title is uppercase and correct
+    let titleDisplay = docType.toUpperCase();
+    if (docType === 'Avoir') titleDisplay = "FACTURE D’AVOIR";
 
     let activeColumns = (settings.documentColumns && settings.documentColumns.length > 0) 
         ? settings.documentColumns.filter(c => c.visible).sort((a, b) => a.order - b.order)
@@ -270,12 +275,13 @@ const generateDocumentHTML = (
                 </div>
             </div>
             <div style="width: 45%; text-align: right;">
-                <div style="font-size: 26px; font-weight: bold; text-transform: uppercase; color: ${primaryColor}; margin-bottom: 10px;">${docType}</div>
+                <div style="font-size: 26px; font-weight: bold; text-transform: uppercase; color: ${primaryColor}; margin-bottom: 10px;">${titleDisplay}</div>
                 <div style="font-size: 16px; font-weight: 600; color: #111827;">N° ${displayId}</div>
                 <div style="margin-top: 10px; font-size: 12px;">
                     <div>Date : <b>${dateStr}</b></div>
                     ${extraDateLabel ? `<div>${extraDateLabel} : <b>${extraDateValue}</b></div>` : ''}
                     ${doc.reference ? `<div>Réf : <b>${doc.reference}</b></div>` : ''}
+                    ${doc.invoiceId ? `<div>Réf. Facture : <b>${doc.invoiceId}</b></div>` : ''}
                 </div>
             </div>
         </div>
@@ -433,7 +439,7 @@ export const generatePDF = async (
         
         const opt = {
             margin: 0, // Zero margin here, handling padding inside CSS to control height better
-            filename: `${docType}_${displayId}.pdf`,
+            filename: `${docType.toLowerCase()}_${displayId}.pdf`,
             image: { type: 'jpeg', quality: 1 },
             // CSS mode respects flexbox better for footer positioning
             pagebreak: { mode: ['css', 'legacy'] },

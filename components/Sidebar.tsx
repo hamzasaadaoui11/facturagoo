@@ -28,6 +28,7 @@ const navigation = [
         children: [
             { name: 'Devis', href: '/sales/quotes' },
             { name: 'Factures', href: '/sales/invoices' },
+            { name: 'Avoirs', href: '/sales/credit-notes' },
             { name: 'Bons de livraison', href: '/sales/delivery' },
         ],
     },
