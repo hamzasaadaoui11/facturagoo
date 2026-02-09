@@ -21,6 +21,10 @@ interface DocumentData {
     invoiceId?: string; // For Credit Notes
 }
 
+interface PDFOptions {
+    showPrices?: boolean;
+}
+
 type DocumentType = 'Facture' | 'Devis' | 'Bon de Livraison' | 'Bon de Commande' | 'Avoir';
 
 // --- Utilitaires de conversion Chiffres vers Lettres (Français) ---
@@ -125,7 +129,8 @@ const generateDocumentHTML = (
     docType: DocumentType,
     doc: DocumentData,
     settings: CompanySettings | null,
-    recipient: Client | Supplier | undefined
+    recipient: Client | Supplier | undefined,
+    options?: PDFOptions
 ): string => {
     if (!settings || !settings.companyName) {
         throw new Error("Impossible de générer le document : Les informations de l'entreprise (Nom) sont manquantes dans les paramètres.");
@@ -134,6 +139,8 @@ const generateDocumentHTML = (
     if (!recipient) {
         throw new Error("Impossible de générer le document : Les informations du client/fournisseur sont introuvables.");
     }
+
+    const showPrices = options?.showPrices !== false;
 
     // Extract custom labels with defaults
     const labels = settings.documentLabels || {};
@@ -162,10 +169,8 @@ const generateDocumentHTML = (
         ? settings.documentColumns.filter(c => c.visible).sort((a, b) => a.order - b.order)
         : DEFAULT_COLUMNS;
 
-    if (isDeliveryNote) {
-        activeColumns = activeColumns.filter(col => 
-            col.id === 'name' || col.id === 'quantity'
-        );
+    if (isDeliveryNote && !showPrices) {
+        activeColumns = activeColumns.filter(c => c.id === 'name' || c.id === 'quantity');
     }
 
     let extraDateLabel = '';
@@ -251,7 +256,8 @@ const generateDocumentHTML = (
     }).join('');
 
     let paymentInfoHtml = '';
-    if (docType === 'Facture') {
+    // Show payment info for Invoice AND Delivery Note if payment recorded AND prices shown
+    if ((docType === 'Facture' || docType === 'Bon de Livraison') && showPrices) {
         const paid = doc.amountPaid || doc.paymentAmount || 0;
         const remaining = totalAmount - paid;
         if (paid > 0) {
@@ -320,7 +326,8 @@ const generateDocumentHTML = (
         </table>
     `;
 
-    const totalsHtml = !isDeliveryNote ? `
+    // Financials Block
+    const financialsHtml = `
         <div class="totals-section" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
             <div style="width: 55%; padding-top: 10px;">
                 <div style="background-color: #f3f4f6; padding: 10px; border-radius: 4px; border-left: 3px solid ${primaryColor};">
@@ -351,7 +358,17 @@ const generateDocumentHTML = (
                 ${paymentInfoHtml}
             </div>
         </div>
-    ` : `
+    `;
+
+    // Notes only block (for when prices are hidden)
+    const notesOnlyHtml = doc.notes ? `
+        <div style="margin-bottom: 20px; font-size: 11px; color: #6b7280;">
+            <span style="font-weight: 600;">Notes:</span> ${doc.notes}
+        </div>
+    ` : '';
+
+    // Signatures Block
+    const signaturesHtml = `
         <div class="totals-section" style="display: flex; justify-content: space-between; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
             <div style="width: 45%;">
                 <div style="font-weight: bold; margin-bottom: 40px;">${txtSigSender}</div>
@@ -361,6 +378,19 @@ const generateDocumentHTML = (
             </div>
         </div>
     `;
+
+    // Construct final HTML based on type and options
+    let totalsHtml = '';
+    
+    if (isDeliveryNote) {
+        if (!showPrices) {
+            totalsHtml = notesOnlyHtml + signaturesHtml;
+        } else {
+            totalsHtml = financialsHtml + signaturesHtml;
+        }
+    } else {
+        totalsHtml = financialsHtml;
+    }
 
     const footerHtml = `
         <div style="text-align: center;">
@@ -417,13 +447,14 @@ export const generatePDF = async (
     docType: DocumentType,
     doc: DocumentData,
     settings: CompanySettings | null,
-    recipient: Client | Supplier | undefined
+    recipient: Client | Supplier | undefined,
+    options?: PDFOptions
 ): Promise<void> => {
     if (typeof (window as any).html2pdf === 'undefined') {
         throw new Error("Le module de génération PDF n'est pas encore chargé. Veuillez vérifier votre connexion internet et rafraîchir la page.");
     }
 
-    const template = generateDocumentHTML(docType, doc, settings, recipient);
+    const template = generateDocumentHTML(docType, doc, settings, recipient, options);
     const displayId = doc.documentId || doc.id;
 
     const container = document.createElement('div');
@@ -474,9 +505,10 @@ export const printDocument = (
     docType: DocumentType,
     doc: DocumentData,
     settings: CompanySettings | null,
-    recipient: Client | Supplier | undefined
+    recipient: Client | Supplier | undefined,
+    options?: PDFOptions
 ): void => {
-    const htmlContent = generateDocumentHTML(docType, doc, settings, recipient);
+    const htmlContent = generateDocumentHTML(docType, doc, settings, recipient, options);
     const displayId = doc.documentId || doc.id;
 
     const printWindow = window.open('', '_blank');

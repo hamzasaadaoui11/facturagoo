@@ -167,7 +167,8 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         <div className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`} aria-modal="true">
             <div className="absolute inset-0 bg-neutral-900/75 backdrop-blur-sm" onClick={handleClose}></div>
             
-            <div className={`relative w-full max-w-2xl bg-white rounded-lg shadow-xl transition-all duration-200 ease-in-out flex flex-col max-h-[90vh] ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+            {/* CHANGED: max-w-2xl -> md:max-w-4xl AND added h-full md:h-auto logic for better responsiveness */}
+            <div className={`relative w-full md:max-w-4xl bg-white md:rounded-lg shadow-xl transition-all duration-200 ease-in-out flex flex-col h-full md:h-auto md:max-h-[90vh] ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
                 
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
@@ -181,7 +182,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 </div>
 
                 {/* Body */}
-                <div className="px-6 py-6 overflow-y-auto custom-scrollbar space-y-6 flex-1">
+                <div className="px-6 py-6 overflow-y-auto custom-scrollbar space-y-6 flex-1 pb-24 md:pb-6">
                     
                     {/* Client & Date */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -220,7 +221,8 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                         </div>
                         
                         <div className="grid grid-cols-12 gap-3 items-end">
-                            <div className="col-span-12 md:col-span-4">
+                            {/* Produit (3 cols) */}
+                            <div className="col-span-12 md:col-span-3">
                                 <label className="block text-xs font-medium text-neutral-500 mb-1">Produit (Auto)</label>
                                 <select 
                                     value={selectedProductId}
@@ -233,7 +235,9 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                     ))}
                                 </select>
                             </div>
-                            <div className="col-span-12 md:col-span-5">
+
+                            {/* Désignation (4 cols) */}
+                            <div className="col-span-12 md:col-span-4">
                                 <label className="block text-xs font-medium text-neutral-500 mb-1">Désignation *</label>
                                 <input 
                                     type="text" 
@@ -242,8 +246,10 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                     className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm font-medium"
                                 />
                             </div>
-                            <div className="col-span-6 md:col-span-2">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Prix</label>
+
+                            {/* Prix HT (2 cols) */}
+                            <div className="col-span-4 md:col-span-2">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Prix HT</label>
                                 <input 
                                     type="number" 
                                     value={tempPrice}
@@ -251,6 +257,24 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                     className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                                 />
                             </div>
+
+                            {/* TVA (1 col) */}
+                            <div className="col-span-4 md:col-span-1">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">TVA</label>
+                                <select 
+                                    value={tempVat} 
+                                    onChange={(e) => setTempVat(parseInt(e.target.value))} 
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-1"
+                                >
+                                    <option value="20">20%</option>
+                                    <option value="14">14%</option>
+                                    <option value="10">10%</option>
+                                    <option value="7">7%</option>
+                                    <option value="0">0%</option>
+                                </select>
+                            </div>
+
+                            {/* Qté (1 col) */}
                             <div className="col-span-4 md:col-span-1">
                                 <label className="block text-xs font-medium text-neutral-500 mb-1">Qté</label>
                                 <input 
@@ -261,12 +285,14 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                     className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm text-center"
                                 />
                             </div>
-                            <div className="col-span-2 md:col-span-12 flex justify-end">
+
+                            {/* Button (1 col) */}
+                            <div className="col-span-12 md:col-span-1 flex justify-end">
                                 <button 
                                     onClick={handleAddItem}
-                                    className="inline-flex items-center justify-center h-[38px] px-4 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm w-full md:w-auto"
+                                    className="inline-flex items-center justify-center h-[38px] w-full md:w-[38px] rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
                                 >
-                                    <Plus size={20} /> <span className="ml-1 md:hidden">Ajouter</span>
+                                    <Plus size={20} /> <span className="ml-2 md:hidden">Ajouter</span>
                                 </button>
                             </div>
                         </div>
@@ -280,7 +306,8 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                     <tr>
                                         <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase">Désignation</th>
                                         <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase">Qté</th>
-                                        <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Prix</th>
+                                        <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Prix HT</th>
+                                        <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase">TVA</th>
                                         <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Total</th>
                                         <th className="px-4 py-2 w-10"></th>
                                     </tr>
@@ -291,6 +318,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                             <td className="px-4 py-2 text-sm text-neutral-900">{item.name}</td>
                                             <td className="px-4 py-2 text-sm text-center text-neutral-600">{item.quantity}</td>
                                             <td className="px-4 py-2 text-sm text-right text-neutral-600">{item.unitPrice.toLocaleString('fr-FR')}</td>
+                                            <td className="px-4 py-2 text-sm text-center text-neutral-500">{item.vat}%</td>
                                             <td className="px-4 py-2 text-sm text-right font-medium text-neutral-900">{(item.quantity * item.unitPrice).toLocaleString('fr-FR')}</td>
                                             <td className="px-4 py-2 text-center">
                                                 <button onClick={() => handleRemoveItem(item.id)} className="text-neutral-400 hover:text-red-500 transition-colors">
@@ -355,7 +383,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                 <span>{totals.subTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                             <div className="flex justify-between text-sm text-neutral-600">
-                                <span>TVA (20%)</span>
+                                <span>TVA</span>
                                 <span>{totals.vatAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                             <div className="h-px bg-neutral-200 my-1"></div>

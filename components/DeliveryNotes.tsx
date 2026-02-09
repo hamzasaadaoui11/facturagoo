@@ -7,6 +7,7 @@ import { Truck, FileText, Plus, Pencil, Download, Trash2, CheckCircle, AlertCirc
 import { DeliveryNote, Invoice, Client, Product, CompanySettings } from '../types';
 import CreateDeliveryNoteModal from './CreateDeliveryNoteModal';
 import ConfirmationModal from './ConfirmationModal';
+import DeliveryNoteOptionModal from './DeliveryNoteOptionModal';
 import { generatePDF, printDocument } from '../services/pdfService';
 
 interface DeliveryNotesProps {
@@ -46,6 +47,11 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     const [noteToEdit, setNoteToEdit] = useState<DeliveryNote | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [noteIdToDelete, setNoteIdToDelete] = useState<string | null>(null);
+
+    // Print/PDF Option Modal State
+    const [isOptionModalOpen, setIsOptionModalOpen] = useState(false);
+    const [selectedNoteForOutput, setSelectedNoteForOutput] = useState<DeliveryNote | null>(null);
+    const [outputAction, setOutputAction] = useState<'print' | 'download'>('download');
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -110,26 +116,41 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
         }
     };
 
-    const handlePDFClick = async (note: DeliveryNote) => {
-        setDownloadingId(note.id);
+    // Open Option Modal instead of direct action
+    const handlePDFClick = (note: DeliveryNote) => {
+        setSelectedNoteForOutput(note);
+        setOutputAction('download');
+        setIsOptionModalOpen(true);
         setActiveMenuId(null);
+    };
+
+    const handlePrintClick = (note: DeliveryNote) => {
+        setSelectedNoteForOutput(note);
+        setOutputAction('print');
+        setIsOptionModalOpen(true);
+        setActiveMenuId(null);
+    };
+
+    // Callback from Option Modal
+    const handleOptionConfirm = async (showPrices: boolean) => {
+        const note = selectedNoteForOutput;
+        if (!note) return;
+
+        setIsOptionModalOpen(false); // Close modal first
+
         try {
             const client = clients.find(c => c.id === note.clientId);
-            await generatePDF('Bon de Livraison', note, companySettings || null, client);
+            if (outputAction === 'download') {
+                setDownloadingId(note.id);
+                await generatePDF('Bon de Livraison', note, companySettings || null, client, { showPrices });
+            } else {
+                printDocument('Bon de Livraison', note, companySettings || null, client, { showPrices });
+            }
         } catch (error: any) {
             alert(error.message);
         } finally {
             setDownloadingId(null);
-        }
-    };
-
-    const handlePrintClick = (note: DeliveryNote) => {
-        setActiveMenuId(null);
-        try {
-            const client = clients.find(c => c.id === note.clientId);
-            printDocument('Bon de Livraison', note, companySettings || null, client);
-        } catch (error: any) {
-            alert(error.message);
+            setSelectedNoteForOutput(null);
         }
     };
     
@@ -226,6 +247,12 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                 onConfirm={confirmDelete}
                 title="Supprimer le bon de livraison"
                 message="Êtes-vous sûr de vouloir supprimer ce bon de livraison ? Cette action est irréversible."
+            />
+
+            <DeliveryNoteOptionModal 
+                isOpen={isOptionModalOpen}
+                onClose={() => setIsOptionModalOpen(false)}
+                onConfirm={handleOptionConfirm}
             />
             
             {isInvoiceModalOpen && (
