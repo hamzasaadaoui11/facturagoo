@@ -14,6 +14,7 @@ interface TemplateCustomizerProps {
 }
 
 const DEFAULT_COLUMNS: DocumentColumn[] = [
+    { id: 'reference', label: 'Réf', visible: false, order: 0 },
     { id: 'name', label: 'Désignation', visible: true, order: 1 },
     { id: 'quantity', label: 'Qté', visible: true, order: 2 },
     { id: 'unitPrice', label: 'P.U. HT', visible: true, order: 3 },
@@ -33,7 +34,15 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
     useEffect(() => {
         setLocalSettings(settings || { primaryColor: '#10b981' }); 
         if (settings?.documentColumns && settings.documentColumns.length > 0) {
-            setColumns(settings.documentColumns.sort((a, b) => a.order - b.order));
+            // Merge saved columns with default columns to ensure new columns (like 'reference') appear if they are missing
+            const mergedColumns = DEFAULT_COLUMNS.map(defCol => {
+                const savedCol = settings.documentColumns?.find(c => c.id === defCol.id);
+                return savedCol || defCol;
+            });
+            // Sort by order
+            setColumns(mergedColumns.sort((a, b) => a.order - b.order));
+        } else {
+            setColumns(DEFAULT_COLUMNS);
         }
     }, [settings]);
 

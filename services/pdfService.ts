@@ -118,6 +118,7 @@ const numberToWordsFr = (amount: number): string => {
 };
 
 const DEFAULT_COLUMNS: DocumentColumn[] = [
+    { id: 'reference', label: 'Réf', visible: false, order: 0 },
     { id: 'name', label: 'Désignation', visible: true, order: 1 },
     { id: 'quantity', label: 'Qté', visible: true, order: 2 },
     { id: 'unitPrice', label: 'P.U. HT', visible: true, order: 3 },
@@ -167,10 +168,10 @@ const generateDocumentHTML = (
 
     let activeColumns = (settings.documentColumns && settings.documentColumns.length > 0) 
         ? settings.documentColumns.filter(c => c.visible).sort((a, b) => a.order - b.order)
-        : DEFAULT_COLUMNS;
+        : DEFAULT_COLUMNS.filter(c => c.visible);
 
     if (isDeliveryNote && !showPrices) {
-        activeColumns = activeColumns.filter(c => c.id === 'name' || c.id === 'quantity');
+        activeColumns = activeColumns.filter(c => c.id === 'name' || c.id === 'quantity' || c.id === 'reference');
     }
 
     let extraDateLabel = '';
@@ -208,12 +209,13 @@ const generateDocumentHTML = (
         let align = 'left';
         let width = '';
         // Adjusted widths and padding for better spacing
-        if (col.id === 'quantity') { align = 'center'; width = 'width: 11%;'; }
+        if (col.id === 'reference') { align = 'left'; width = 'width: 12%;'; }
+        else if (col.id === 'quantity') { align = 'center'; width = 'width: 11%;'; }
         else if (col.id === 'vat') { align = 'center'; width = 'width: 11%;'; }
         else if (col.id === 'unitPrice') { align = 'right'; width = 'width: 18%;'; }
         else if (col.id === 'total') { align = 'right'; width = 'width: 18%;'; }
         
-        return `<th style="padding: 10px 22px; text-align: ${align}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${width}">${col.label}</th>`;
+        return `<th style="padding: 10px 12px; text-align: ${align}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${width}">${col.label}</th>`;
     }).join('');
 
     const rowsHtml = doc.lineItems.map((item, index) => {
@@ -223,6 +225,11 @@ const generateDocumentHTML = (
             let style = '';
 
             switch (col.id) {
+                case 'reference':
+                    content = item.productCode || '-';
+                    align = 'left';
+                    style = 'font-size: 11px; color: #4b5563;';
+                    break;
                 case 'name':
                     content = `
                         <div style="font-weight: 600; color: #111827;">${item.name}</div>
@@ -249,7 +256,7 @@ const generateDocumentHTML = (
                     break;
             }
 
-            return `<td style="padding: 12px 22px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; ${style}">${content}</td>`;
+            return `<td style="padding: 12px 12px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; ${style}">${content}</td>`;
         }).join('');
 
         return `<tr class="item-row" style="background-color: ${index % 2 === 0 ? '#fff' : '#f9fafb'};">${cellsHtml}</tr>`;

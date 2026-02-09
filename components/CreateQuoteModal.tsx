@@ -30,6 +30,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
     const [tempPrice, setTempPrice] = useState(0);
     const [tempVat, setTempVat] = useState(20);
     const [itemQuantity, setItemQuantity] = useState(1);
+    const [tempProductCode, setTempProductCode] = useState('');
 
     useEffect(() => {
         if (isOpen) {
@@ -63,6 +64,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
         setTempPrice(0);
         setTempVat(20);
         setItemQuantity(1);
+        setTempProductCode('');
     };
 
     const handleClose = () => {
@@ -79,6 +81,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setTempDesc(product.description || '');
                 setTempPrice(product.salePrice);
                 setTempVat(product.vat);
+                setTempProductCode(product.productCode);
             }
         }
     }, [selectedProductId, products]);
@@ -92,6 +95,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
         const newItem: LineItem = {
             id: `temp-${Date.now()}`,
             productId: selectedProductId || null,
+            productCode: tempProductCode, // Use editable state here
             name: tempName,
             description: tempDesc,
             quantity: itemQuantity,
@@ -240,8 +244,20 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 </select>
                             </div>
 
+                            {/* Reference Input - NEW */}
+                            <div className="col-span-6 md:col-span-2">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Réf (Code)</label>
+                                <input 
+                                    type="text" 
+                                    value={tempProductCode}
+                                    onChange={(e) => setTempProductCode(e.target.value)}
+                                    placeholder="Réf"
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                                />
+                            </div>
+
                             {/* Name Input */}
-                            <div className="col-span-12 md:col-span-4">
+                            <div className="col-span-6 md:col-span-3">
                                 <label className="block text-xs font-medium text-neutral-500 mb-1">Désignation *</label>
                                 <input 
                                     type="text" 
@@ -253,7 +269,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             </div>
 
                             {/* Price Input */}
-                            <div className="col-span-6 md:col-span-2">
+                            <div className="col-span-4 md:col-span-2">
                                 <label className="block text-xs font-medium text-neutral-500 mb-1">Prix HT</label>
                                 <input 
                                     type="number" 
@@ -264,7 +280,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             </div>
 
                             {/* Qty Input */}
-                            <div className="col-span-3 md:col-span-1">
+                            <div className="col-span-4 md:col-span-1">
                                 <label className="block text-xs font-medium text-neutral-500 mb-1">Qté</label>
                                 <input 
                                     type="number" 
@@ -275,8 +291,8 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 />
                             </div>
 
-                            {/* VAT */}
-                            <div className="col-span-3 md:col-span-1">
+                            {/* VAT - Moved to align */}
+                            <div className="col-span-4 md:col-span-1">
                                 <label className="block text-xs font-medium text-neutral-500 mb-1">TVA</label>
                                 <select 
                                     value={tempVat} 
@@ -291,13 +307,13 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 </select>
                             </div>
 
-                            {/* Add Button */}
-                            <div className="col-span-12 md:col-span-1">
+                            {/* Add Button - Moved to own row on mobile, float on desktop */}
+                            <div className="col-span-12 md:col-span-12 flex justify-end mt-2">
                                 <button 
                                     onClick={handleAddItem}
-                                    className="w-full inline-flex items-center justify-center h-[38px] rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
+                                    className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm text-sm font-medium"
                                 >
-                                    <Plus size={20} />
+                                    <Plus size={16} className="mr-2" /> Ajouter Ligne
                                 </button>
                             </div>
                         </div>
@@ -309,6 +325,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             <table className="min-w-full divide-y divide-neutral-200">
                                 <thead className="bg-neutral-50">
                                     <tr>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase">Réf</th>
                                         <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase">Désignation</th>
                                         <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase">Qté</th>
                                         <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Prix HT</th>
@@ -319,6 +336,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 <tbody className="bg-white divide-y divide-neutral-200">
                                     {lineItems.map(item => (
                                         <tr key={item.id}>
+                                            <td className="px-4 py-2 text-sm text-neutral-500">{item.productCode || '-'}</td>
                                             <td className="px-4 py-2 text-sm text-neutral-900">{item.name}</td>
                                             <td className="px-4 py-2 text-sm text-center text-neutral-600">{item.quantity}</td>
                                             <td className="px-4 py-2 text-sm text-right text-neutral-600">{item.unitPrice.toLocaleString('fr-FR')}</td>

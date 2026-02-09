@@ -30,6 +30,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const [tempPrice, setTempPrice] = useState(0);
     const [tempVat, setTempVat] = useState(20);
     const [itemQuantity, setItemQuantity] = useState(1);
+    const [tempProductCode, setTempProductCode] = useState('');
 
     useEffect(() => {
         if (isOpen) {
@@ -60,6 +61,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
         setTempPrice(0);
         setTempVat(20);
         setItemQuantity(1);
+        setTempProductCode('');
     };
 
     const handleClose = () => {
@@ -76,6 +78,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 setTempDesc(product.description || '');
                 setTempPrice(product.salePrice);
                 setTempVat(product.vat);
+                setTempProductCode(product.productCode);
             }
         }
     }, [selectedProductId, products]);
@@ -89,6 +92,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
         const newItem: LineItem = {
             id: `temp-${Date.now()}`,
             productId: selectedProductId || null,
+            productCode: selectedProductId ? tempProductCode : undefined,
             name: tempName,
             description: tempDesc,
             quantity: itemQuantity,

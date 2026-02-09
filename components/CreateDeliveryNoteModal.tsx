@@ -28,6 +28,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     const [tempPrice, setTempPrice] = useState(0);
     const [tempVat, setTempVat] = useState(20);
     const [itemQuantity, setItemQuantity] = useState(1);
+    const [tempProductCode, setTempProductCode] = useState('');
     
     // Payment State
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
@@ -64,6 +65,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         setTempPrice(0);
         setTempVat(20);
         setItemQuantity(1);
+        setTempProductCode('');
     };
 
     const handleClose = () => {
@@ -80,6 +82,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setTempDesc(product.description || '');
                 setTempPrice(product.salePrice);
                 setTempVat(product.vat);
+                setTempProductCode(product.productCode);
             }
         }
     }, [selectedProductId, products]);
@@ -93,6 +96,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         const newItem: LineItem = {
             id: `temp-${Date.now()}`,
             productId: selectedProductId || null,
+            productCode: tempProductCode, // Use state
             name: tempName,
             description: tempDesc,
             quantity: itemQuantity,
@@ -236,8 +240,20 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                 </select>
                             </div>
 
-                            {/* Désignation (4 cols) */}
-                            <div className="col-span-12 md:col-span-4">
+                            {/* Ref (2 cols) - NEW */}
+                            <div className="col-span-6 md:col-span-2">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Réf (Code)</label>
+                                <input 
+                                    type="text" 
+                                    value={tempProductCode}
+                                    onChange={(e) => setTempProductCode(e.target.value)}
+                                    placeholder="Réf"
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                                />
+                            </div>
+
+                            {/* Désignation (3 cols) */}
+                            <div className="col-span-6 md:col-span-3">
                                 <label className="block text-xs font-medium text-neutral-500 mb-1">Désignation *</label>
                                 <input 
                                     type="text" 
@@ -287,12 +303,12 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                             </div>
 
                             {/* Button (1 col) */}
-                            <div className="col-span-12 md:col-span-1 flex justify-end">
+                            <div className="col-span-12 md:col-span-12 flex justify-end mt-2">
                                 <button 
                                     onClick={handleAddItem}
-                                    className="inline-flex items-center justify-center h-[38px] w-full md:w-[38px] rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm"
+                                    className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm text-sm font-medium"
                                 >
-                                    <Plus size={20} /> <span className="ml-2 md:hidden">Ajouter</span>
+                                    <Plus size={16} className="mr-2"/> Ajouter Ligne
                                 </button>
                             </div>
                         </div>
@@ -304,6 +320,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                             <table className="min-w-full divide-y divide-neutral-200">
                                 <thead className="bg-neutral-50">
                                     <tr>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase">Réf</th>
                                         <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase">Désignation</th>
                                         <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase">Qté</th>
                                         <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Prix HT</th>
@@ -315,6 +332,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                 <tbody className="bg-white divide-y divide-neutral-200">
                                     {lineItems.map(item => (
                                         <tr key={item.id}>
+                                            <td className="px-4 py-2 text-sm text-neutral-500">{item.productCode || '-'}</td>
                                             <td className="px-4 py-2 text-sm text-neutral-900">{item.name}</td>
                                             <td className="px-4 py-2 text-sm text-center text-neutral-600">{item.quantity}</td>
                                             <td className="px-4 py-2 text-sm text-right text-neutral-600">{item.unitPrice.toLocaleString('fr-FR')}</td>

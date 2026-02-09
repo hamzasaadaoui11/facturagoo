@@ -29,7 +29,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
   const [reference, setReference] = useState('');
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { id: `line-${Date.now()}`, productId: null, name: '', description: '', quantity: 1, unitPrice: 0, vat: 20 },
+    { id: `line-${Date.now()}`, productId: null, productCode: '', name: '', description: '', quantity: 1, unitPrice: 0, vat: 20 },
   ]);
 
   // Prepare client list with display name priority (Company > Name)
@@ -54,7 +54,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
   }, [isEditMode, quoteToEdit, clients]);
 
   const addLineItem = () => {
-    setLineItems([...lineItems, { id: `line-${Date.now()}`, productId: null, name: '', description: '', quantity: 1, unitPrice: 0, vat: 20 }]);
+    setLineItems([...lineItems, { id: `line-${Date.now()}`, productId: null, productCode: '', name: '', description: '', quantity: 1, unitPrice: 0, vat: 20 }]);
   };
 
   const removeLineItem = (id: string) => {
@@ -68,6 +68,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
   const handleProductSelect = (lineId: string, product: Product) => {
       updateLineItem(lineId, { 
           productId: product.id,
+          productCode: product.productCode,
           name: product.name,
           description: product.description,
           unitPrice: product.salePrice,
@@ -143,7 +144,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
             Objet: ${subject || 'N/A'}
             -------------------
             Articles:
-            ${lineItems.map(item => `  - ${item.name || 'Article non défini'} (x${item.quantity}): ${(item.quantity * item.unitPrice).toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}`).join('\n')}
+            ${lineItems.map(item => `  - [${item.productCode || 'N/A'}] ${item.name || 'Article non défini'} (x${item.quantity}): ${(item.quantity * item.unitPrice).toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}`).join('\n')}
             -------------------
             Sous-total HT: ${totals.subTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
             TVA: ${totals.vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
@@ -410,7 +411,8 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
             <table className="min-w-full">
                 <thead className="bg-neutral-50">
                     <tr>
-                        <th className="px-6 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider w-2/5">Article (Libre ou Catalogue)</th>
+                        <th className="px-6 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider w-1/12">Réf</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider w-4/12">Article</th>
                         <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Qté</th>
                         <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">P.U. HT</th>
                         <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">TVA</th>
@@ -424,6 +426,15 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
                     return (
                         <tr key={item.id} className="border-b border-neutral-200">
                             <td className="px-6 py-3 whitespace-nowrap">
+                                <input 
+                                    type="text" 
+                                    value={item.productCode || ''} 
+                                    onChange={e => updateLineItem(item.id, { productCode: e.target.value })} 
+                                    placeholder="Réf"
+                                    className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-gray-50"
+                                />
+                            </td>
+                            <td className="px-3 py-3 whitespace-nowrap">
                                 <ItemNameInput 
                                     value={item.name} 
                                     products={products}

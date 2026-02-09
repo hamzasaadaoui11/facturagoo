@@ -120,8 +120,8 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                             <input type="text" id="productName" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: T-shirt en coton" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" required/>
                         </div>
                         <div>
-                            <label htmlFor="productCode" className="block text-sm font-medium text-neutral-700">Code Produit (SKU)</label>
-                            <input type="text" id="productCode" value={productCode} onChange={e => setProductCode(e.target.value)} placeholder="Optionnel" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
+                            <label htmlFor="productCode" className="block text-sm font-medium text-neutral-700">Référence (Réf)</label>
+                            <input type="text" id="productCode" value={productCode} onChange={e => setProductCode(e.target.value)} placeholder="Laisser vide pour génération auto" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
                         </div>
                         <div className="sm:col-span-2">
                             <label htmlFor="description" className="block text-sm font-medium text-neutral-700">Description</label>
@@ -278,7 +278,7 @@ const ProductList = ({ products, onDeleteProduct }: ProductListProps) => {
                 <div className="p-4 border-b border-neutral-200">
                     <input
                         type="search"
-                        placeholder="Rechercher par code ou nom..."
+                        placeholder="Rechercher par référence ou nom..."
                         className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                     />
                 </div>
@@ -286,7 +286,7 @@ const ProductList = ({ products, onDeleteProduct }: ProductListProps) => {
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Code Produit</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Réf</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Nom</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Stock</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Prix de vente HT</th>
@@ -298,7 +298,7 @@ const ProductList = ({ products, onDeleteProduct }: ProductListProps) => {
                             {products.length > 0 ? (
                                 products.map((product: Product) => (
                                     <tr key={product.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{product.productCode}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 font-mono">{product.productCode}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-neutral-900">{product.name}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base">
                                             {product.productType === 'Service' ? (

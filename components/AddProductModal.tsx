@@ -6,12 +6,13 @@ import { X } from 'lucide-react';
 interface AddProductModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (product: Omit<Product, 'id' | 'productCode'>, id?: string) => void;
+    onSave: (product: Omit<Product, 'id'>, id?: string) => void;
     productToEdit: Product | null;
 }
 
 const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSave, productToEdit }) => {
     const [name, setName] = useState('');
+    const [productCode, setProductCode] = useState('');
     const [salePrice, setSalePrice] = useState(0);
     const [purchasePrice, setPurchasePrice] = useState(0);
     const [vat, setVat] = useState(20);
@@ -22,11 +23,13 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
         if (isOpen) {
             if (isEditMode) {
                 setName(productToEdit.name);
+                setProductCode(productToEdit.productCode || '');
                 setSalePrice(productToEdit.salePrice);
                 setPurchasePrice(productToEdit.purchasePrice);
                 setVat(productToEdit.vat);
             } else {
                 setName('');
+                setProductCode('');
                 setSalePrice(0);
                 setPurchasePrice(0);
                 setVat(20);
@@ -42,7 +45,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
         }
         
         onSave({ 
-            name, 
+            name,
+            productCode,
             description: productToEdit?.description || '',
             productType: productToEdit?.productType || 'Produit',
             unitOfMeasure: productToEdit?.unitOfMeasure || 'Aucune',
@@ -52,6 +56,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
             stockQuantity: productToEdit?.stockQuantity || 0,
             minStockAlert: productToEdit?.minStockAlert || 5
         }, productToEdit?.id);
+        onClose();
     };
 
     if (!isOpen) return null;
@@ -68,21 +73,25 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                 <form onSubmit={handleSubmit} className="mt-4 space-y-4">
                     <div>
                         <label htmlFor="productName" className="block text-sm font-medium text-slate-700">Nom du produit</label>
-                        <input type="text" id="productName" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" />
+                        <input type="text" id="productName" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                    </div>
+                    <div>
+                        <label htmlFor="modalProductCode" className="block text-sm font-medium text-slate-700">Référence (Réf)</label>
+                        <input type="text" id="modalProductCode" value={productCode} onChange={(e) => setProductCode(e.target.value)} placeholder="Auto si vide" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                             <label htmlFor="salePrice" className="block text-sm font-medium text-slate-700">Prix de vente (HT)</label>
-                            <input type="number" id="salePrice" value={salePrice} onChange={(e) => setSalePrice(parseFloat(e.target.value) || 0)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" />
+                            <input type="number" id="salePrice" value={salePrice} onChange={(e) => setSalePrice(parseFloat(e.target.value) || 0)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                         </div>
                          <div>
                             <label htmlFor="purchasePrice" className="block text-sm font-medium text-slate-700">Prix d'achat (HT)</label>
-                            <input type="number" id="purchasePrice" value={purchasePrice} onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" />
+                            <input type="number" id="purchasePrice" value={purchasePrice} onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                         </div>
                     </div>
                      <div>
                         <label htmlFor="vat" className="block text-sm font-medium text-slate-700">TVA (%)</label>
-                        <select id="vat" value={vat} onChange={(e) => setVat(parseInt(e.target.value))} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                        <select id="vat" value={vat} onChange={(e) => setVat(parseInt(e.target.value))} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
                             <option>20</option>
                             <option>14</option>
                             <option>10</option>

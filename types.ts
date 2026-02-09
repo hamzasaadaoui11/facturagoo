@@ -72,6 +72,7 @@ export enum PurchaseOrderStatus {
 export interface LineItem {
   id: string;
   productId: string | null;
+  productCode?: string; // Reference/SKU display
   name: string;
   description: string;
   quantity: number;
@@ -186,7 +187,7 @@ export interface DeliveryNote {
 }
 
 export interface DocumentColumn {
-    id: 'name' | 'quantity' | 'unitPrice' | 'vat' | 'total';
+    id: 'reference' | 'name' | 'quantity' | 'unitPrice' | 'vat' | 'total';
     label: string;
     visible: boolean;
     order: number;
