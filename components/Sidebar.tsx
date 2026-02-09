@@ -15,13 +15,15 @@ import {
     ShoppingBag,
     BarChart3,
     LogOut,
-    UserCircle
+    UserCircle,
+    CreditCard
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
 const navigation = [
     { name: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Statistiques', href: '/statistics', icon: BarChart3 },
+    { name: 'Suivi Paiements', href: '/sales/payments', icon: CreditCard },
     {
         name: 'Vente',
         icon: ShoppingCart,
