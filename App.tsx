@@ -6,6 +6,7 @@ import { Client, Product, Supplier, Quote, QuoteStatus, Invoice, InvoiceStatus, 
 import { dbService, initDB } from './db';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -890,13 +891,15 @@ const App: React.FC = () => {
     }
 
     return (
-        <HashRouter>
-            <Routes>
-                <Route path="/" element={!session ? <LandingPage /> : <Navigate to="/dashboard" replace />} />
-                <Route path="/login" element={!session ? <Login /> : <Navigate to="/dashboard" replace />} />
-                <Route path="/*" element={session ? <MainContent /> : <Navigate to="/" replace />} />
-            </Routes>
-        </HashRouter>
+        <LanguageProvider>
+            <HashRouter>
+                <Routes>
+                    <Route path="/" element={!session ? <LandingPage /> : <Navigate to="/dashboard" replace />} />
+                    <Route path="/login" element={!session ? <Login /> : <Navigate to="/dashboard" replace />} />
+                    <Route path="/*" element={session ? <MainContent /> : <Navigate to="/" replace />} />
+                </Routes>
+            </HashRouter>
+        </LanguageProvider>
     );
 };
 

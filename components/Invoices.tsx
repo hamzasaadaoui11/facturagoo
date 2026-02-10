@@ -7,6 +7,7 @@ import { Invoice, InvoiceStatus, Payment, Client, Product, CompanySettings } fro
 import CreateInvoiceModal from './CreateInvoiceModal';
 import ConfirmationModal from './ConfirmationModal';
 import { generatePDF, printDocument } from '../services/pdfService';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const statusColors: { [key in InvoiceStatus]: string } = {
     [InvoiceStatus.Paid]: 'bg-green-100 text-green-700',
@@ -30,6 +31,7 @@ interface InvoicesProps {
 }
 
 const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, onAddPayment, onCreateInvoice, onUpdateInvoice, onDeleteInvoice, onCreateCreditNote, clients = [], products = [], companySettings }) => {
+    const { t, isRTL } = useLanguage();
     const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
     const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
@@ -72,7 +74,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
             setActiveMenuId(id);
             setMenuPosition({
                 top: rect.bottom + window.scrollY + 5,
-                left: Math.max(10, leftPos) // Ensure it doesn't go off-screen left
+                left: isRTL ? rect.left + window.scrollX : Math.max(10, leftPos)
             });
         }
     };
@@ -165,14 +167,14 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
 
     return (
         <div>
-            <Header title="Factures">
+            <Header title={t('invoices')}>
                  <button
                     type="button"
                     onClick={handleCreateClick}
                     className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
                 >
-                    <Plus className="-ml-0.5 h-5 w-5" />
-                    Nouvelle Facture
+                    <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
+                    {t('newInvoice')}
                 </button>
             </Header>
             
@@ -189,19 +191,17 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={confirmDelete}
-                title="Supprimer la facture"
-                message="Êtes-vous sûr de vouloir supprimer cette facture ? Attention, cela supprimera également tous les paiements associés, ce qui réduira votre chiffre d'affaires affiché."
             />
 
             {/* Payment Modal */}
             {selectedInvoiceForPayment && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-                        <h3 className="text-lg font-bold mb-4">Enregistrer un paiement</h3>
-                        <p className="text-sm text-gray-500 mb-4">Pour la facture {selectedInvoiceForPayment.documentId || selectedInvoiceForPayment.id}</p>
+                        <h3 className="text-lg font-bold mb-4">{t('paymentRecorded')}</h3>
+                        <p className="text-sm text-gray-500 mb-4">{t('invoices')} {selectedInvoiceForPayment.documentId || selectedInvoiceForPayment.id}</p>
                         <form onSubmit={handlePaymentSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Montant</label>
+                                <label className="block text-sm font-medium text-gray-700">{t('amount')}</label>
                                 <input 
                                     type="number" 
                                     step="0.01" 
@@ -210,10 +210,10 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                     onChange={e => setPaymentAmount(parseFloat(e.target.value))}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">Reste à payer : {(selectedInvoiceForPayment.amount - (selectedInvoiceForPayment.amountPaid || 0)).toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</p>
+                                <p className="text-xs text-gray-500 mt-1">{t('remaining')} : {(selectedInvoiceForPayment.amount - (selectedInvoiceForPayment.amountPaid || 0)).toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</p>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">Mode de paiement</label>
+                                <label className="block text-sm font-medium text-gray-700">{t('paymentMethod')}</label>
                                 <select 
                                     value={paymentMethod} 
                                     onChange={e => setPaymentMethod(e.target.value as any)}
@@ -226,8 +226,8 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                 </select>
                             </div>
                             <div className="flex justify-end gap-2 mt-4">
-                                <button type="button" onClick={() => setSelectedInvoiceForPayment(null)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">Annuler</button>
-                                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700">Confirmer</button>
+                                <button type="button" onClick={() => setSelectedInvoiceForPayment(null)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">{t('cancel')}</button>
+                                <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700">{t('confirm')}</button>
                             </div>
                         </form>
                     </div>
@@ -239,12 +239,12 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">N° Facture</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Client</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Montant</th>
-                                <th scope="col" className="hidden md:table-cell px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Reste</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Statut</th>
-                                <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">Actions</span></th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">#</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('client')}</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('amount')}</th>
+                                <th scope="col" className="hidden md:table-cell px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('remaining')}</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('status')}</th>
+                                <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">{t('actions')}</span></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-200 bg-white">
@@ -253,16 +253,16 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                     const remaining = invoice.amount - (invoice.amountPaid || 0);
                                     return (
                                     <tr key={invoice.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">{invoice.documentId || invoice.id}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-600 max-w-[120px] truncate">{invoice.clientName}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-medium">{invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
-                                        <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-sm font-medium text-red-600">{remaining > 0 ? remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600 rtl:text-right">{invoice.documentId || invoice.id}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-600 max-w-[120px] truncate rtl:text-right">{invoice.clientName}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-medium rtl:text-right">{invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
+                                        <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-sm font-medium text-red-600 rtl:text-right">{remaining > 0 ? remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm rtl:text-right">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[invoice.status]}`}>
                                                 {invoice.status}
                                             </span>
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium relative">
+                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium relative rtl:text-left">
                                             <button 
                                                 onClick={(e) => toggleMenu(e, invoice.id)}
                                                 className={`p-1.5 rounded-full transition-colors ${activeMenuId === invoice.id ? 'bg-neutral-200 text-neutral-800' : 'text-neutral-500 hover:bg-neutral-100'}`}
@@ -277,8 +277,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                     <td colSpan={7} className="text-center py-16 px-6 text-sm text-neutral-500">
                                         <div className="flex flex-col items-center">
                                             <FileText className="h-10 w-10 text-neutral-400 mb-2" />
-                                            <h3 className="font-semibold text-neutral-800">Aucune facture trouvée</h3>
-                                            <p>Les factures générées depuis les devis apparaîtront ici.</p>
+                                            <h3 className="font-semibold text-neutral-800">{t('noRecentInvoices')}</h3>
                                         </div>
                                     </td>
                                 </tr>
@@ -300,7 +299,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                             onClick={() => { handleEditClick(activeInvoice); setActiveMenuId(null); }} 
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Pencil size={16} className="mr-3 text-emerald-600" /> Modifier
+                            <Pencil size={16} className={`text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('edit')}
                         </button>
 
                         {activeInvoice.status === InvoiceStatus.Draft && (
@@ -308,7 +307,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                 onClick={() => { onUpdateInvoiceStatus(activeInvoice.id, InvoiceStatus.Pending); setActiveMenuId(null); }} 
                                 className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                             >
-                                <CheckCircle size={16} className="mr-3 text-green-600" /> Valider
+                                <CheckCircle size={16} className={`text-green-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('validate')}
                             </button>
                         )}
 
@@ -317,7 +316,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                 onClick={() => { openPaymentModal(activeInvoice); setActiveMenuId(null); }} 
                                 className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                             >
-                                <CreditCard size={16} className="mr-3 text-emerald-600" /> Paiement
+                                <CreditCard size={16} className={`text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('paymentAmount')}
                             </button>
                         )}
 
@@ -326,7 +325,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                 onClick={() => handleCreateCreditNote(activeInvoice.id)} 
                                 className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                             >
-                                <ArrowLeftRight size={16} className="mr-3 text-purple-600" /> Créer un avoir
+                                <ArrowLeftRight size={16} className={`text-purple-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('newCreditNote')}
                             </button>
                         )}
                         
@@ -336,7 +335,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                             onClick={() => { handlePrint(activeInvoice); setActiveMenuId(null); }}
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Printer size={16} className="mr-3 text-neutral-500" /> Imprimer
+                            <Printer size={16} className={`text-neutral-500 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('print')}
                         </button>
 
                         <button 
@@ -344,14 +343,14 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                             disabled={isDownloading}
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                         >
-                            {isDownloading ? <Loader2 size={16} className="mr-3 animate-spin" /> : <Download size={16} className="mr-3 text-neutral-500" />} Télécharger PDF
+                            {isDownloading ? <Loader2 size={16} className={`animate-spin ${isRTL ? 'ml-3' : 'mr-3'}`} /> : <Download size={16} className={`text-neutral-500 ${isRTL ? 'ml-3' : 'mr-3'}`} />} {t('download')}
                         </button>
 
                         <button 
                             onClick={() => handleDeleteClick(activeInvoice.id)} 
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Trash2 size={16} className="mr-3 text-red-600" /> Supprimer
+                            <Trash2 size={16} className={`text-red-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('delete')}
                         </button>
                     </div>
                 </div>,

@@ -1,17 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface ConfirmationModalProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
-    title: string;
-    message: string;
+    title?: string;
+    message?: string;
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, onConfirm, title, message }) => {
     const [isVisible, setIsVisible] = useState(false);
+    const { t } = useLanguage();
 
     useEffect(() => {
         if (isOpen) {
@@ -43,11 +45,11 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
                     </div>
                     <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
                         <h3 className="text-lg font-semibold leading-6 text-neutral-900" id="modal-title">
-                            {title}
+                            {title || t('confirmDelete')}
                         </h3>
                         <div className="mt-2">
                             <p className="text-sm text-neutral-500">
-                                {message}
+                                {message || t('confirmDeleteMessage')}
                             </p>
                         </div>
                     </div>
@@ -58,14 +60,14 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onClose, 
                         onClick={handleConfirm}
                         className="inline-flex w-full justify-center rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:w-auto transition-all duration-200 ease-in-out"
                     >
-                        Confirmer
+                        {t('confirm')}
                     </button>
                     <button
                         type="button"
                         onClick={handleClose}
                         className="mt-3 inline-flex w-full justify-center rounded-lg bg-white px-3 py-2 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 sm:mt-0 sm:w-auto transition-all duration-200 ease-in-out"
                     >
-                        Annuler
+                        {t('cancel')}
                     </button>
                 </div>
             </div>

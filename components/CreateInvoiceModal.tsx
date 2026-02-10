@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, ScanLine, Calculator, FileText, CreditCard, Loader2 } from 'lucide-react';
 import { Client, Product, Invoice, LineItem, InvoiceStatus } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface CreateInvoiceModalProps {
     isOpen: boolean;
@@ -13,6 +13,7 @@ interface CreateInvoiceModalProps {
 }
 
 const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose, onSave, clients, products, invoiceToEdit }) => {
+    const { t, isRTL } = useLanguage();
     const [isVisible, setIsVisible] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
@@ -93,7 +94,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
 
     const handleAddItem = () => {
         if (!tempName) {
-            alert("Veuillez entrer une désignation pour l'article.");
+            alert(t('name') + " " + t('description')); // Just a simple alert
             return;
         }
 
@@ -125,11 +126,11 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
 
     const handleSave = async () => {
         if (!clientId) {
-            alert('Veuillez sélectionner un client.');
+            alert(t('client'));
             return;
         }
         if (lineItems.length === 0) {
-            alert('Veuillez ajouter au moins un article.');
+            alert(t('items'));
             return;
         }
 
@@ -190,8 +191,8 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-neutral-200">
                     <div>
-                        <h3 className="text-lg font-semibold text-neutral-900">{invoiceToEdit ? 'Modifier la Facture' : 'Nouvelle Facture'}</h3>
-                        <p className="text-sm text-neutral-500 hidden md:block">{invoiceToEdit ? `Modification de la facture #${invoiceToEdit.documentId || invoiceToEdit.id}` : 'Création d\'une facture directe.'}</p>
+                        <h3 className="text-lg font-semibold text-neutral-900">{invoiceToEdit ? t('editInvoice') : t('newInvoice')}</h3>
+                        <p className="text-sm text-neutral-500 hidden md:block">{invoiceToEdit ? `#${invoiceToEdit.documentId || invoiceToEdit.id}` : ''}</p>
                     </div>
                     <button onClick={handleClose} className="p-1 text-neutral-400 hover:text-neutral-600 rounded-full hover:bg-neutral-100 transition-colors">
                         <X size={20} />
@@ -204,13 +205,13 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                     {/* Client & Dates */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Client *</label>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">{t('client')} *</label>
                             <select 
                                 value={clientId}
                                 onChange={(e) => setClientId(e.target.value)}
                                 className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                             >
-                                <option value="">-- Sélectionner --</option>
+                                <option value="">-- {t('select')} --</option>
                                 {clients.map(client => (
                                     <option key={client.id} value={client.id}>
                                         {client.company || client.name}
@@ -219,7 +220,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Date d'émission *</label>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">{t('date')} *</label>
                             <input 
                                 type="date" 
                                 value={date}
@@ -230,12 +231,12 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-neutral-700 mb-1">Objet (Optionnel)</label>
+                        <label className="block text-sm font-medium text-neutral-700 mb-1">{t('subject')}</label>
                         <input 
                             type="text" 
                             value={subject}
                             onChange={(e) => setSubject(e.target.value)}
-                            placeholder="Ex: Prestation de service informatique"
+                            placeholder={t('subject')}
                             className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                         />
                     </div>
@@ -244,20 +245,20 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                     <div className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 space-y-4">
                         <div className="flex justify-between items-center">
                             <h4 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
-                                <ScanLine size={16} className="text-emerald-600"/> Ajouter des articles
+                                <ScanLine size={16} className="text-emerald-600"/> {t('items')}
                             </h4>
                         </div>
                         
                         <div className="grid grid-cols-12 gap-3 items-end">
                             {/* Product Selector - Optional Auto-fill */}
-                            <div className="col-span-12 md:col-span-3">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Produit (Auto-remplissage)</label>
+                            <div className="col-span-12 md:col-span-2">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Produit (Auto)</label>
                                 <select 
                                     value={selectedProductId}
                                     onChange={(e) => setSelectedProductId(e.target.value)}
                                     className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm text-neutral-600"
                                 >
-                                    <option value="">-- Libre / Manuel --</option>
+                                    <option value="">-- {t('new')} --</option>
                                     {products.map(product => (
                                         <option key={product.id} value={product.id}>{product.name}</option>
                                     ))}
@@ -266,31 +267,31 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
 
                             {/* Reference Input - NEW */}
                             <div className="col-span-6 md:col-span-2">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Réf (Code)</label>
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">{t('reference')}</label>
                                 <input 
                                     type="text" 
                                     value={tempProductCode}
                                     onChange={(e) => setTempProductCode(e.target.value)}
-                                    placeholder="Réf"
+                                    placeholder={t('reference')}
                                     className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                                 />
                             </div>
 
                             {/* Name Input - Required */}
                             <div className="col-span-6 md:col-span-3">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Désignation *</label>
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">{t('description')} *</label>
                                 <input 
                                     type="text" 
                                     value={tempName}
                                     onChange={(e) => setTempName(e.target.value)}
-                                    placeholder="Nom du produit ou service"
+                                    placeholder={t('description')}
                                     className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm font-medium"
                                 />
                             </div>
 
                             {/* Price Input */}
                             <div className="col-span-4 md:col-span-2">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Prix HT</label>
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">{t('unitPrice')}</label>
                                 <input 
                                     type="number" 
                                     value={tempPrice}
@@ -299,32 +300,34 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                 />
                             </div>
 
-                            {/* Qty Input */}
-                            <div className="col-span-4 md:col-span-1">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Qté</label>
-                                <input 
-                                    type="number" 
-                                    min="1"
-                                    value={itemQuantity}
-                                    onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
-                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm text-center"
-                                />
-                            </div>
-
-                            {/* VAT Input */}
-                            <div className="col-span-4 md:col-span-1">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">TVA</label>
-                                <select 
-                                    value={tempVat} 
-                                    onChange={(e) => setTempVat(parseInt(e.target.value))} 
-                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-1.5"
-                                >
-                                    <option value="20">20%</option>
-                                    <option value="14">14%</option>
-                                    <option value="10">10%</option>
-                                    <option value="7">7%</option>
-                                    <option value="0">0%</option>
-                                </select>
+                            {/* Qty & VAT Grouped */}
+                            <div className="col-span-8 md:col-span-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-neutral-500 mb-1">{t('quantity')}</label>
+                                        <input 
+                                            type="number" 
+                                            min="1"
+                                            value={itemQuantity}
+                                            onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
+                                            className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm text-center"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-neutral-500 mb-1">{t('vat')}</label>
+                                        <select 
+                                            value={tempVat} 
+                                            onChange={(e) => setTempVat(parseInt(e.target.value))} 
+                                            className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                                        >
+                                            <option value="20">20%</option>
+                                            <option value="14">14%</option>
+                                            <option value="10">10%</option>
+                                            <option value="7">7%</option>
+                                            <option value="0">0%</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Add Button */}
@@ -332,9 +335,9 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                 <button 
                                     onClick={handleAddItem}
                                     className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm text-sm font-medium"
-                                    title="Ajouter la ligne"
+                                    title={t('addItem')}
                                 >
-                                    <Plus size={16} className="mr-2" /> Ajouter Ligne
+                                    <Plus size={16} className={`mr-2 ${isRTL ? 'ml-2 mr-0' : ''}`} /> {t('add')}
                                 </button>
                             </div>
                         </div>
@@ -346,24 +349,24 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                             <table className="min-w-full divide-y divide-neutral-200">
                                 <thead className="bg-neutral-50">
                                     <tr>
-                                        <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase">Réf</th>
-                                        <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase">Désignation</th>
-                                        <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase">Qté</th>
-                                        <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Prix HT</th>
-                                        <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase hidden md:table-cell">TVA</th>
-                                        <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Total HT</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase rtl:text-right">{t('reference')}</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase rtl:text-right">{t('description')}</th>
+                                        <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase">{t('quantity')}</th>
+                                        <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase rtl:text-left">{t('unitPrice')}</th>
+                                        <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase hidden md:table-cell">{t('vat')}</th>
+                                        <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase rtl:text-left">{t('totalHT')}</th>
                                         <th className="px-4 py-2 w-10"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-neutral-200">
                                     {lineItems.map(item => (
                                         <tr key={item.id}>
-                                            <td className="px-4 py-2 text-sm text-neutral-500">{item.productCode || '-'}</td>
-                                            <td className="px-4 py-2 text-sm text-neutral-900">{item.name}</td>
+                                            <td className="px-4 py-2 text-sm text-neutral-500 rtl:text-right">{item.productCode || '-'}</td>
+                                            <td className="px-4 py-2 text-sm text-neutral-900 rtl:text-right">{item.name}</td>
                                             <td className="px-4 py-2 text-sm text-center text-neutral-600">{item.quantity}</td>
-                                            <td className="px-4 py-2 text-sm text-right text-neutral-600">{item.unitPrice.toLocaleString('fr-FR')}</td>
+                                            <td className="px-4 py-2 text-sm text-right text-neutral-600 rtl:text-left">{item.unitPrice.toLocaleString('fr-FR')}</td>
                                             <td className="px-4 py-2 text-sm text-center text-neutral-600 hidden md:table-cell">{item.vat}%</td>
-                                            <td className="px-4 py-2 text-sm text-right font-medium text-neutral-900">{(item.quantity * item.unitPrice).toLocaleString('fr-FR')}</td>
+                                            <td className="px-4 py-2 text-sm text-right font-medium text-neutral-900 rtl:text-left">{(item.quantity * item.unitPrice).toLocaleString('fr-FR')}</td>
                                             <td className="px-4 py-2 text-center">
                                                 <button onClick={() => handleRemoveItem(item.id)} className="text-neutral-400 hover:text-red-500 transition-colors">
                                                     <Trash2 size={16}/>
@@ -376,7 +379,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                         </div>
                     ) : (
                         <div className="text-center py-8 bg-neutral-50 rounded-lg border border-dashed border-neutral-300 text-neutral-500 text-sm">
-                            Aucun article ajouté.
+                            {t('items')}
                         </div>
                     )}
 
@@ -386,35 +389,35 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                         {/* Payment Input Section */}
                         <div className="space-y-4">
                             <h4 className="text-sm font-semibold text-neutral-900 flex items-center gap-2">
-                                <CreditCard size={16} className="text-emerald-600"/> Règlement
+                                <CreditCard size={16} className="text-emerald-600"/> {t('paymentMethod')}
                             </h4>
                             <div className="bg-white p-4 rounded-lg border border-neutral-200 shadow-sm space-y-3">
                                 {invoiceToEdit && existingAmountPaid > 0 && (
                                     <div className="text-sm text-emerald-700 bg-emerald-50 p-2 rounded mb-2 flex justify-between">
-                                        <span>Déjà encaissé :</span>
+                                        <span>{t('paid')} :</span>
                                         <span className="font-bold">{existingAmountPaid.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
                                     </div>
                                 )}
                                 <div>
                                     <label className="block text-xs font-medium text-neutral-500 mb-1">
-                                        {invoiceToEdit ? "Ajouter un paiement" : "Montant perçu (Acompte)"}
+                                        {t('paymentAmount')}
                                     </label>
                                     <div className="relative">
                                         <input 
                                             type="number" 
                                             value={newPaymentAmount}
                                             onChange={(e) => setNewPaymentAmount(parseFloat(e.target.value) || 0)}
-                                            className="block w-full rounded-lg border-neutral-300 pl-3 pr-12 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm font-semibold"
+                                            className={`block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm font-semibold ${isRTL ? 'pl-12 pr-3' : 'pl-3 pr-12'}`}
                                             placeholder="0.00"
                                         />
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                        <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'left-0 pl-3' : 'right-0 pr-3'}`}>
                                             <span className="text-neutral-500 sm:text-sm">MAD</span>
                                         </div>
                                     </div>
                                 </div>
                                 {newPaymentAmount > 0 && (
                                     <div>
-                                        <label className="block text-xs font-medium text-neutral-500 mb-1">Mode de règlement</label>
+                                        <label className="block text-xs font-medium text-neutral-500 mb-1">{t('paymentMethod')}</label>
                                         <select 
                                             value={paymentMethod}
                                             onChange={(e) => setPaymentMethod(e.target.value)}
@@ -433,20 +436,20 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                         {/* Totals Section */}
                         <div className="space-y-3">
                              <div className="flex justify-between text-sm text-neutral-600">
-                                <span>Total HT</span>
+                                <span>{t('totalHT')}</span>
                                 <span>{totals.subTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                             <div className="flex justify-between text-sm text-neutral-600">
-                                <span>TVA (Estimée)</span>
+                                <span>{t('vat')}</span>
                                 <span>{totals.vatAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                             <div className="h-px bg-neutral-200 my-1"></div>
                             <div className="flex justify-between items-center">
-                                <span className="text-base font-bold text-neutral-900">Total TTC</span>
+                                <span className="text-base font-bold text-neutral-900">{t('totalTTC')}</span>
                                 <span className="text-base font-bold text-emerald-700">{totals.totalTTC.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                              <div className={`mt-2 flex justify-between items-center text-sm p-2 rounded ${remainingAmount === 0 ? 'bg-green-50 text-green-700' : 'bg-neutral-100 text-neutral-600'}`}>
-                                <span>Reste à payer :</span>
+                                <span>{t('remaining')} :</span>
                                 <span className="font-bold">{remainingAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                         </div>
@@ -461,7 +464,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                         disabled={isSubmitting}
                         className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg shadow-sm hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all disabled:opacity-50"
                     >
-                        Annuler
+                        {t('cancel')}
                     </button>
                     <button 
                         onClick={handleSave}
@@ -469,7 +472,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                         className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-lg shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />} 
-                        {isSubmitting ? 'Enregistrement...' : (invoiceToEdit ? 'Mettre à jour' : 'Enregistrer')}
+                        {isSubmitting ? t('save') : t('save')}
                     </button>
                 </div>
 

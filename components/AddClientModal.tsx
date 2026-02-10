@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Client } from '../types';
 import { X, User, Building2, MapPin } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface AddClientModalProps {
     isOpen: boolean;
@@ -11,9 +12,10 @@ interface AddClientModalProps {
 }
 
 const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave, clientToEdit }) => {
+    const { t } = useLanguage();
     const [type, setType] = useState<'Entreprise' | 'Particulier'>('Entreprise');
-    const [name, setName] = useState(''); // Nom du contact ou Nom complet
-    const [company, setCompany] = useState(''); // Nom de la société
+    const [name, setName] = useState('');
+    const [company, setCompany] = useState('');
     const [ice, setIce] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
@@ -56,13 +58,12 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Validation basique
         if (type === 'Entreprise' && !company) {
-            alert('Le nom de la société est obligatoire pour une entreprise.');
+            alert(t('company'));
             return;
         }
         if (type === 'Particulier' && !name) {
-            alert('Le nom est obligatoire.');
+            alert(t('name'));
             return;
         }
 
@@ -71,7 +72,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
             name, 
             company: type === 'Entreprise' ? company : undefined,
             ice,
-            rc: '', // Champ supprimé de l'interface mais conservé dans le type
+            rc: '',
             email, 
             phone,
             address
@@ -89,8 +90,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                 {/* Header */}
                 <div className="flex items-start justify-between pb-4 border-b border-neutral-200">
                     <div>
-                        <h3 className="text-lg font-semibold text-neutral-900">{isEditMode ? 'Modifier le client' : 'Ajouter un nouveau client'}</h3>
-                        <p className="text-sm text-neutral-500">Remplissez les informations ci-dessous.</p>
+                        <h3 className="text-lg font-semibold text-neutral-900">{isEditMode ? t('editClient') : t('addClient')}</h3>
                     </div>
                     <button onClick={handleClose} className="p-1 -mt-1 -mr-1 text-neutral-400 rounded-full hover:bg-neutral-100 hover:text-neutral-600 transition-colors">
                         <X size={20} />
@@ -103,7 +103,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                         
                         {/* Type Selector */}
                         <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-2">Type de client</label>
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">{t('type')}</label>
                             <div className="grid grid-cols-2 gap-3">
                                 <button
                                     type="button"
@@ -126,12 +126,26 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                         {type === 'Entreprise' && (
                             <div className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 space-y-4">
                                 <div>
-                                    <label htmlFor="company" className="block text-sm font-medium text-neutral-700">Nom de la Société <span className="text-red-500">*</span></label>
-                                    <input type="text" id="company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Ex: Facturago SARL" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                    <label htmlFor="company" className="block text-sm font-medium text-neutral-700">{t('company')} <span className="text-red-500">*</span></label>
+                                    <input 
+                                        type="text" 
+                                        id="company" 
+                                        value={company} 
+                                        onChange={(e) => setCompany(e.target.value)} 
+                                        placeholder="Ex: Mon Entreprise SARL"
+                                        className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
+                                    />
                                 </div>
                                 <div>
-                                    <label htmlFor="ice" className="block text-sm font-medium text-neutral-700">ICE</label>
-                                    <input type="text" id="ice" value={ice} onChange={(e) => setIce(e.target.value)} placeholder="Identifiant Commun" className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                    <label htmlFor="ice" className="block text-sm font-medium text-neutral-700">{t('ice')}</label>
+                                    <input 
+                                        type="text" 
+                                        id="ice" 
+                                        value={ice} 
+                                        onChange={(e) => setIce(e.target.value)} 
+                                        placeholder="Ex: 001588888000025"
+                                        className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
+                                    />
                                 </div>
                             </div>
                         )}
@@ -139,14 +153,14 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                         {/* Common Fields */}
                         <div>
                             <label htmlFor="name" className="block text-sm font-medium text-neutral-700">
-                                {type === 'Entreprise' ? 'Personne de contact' : 'Nom complet'} {type === 'Particulier' && <span className="text-red-500">*</span>}
+                                {t('name')} {type === 'Particulier' && <span className="text-red-500">*</span>}
                             </label>
                             <input 
                                 type="text" 
                                 id="name" 
                                 value={name} 
                                 onChange={(e) => setName(e.target.value)} 
-                                placeholder={type === 'Entreprise' ? "Ex: M. Alami (Optionnel)" : "Ex: Ahmed Alami"} 
+                                placeholder={type === 'Entreprise' ? "Ex: M. Responsable" : "Ex: Ahmed Alami"}
                                 className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
                                 required={type === 'Particulier'}
                             />
@@ -154,20 +168,38 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label htmlFor="phone" className="block text-sm font-medium text-neutral-700">Téléphone</label>
-                                <input type="text" id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                <label htmlFor="phone" className="block text-sm font-medium text-neutral-700">{t('phone')}</label>
+                                <input 
+                                    type="text" 
+                                    id="phone" 
+                                    value={phone} 
+                                    onChange={(e) => setPhone(e.target.value)} 
+                                    className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
+                                />
                             </div>
                             <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-neutral-700">Email</label>
-                                <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                <label htmlFor="email" className="block text-sm font-medium text-neutral-700">{t('email')}</label>
+                                <input 
+                                    type="email" 
+                                    id="email" 
+                                    value={email} 
+                                    onChange={(e) => setEmail(e.target.value)} 
+                                    className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
+                                />
                             </div>
                         </div>
 
                         <div>
                             <label htmlFor="address" className="block text-sm font-medium text-neutral-700 flex items-center gap-1">
-                                <MapPin size={14}/> Adresse complète
+                                <MapPin size={14}/> {t('address')}
                             </label>
-                            <textarea id="address" rows={2} value={address} onChange={(e) => setAddress(e.target.value)} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            <textarea 
+                                id="address" 
+                                rows={2} 
+                                value={address} 
+                                onChange={(e) => setAddress(e.target.value)} 
+                                className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
+                            />
                         </div>
 
                     </form>
@@ -176,10 +208,10 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                 {/* Footer */}
                 <div className="pt-4 mt-2 border-t border-neutral-200 flex justify-end space-x-3">
                     <button type="button" onClick={handleClose} className="px-4 py-2 text-sm font-semibold text-neutral-900 bg-white border border-neutral-300 rounded-lg shadow-sm hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all">
-                        Annuler
+                        {t('cancel')}
                     </button>
                     <button type="submit" form="clientForm" className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 border border-transparent rounded-lg shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600 transition-all">
-                        {isEditMode ? 'Mettre à jour' : 'Enregistrer'}
+                        {isEditMode ? t('update') : t('save')}
                     </button>
                 </div>
             </div>

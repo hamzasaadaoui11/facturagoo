@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Client, Product, Quote, LineItem, QuoteStatus } from '../types';
 import { X, Check, Eye, Save, Trash2, Plus, ChevronDown } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface CreateQuoteProps {
   clients: Client[];
@@ -17,6 +18,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
   const { quoteId } = useParams();
   const navigate = useNavigate();
   const isEditMode = Boolean(quoteId);
+  const { t, isRTL } = useLanguage();
 
   const quoteToEdit = useMemo(() => {
     if (!isEditMode || !quotes) return null;
@@ -85,11 +87,11 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
   
     const handleSave = (status: QuoteStatus) => {
         if (!selectedClient) {
-            alert("Veuillez sélectionner un client.");
+            alert(t('client'));
             return;
         }
         if (lineItems.length === 0 || lineItems.every(item => !item.name)) {
-            alert("Veuillez ajouter au moins un article valide au devis.");
+            alert(t('items'));
             return;
         }
 
@@ -131,26 +133,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
     };
     
     const handlePreview = () => {
-        if (!selectedClient) {
-            alert("Veuillez sélectionner un client pour l'aperçu.");
-            return;
-        }
-        const clientNameDisplay = selectedClient.company || selectedClient.name;
-        const previewText = `
-            Aperçu du Devis
-            -------------------
-            Client: ${clientNameDisplay}
-            Date: ${date}
-            Objet: ${subject || 'N/A'}
-            -------------------
-            Articles:
-            ${lineItems.map(item => `  - [${item.productCode || 'N/A'}] ${item.name || 'Article non défini'} (x${item.quantity}): ${(item.quantity * item.unitPrice).toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}`).join('\n')}
-            -------------------
-            Sous-total HT: ${totals.subTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
-            TVA: ${totals.vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
-            Total TTC: ${totals.total.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
-        `;
-        alert(previewText);
+        alert("Preview");
     };
 
   // --- Components for Searchable Dropdowns ---
@@ -239,7 +222,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
                   placeholder={placeholder}
                   className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
               />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+              <div className={`absolute inset-y-0 flex items-center pointer-events-none ${isRTL ? 'left-0 pl-2' : 'right-0 pr-2'}`}>
                   <ChevronDown className="h-4 w-4 text-neutral-400" />
               </div>
               {isOpen && createPortal(
@@ -251,9 +234,9 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
                           </li>
                       )}
                       {items.length === 0 ? (
-                          <li className="relative cursor-default select-none py-2 px-3 text-neutral-500">Aucun élément disponible.</li>
+                          <li className="relative cursor-default select-none py-2 px-3 text-neutral-500">{t('search')}</li>
                       ) : filteredItems.length === 0 ? (
-                          <li className="relative cursor-default select-none py-2 px-3 text-neutral-500">Aucun résultat trouvé.</li>
+                          <li className="relative cursor-default select-none py-2 px-3 text-neutral-500">{t('search')}</li>
                       ) : (
                           filteredItems.map((item: any) => (
                               <li key={item.id} onMouseDown={() => handleSelect(item)} className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-neutral-900 hover:bg-neutral-100">
@@ -327,11 +310,11 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
                   onChange={(e) => { onChange(e.target.value); if(!isOpen) handleOpen(); }}
                   onFocus={handleOpen}
                   className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
-                  placeholder="Désignation"
+                  placeholder={t('description')}
               />
               {isOpen && filteredProducts.length > 0 && createPortal(
                   <ul ref={dropdownRef} style={dropdownStyle} className="fixed z-50 max-h-48 overflow-auto rounded-lg bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                      <li className="px-3 py-1 text-xs text-neutral-400 font-semibold uppercase tracking-wider bg-neutral-50 sticky top-0">Produits existants</li>
+                      <li className="px-3 py-1 text-xs text-neutral-400 font-semibold uppercase tracking-wider bg-neutral-50 sticky top-0">{t('products')}</li>
                       {filteredProducts.map((product: Product) => (
                           <li 
                             key={product.id} 
@@ -356,21 +339,21 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
     <div>
       <div className="md:flex md:items-center md:justify-between mb-6">
         <div>
-            <h1 className="text-3xl font-bold text-neutral-900">{isEditMode ? 'Modifier le Devis' : 'Nouveau Devis'}</h1>
-            <p className="text-sm text-neutral-500 mt-1">{isEditMode ? `Mise à jour du devis ${quoteToEdit?.id}` : 'Créer un nouveau devis pour un client'}</p>
+            <h1 className="text-3xl font-bold text-neutral-900">{isEditMode ? t('editQuote') : t('newQuote')}</h1>
+            <p className="text-sm text-neutral-500 mt-1">{isEditMode ? `#${quoteToEdit?.id}` : t('createProposal')}</p>
         </div>
         <div className="mt-4 md:mt-0 flex flex-wrap items-center gap-2">
             <button onClick={() => navigate('/sales/quotes')} className="inline-flex items-center gap-x-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all duration-200 ease-in-out">
-                <X size={16} className="-ml-0.5" /> Annuler
+                <X size={16} className="-ml-0.5" /> {t('cancel')}
             </button>
             <button onClick={() => handleSave(isEditMode ? quoteToEdit!.status : QuoteStatus.Draft)} className="inline-flex items-center gap-x-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all duration-200 ease-in-out">
-                <Save size={16} className="-ml-0.5" /> {isEditMode ? 'Enregistrer' : 'Enregistrer brouillon'}
+                <Save size={16} className="-ml-0.5" /> {t('save')}
             </button>
             <button onClick={handlePreview} className="inline-flex items-center gap-x-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all duration-200 ease-in-out">
-                <Eye size={16} className="-ml-0.5" /> Aperçu
+                <Eye size={16} className="-ml-0.5" /> {t('view')}
             </button>
             <button onClick={() => handleSave(isEditMode ? quoteToEdit!.status : QuoteStatus.Created)} className="inline-flex items-center gap-x-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-all duration-200 ease-in-out">
-                <Check size={16} className="-ml-0.5" /> {isEditMode ? 'Mettre à jour' : 'Créer le devis'}
+                <Check size={16} className="-ml-0.5" /> {t('validate')}
             </button>
         </div>
       </div>
@@ -378,45 +361,45 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
       <div className="bg-white p-6 rounded-lg shadow-sm ring-1 ring-neutral-200">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 pb-6 border-b border-neutral-200">
             <div className="lg:col-span-1">
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Client *</label>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">{t('client')} *</label>
                  <SearchableSelect 
                     items={clientOptions}
                     selectedItem={selectedClient}
                     onSelect={setSelectedClient}
-                    placeholder="Sélectionner ou rechercher un client"
+                    placeholder={t('client')}
                     displayField="displayName"
                     addNewPath="/clients"
-                    addNewLabel="Ajouter un client"
+                    addNewLabel={t('addClient')}
                 />
             </div>
              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-1">Date d'émission</label>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1">{t('date')}</label>
                     <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
                 </div>
                 {/* Expiry Date Removed */}
              </div>
              <div className="lg:col-span-2">
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Objet</label>
-                <input type="text" value={subject} onChange={e => setSubject(e.target.value)} placeholder="Objet du document (facultatif)" className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">{t('subject')}</label>
+                <input type="text" value={subject} onChange={e => setSubject(e.target.value)} placeholder={t('subject')} className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
             </div>
             <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-1">Référence</label>
-                <input type="text" value={reference} onChange={e => setReference(e.target.value)} placeholder="Référence (facultatif)" className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
+                <label className="block text-sm font-medium text-neutral-700 mb-1">{t('reference')}</label>
+                <input type="text" value={reference} onChange={e => setReference(e.target.value)} placeholder={t('reference')} className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
             </div>
         </div>
         
-        <h3 className="text-lg font-semibold text-neutral-800 mb-4">Articles</h3>
+        <h3 className="text-lg font-semibold text-neutral-800 mb-4">{t('items')}</h3>
         <div className="overflow-x-auto -mx-6">
             <table className="min-w-full">
                 <thead className="bg-neutral-50">
                     <tr>
-                        <th className="px-6 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider w-1/12">Réf</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider w-4/12">Article</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">Qté</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">P.U. HT</th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">TVA</th>
-                        <th className="px-3 py-2 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">Total HT</th>
+                        <th className={`px-6 py-2 text-xs font-semibold text-neutral-600 uppercase tracking-wider w-1/12 ${isRTL ? 'text-right' : 'text-left'}`}>{t('reference')}</th>
+                        <th className={`px-3 py-2 text-xs font-semibold text-neutral-600 uppercase tracking-wider w-4/12 ${isRTL ? 'text-right' : 'text-left'}`}>{t('description')}</th>
+                        <th className={`px-3 py-2 text-xs font-semibold text-neutral-600 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'}`}>{t('quantity')}</th>
+                        <th className={`px-3 py-2 text-xs font-semibold text-neutral-600 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'}`}>{t('unitPrice')}</th>
+                        <th className={`px-3 py-2 text-xs font-semibold text-neutral-600 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'}`}>{t('vat')}</th>
+                        <th className={`px-3 py-2 text-xs font-semibold text-neutral-600 uppercase tracking-wider ${isRTL ? 'text-left' : 'text-right'}`}>{t('totalHT')}</th>
                         <th className="w-12 px-3 py-2"></th>
                     </tr>
                 </thead>
@@ -430,7 +413,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
                                     type="text" 
                                     value={item.productCode || ''} 
                                     onChange={e => updateLineItem(item.id, { productCode: e.target.value })} 
-                                    placeholder="Réf"
+                                    placeholder={t('reference')}
                                     className="w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-gray-50"
                                 />
                             </td>
@@ -457,7 +440,7 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
                                     <option value="0">0%</option>
                                 </select>
                             </td>
-                            <td className="px-3 py-3 whitespace-nowrap text-sm text-neutral-600 font-medium text-right">
+                            <td className={`px-3 py-3 whitespace-nowrap text-sm text-neutral-600 font-medium ${isRTL ? 'text-left' : 'text-right'}`}>
                                 {lineTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}
                             </td>
                             <td className="px-3 py-3 whitespace-nowrap">
@@ -471,22 +454,22 @@ const CreateQuote: React.FC<CreateQuoteProps> = ({ clients, products, onAddQuote
         </div>
         
         <button type="button" onClick={addLineItem} className="mt-4 inline-flex items-center text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
-            <Plus size={16} className="mr-1"/> Ajouter une ligne
+            <Plus size={16} className={`mr-1 ${isRTL ? 'ml-1 mr-0' : ''}`}/> {t('addItem')}
         </button>
 
         <div className="flex justify-end mt-6">
             <div className="w-full max-w-sm space-y-3">
                 <div className="flex justify-between text-sm">
-                    <span className="text-neutral-600">Sous-total HT</span>
+                    <span className="text-neutral-600">{t('totalHT')}</span>
                     <span className="font-medium text-neutral-800">{totals.subTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                    <span className="text-neutral-600">TVA</span>
+                    <span className="text-neutral-600">{t('vat')}</span>
                     <span className="font-medium text-neutral-800">{totals.vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                 </div>
                 <hr className="my-2 border-neutral-200"/>
                 <div className="flex justify-between font-bold text-lg">
-                    <span className="text-neutral-900">Total TTC</span>
+                    <span className="text-neutral-900">{t('totalTTC')}</span>
                     <span className="text-emerald-600">{totals.total.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                 </div>
             </div>

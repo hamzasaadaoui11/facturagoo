@@ -1,9 +1,10 @@
 
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { Invoice, InvoiceStatus, Client, Product, CompanySettings, CreditNote, CreditNoteStatus } from '../types';
-import { Users, Package, FileText, AlertCircle, AlertTriangle, DollarSign, Gift, Archive, CheckCircle, ArrowRight, UserPlus, List, ChevronRight, TrendingUp, ShoppingBag, CalendarDays, Clock, Filter } from 'lucide-react';
+import { Users, Package, FileText, AlertCircle, AlertTriangle, DollarSign, Archive, CheckCircle, ArrowRight, UserPlus, ChevronRight, TrendingUp, CalendarDays, Filter } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface DashboardProps {
     invoices: Invoice[];
@@ -21,7 +22,6 @@ const StatCard: React.FC<{
             <div className={`p-3 rounded-xl ${item.color} bg-opacity-10 group-hover:bg-opacity-20 transition-all`}>
                 <item.icon className={`h-6 w-6 ${item.color.replace('bg-', 'text-')}`} />
             </div>
-            {/* Optional trend badge could go here */}
         </div>
         <div className="mt-4">
             <p className="text-sm font-medium text-slate-500">{item.name}</p>
@@ -32,16 +32,17 @@ const StatCard: React.FC<{
 );
 
 const ShortcutCard = ({ icon: Icon, label, desc, onClick, colorClass }: { icon: React.ElementType, label: string, desc: string, onClick: () => void, colorClass: string }) => {
+    const { isRTL } = useLanguage();
     return (
         <button onClick={onClick} className="bg-white rounded-2xl p-5 shadow-sm ring-1 ring-slate-100 flex items-center gap-4 text-left hover:ring-emerald-500/50 hover:shadow-md transition-all group w-full">
             <div className={`flex items-center justify-center h-12 w-12 rounded-xl ${colorClass} bg-opacity-10 group-hover:scale-110 transition-transform flex-shrink-0`}>
                 <Icon className={`h-6 w-6 ${colorClass.replace('bg-', 'text-')}`} />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
                 <p className="font-bold text-slate-800 truncate text-base">{label}</p>
                 <p className="text-sm text-slate-500 truncate">{desc}</p>
             </div>
-            <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-slate-400">
+            <div className={`opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 ${isRTL ? 'mr-auto rotate-180' : 'ml-auto'}`}>
                 <ChevronRight size={20} />
             </div>
         </button>
@@ -52,12 +53,12 @@ type ChartPeriod = 'day' | 'week' | 'month' | 'year' | 'custom';
 
 const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, companySettings, creditNotes = [] }) => {
     const navigate = useNavigate();
+    const { t, language } = useLanguage();
     const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('year');
     const [customStartDate, setCustomStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
     const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
     
-    // Date du jour formatée
-    const todayDate = new Date().toLocaleDateString('fr-FR', { 
+    const todayDate = new Date().toLocaleDateString(language === 'ar' ? 'ar-MA' : (language === 'en' ? 'en-US' : 'fr-FR'), { 
         weekday: 'long', 
         year: 'numeric', 
         month: 'long', 
@@ -80,7 +81,6 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
             }
         });
 
-        // Subtract validated credit notes from unpaid amount (Financial Impact)
         const validatedCreditNotesAmount = creditNotes
             .filter(cn => cn.status === CreditNoteStatus.Validated)
             .reduce((sum, cn) => sum + cn.amount, 0);
@@ -92,32 +92,32 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
 
     const stats = [
         { 
-            name: 'Revenu Total', 
-            stat: totalRevenue.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }), 
+            name: t('totalRevenue'), 
+            stat: totalRevenue.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }), 
             icon: DollarSign, 
             color: 'bg-emerald-500 text-emerald-600',
-            desc: 'Sur toutes les factures payées'
+            desc: t('totalRevenueDesc')
         },
         { 
-            name: 'Factures Impayées', 
+            name: t('unpaidInvoices'), 
             stat: unpaidInvoicesCount, 
             icon: AlertCircle, 
             color: 'bg-amber-500 text-amber-600',
-            desc: `Montant restant : ${unpaidAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 })}`
+            desc: `${t('remainingAmount')} : ${unpaidAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 })}`
         },
         { 
-            name: 'Clients Actifs', 
+            name: t('activeClients'), 
             stat: clients.length, 
             icon: Users, 
             color: 'bg-blue-500 text-blue-600',
-            desc: 'Base de données clients'
+            desc: t('clientsDatabase')
         },
         { 
-            name: 'Catalogue', 
+            name: t('catalog'), 
             stat: products.length, 
             icon: Package, 
             color: 'bg-purple-500 text-purple-600',
-            desc: 'Produits et services'
+            desc: t('catalogDesc')
         },
     ];
 
@@ -205,7 +205,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
             const relevantInvoices = getPaidInvoices(start, end);
             
             for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+                const dateStr = d.toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR', { day: '2-digit', month: '2-digit' });
                 const isoDate = d.toISOString().split('T')[0];
                 
                 const amount = relevantInvoices.reduce((acc, inv) => {
@@ -218,7 +218,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
         }
 
         return data;
-    }, [invoices, chartPeriod, customStartDate, customEndDate]);
+    }, [invoices, chartPeriod, customStartDate, customEndDate, language]);
 
     const lowStockProducts = useMemo(() => {
         return products
@@ -263,8 +263,8 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                 
                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold">Bienvenue, {welcomeName} !</h1>
-                        <p className="text-emerald-100 mt-2 text-base md:text-lg">Voici un aperçu de vos activités.</p>
+                        <h1 className="text-2xl md:text-3xl font-bold">{t('welcome')}, {welcomeName} !</h1>
+                        <p className="text-emerald-100 mt-2 text-base md:text-lg">{t('welcomeSubtitle')}</p>
                     </div>
                     
                     {/* Widget Date */}
@@ -273,7 +273,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                             <CalendarDays className="h-6 w-6" />
                         </div>
                         <div className="text-white">
-                            <p className="text-xs text-emerald-200 font-bold uppercase tracking-wider mb-0.5">Aujourd'hui</p>
+                            <p className="text-xs text-emerald-200 font-bold uppercase tracking-wider mb-0.5">{t('today')}</p>
                             <p className="text-base md:text-lg font-bold capitalize leading-none">{todayDate}</p>
                         </div>
                     </div>
@@ -291,7 +291,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                 {/* Chart Section */}
                 <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-slate-100 p-6 md:p-8 flex flex-col">
                     <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                        <h3 className="text-lg font-bold text-slate-900">Évolution du CA</h3>
+                        <h3 className="text-lg font-bold text-slate-900">{t('revenueEvolution')}</h3>
                         
                         {/* Période Selector */}
                         <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-lg w-full sm:w-auto justify-center">
@@ -305,7 +305,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                                         : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700'
                                     }`}
                                 >
-                                    {p === 'day' ? 'Jour' : p === 'week' ? 'Sem' : p === 'month' ? 'Mois' : 'An'}
+                                    {p === 'day' ? t('periodDay') : p === 'week' ? t('periodWeek') : p === 'month' ? t('periodMonth') : t('periodYear')}
                                 </button>
                             ))}
                             <button
@@ -346,7 +346,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                                 <div className="p-4 bg-slate-50 rounded-full mb-3">
                                     <Archive className="h-8 w-8" />
                                 </div>
-                                <p>Aucune donnée financière</p>
+                                <p>{t('noFinancialData')}</p>
                             </div>
                         ) : (
                             <ResponsiveContainer width="100%" height="100%">
@@ -373,26 +373,26 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
 
                 {/* Right Column: Actions, Stock Alerts, Top Products */}
                 <div className="space-y-6">
-                    <h3 className="text-lg font-bold text-slate-900 px-1">Actions Rapides</h3>
+                    <h3 className="text-lg font-bold text-slate-900 px-1">{t('quickActions')}</h3>
                     <div className="grid grid-cols-1 gap-4">
                         <ShortcutCard 
                             icon={FileText} 
-                            label="Nouveau Devis" 
-                            desc="Créer une proposition" 
+                            label={t('newQuote')} 
+                            desc={t('createProposal')} 
                             colorClass="bg-blue-500" 
                             onClick={() => navigate('/sales/quotes/new')} 
                         />
                         <ShortcutCard 
                             icon={UserPlus} 
-                            label="Ajouter Client" 
-                            desc="Enregistrer un contact" 
+                            label={t('addClient')} 
+                            desc={t('saveContact')} 
                             colorClass="bg-purple-500" 
                             onClick={() => navigate('/clients')} 
                         />
                         <ShortcutCard 
                             icon={Package} 
-                            label="Nouveau Produit" 
-                            desc="Mettre à jour le stock" 
+                            label={t('newProduct')} 
+                            desc={t('updateStock')} 
                             colorClass="bg-amber-500" 
                             onClick={() => navigate('/products/new')} 
                         />
@@ -402,9 +402,9 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                     <div className="bg-red-50 rounded-2xl p-5 border border-red-100 shadow-sm mt-6">
                         <div className="flex justify-between items-center mb-3">
                             <h4 className="font-bold text-red-800 flex items-center gap-2">
-                                <AlertTriangle className="h-5 w-5"/> Alertes Stock
+                                <AlertTriangle className="h-5 w-5"/> {t('stockAlerts')}
                             </h4>
-                            <button onClick={() => navigate('/stock')} className="text-xs font-semibold text-red-600 hover:underline">Gérer</button>
+                            <button onClick={() => navigate('/stock')} className="text-xs font-semibold text-red-600 hover:underline">{t('manage')}</button>
                         </div>
                         <div className="space-y-2">
                             {lowStockProducts.length > 0 ? (
@@ -412,13 +412,13 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                                     <div key={p.id} className="flex justify-between items-center bg-white p-2 rounded-lg border border-red-100">
                                         <span className="text-sm font-medium text-slate-700 truncate max-w-[120px]">{p.name}</span>
                                         <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-md">
-                                            Reste: {p.stockQuantity}
+                                            {t('remains')}: {p.stockQuantity}
                                         </span>
                                     </div>
                                 ))
                             ) : (
                                 <div className="text-sm text-green-700 flex items-center gap-2">
-                                    <CheckCircle size={16}/> Tous les stocks sont bons
+                                    <CheckCircle size={16}/> {t('stockOk')}
                                 </div>
                             )}
                         </div>
@@ -427,7 +427,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                     {/* Meilleurs Produits */}
                     <div className="bg-amber-50 rounded-2xl p-5 border border-amber-100 shadow-sm">
                         <h4 className="font-bold text-amber-900 flex items-center gap-2 mb-3">
-                            <TrendingUp className="h-5 w-5 text-amber-600"/> Top Ventes
+                            <TrendingUp className="h-5 w-5 text-amber-600"/> {t('topSales')}
                         </h4>
                         <div className="space-y-2">
                             {topProducts.length > 0 ? (
@@ -438,7 +438,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                                             <span className="text-sm font-medium text-slate-700 truncate max-w-[110px]">{p?.name}</span>
                                         </div>
                                         <span className="text-xs font-semibold text-slate-500">
-                                            {p?.qty} vendus
+                                            {p?.qty} {t('sold')}
                                         </span>
                                     </div>
                                 ))
@@ -454,9 +454,9 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
                  <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-100 overflow-hidden">
                     <div className="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                        <h3 className="font-bold text-slate-900">Dernières Factures</h3>
+                        <h3 className="font-bold text-slate-900">{t('recentInvoices')}</h3>
                         <button onClick={() => navigate('/sales/invoices')} className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
-                            Voir tout <ArrowRight className="h-4 w-4"/>
+                            {t('seeAll')} <ArrowRight className="h-4 w-4 rtl:rotate-180"/>
                         </button>
                     </div>
                     {recentInvoices.length > 0 ? (
@@ -487,16 +487,16 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                     ) : (
                         <div className="flex flex-col items-center justify-center text-slate-400 py-12">
                             <FileText className="h-12 w-12 mb-3 opacity-20" />
-                            <p>Aucune facture récente</p>
+                            <p>{t('noRecentInvoices')}</p>
                         </div>
                     )}
                  </div>
 
                  <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-100 overflow-hidden">
                     <div className="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                        <h3 className="font-bold text-slate-900">Nouveaux Clients</h3>
+                        <h3 className="font-bold text-slate-900">{t('newClients')}</h3>
                         <button onClick={() => navigate('/clients')} className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
-                            Voir tout <ArrowRight className="h-4 w-4"/>
+                            {t('seeAll')} <ArrowRight className="h-4 w-4 rtl:rotate-180"/>
                         </button>
                     </div>
                      {recentClients.length > 0 ? (
@@ -521,7 +521,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                     ) : (
                          <div className="flex flex-col items-center justify-center text-slate-400 py-12">
                             <Users className="h-12 w-12 mb-3 opacity-20" />
-                            <p>Aucun client enregistré</p>
+                            <p>{t('noClients')}</p>
                         </div>
                     )}
                  </div>

@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, ScanLine, Calculator, FileText } from 'lucide-react';
 import { Client, Product, Quote, LineItem, QuoteStatus } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface CreateQuoteModalProps {
     isOpen: boolean;
@@ -13,12 +13,13 @@ interface CreateQuoteModalProps {
 }
 
 const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, onSave, clients, products, quoteToEdit }) => {
+    const { t, isRTL } = useLanguage();
     const [isVisible, setIsVisible] = useState(false);
     
     // Form State
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    // expiryDate removed from UI
+    // expiryDate removed from UI, will be handled internally
     const [subject, setSubject] = useState('');
     const [reference, setReference] = useState('');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -88,7 +89,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
 
     const handleAddItem = () => {
         if (!tempName) {
-            alert("Veuillez entrer une désignation pour l'article.");
+            alert(t('description'));
             return;
         }
 
@@ -120,11 +121,11 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
 
     const handleSave = () => {
         if (!clientId) {
-            alert('Veuillez sélectionner un client.');
+            alert(t('client'));
             return;
         }
         if (lineItems.length === 0) {
-            alert('Veuillez ajouter au moins un article.');
+            alert(t('items'));
             return;
         }
 
@@ -158,8 +159,8 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
                     <div>
-                        <h3 className="text-lg font-semibold text-neutral-900">{quoteToEdit ? 'Modifier Devis' : 'Nouveau Devis'}</h3>
-                        <p className="text-sm text-neutral-500">{quoteToEdit ? `Modification du devis #${quoteToEdit.id}` : 'Créer une proposition commerciale.'}</p>
+                        <h3 className="text-lg font-semibold text-neutral-900">{quoteToEdit ? t('editQuote') : t('newQuote')}</h3>
+                        <p className="text-sm text-neutral-500">{quoteToEdit ? `#${quoteToEdit.documentId || quoteToEdit.id}` : t('createProposal')}</p>
                     </div>
                     <button onClick={handleClose} className="p-1 text-neutral-400 hover:text-neutral-600 rounded-full hover:bg-neutral-100 transition-colors">
                         <X size={20} />
@@ -172,13 +173,13 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                     {/* Client & Dates */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div className="sm:col-span-1">
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Client *</label>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">{t('client')} *</label>
                             <select 
                                 value={clientId}
                                 onChange={(e) => setClientId(e.target.value)}
                                 className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                             >
-                                <option value="">-- Sélectionner --</option>
+                                <option value="">-- {t('select')} --</option>
                                 {clients.map(client => (
                                     <option key={client.id} value={client.id}>
                                         {client.company || client.name}
@@ -187,7 +188,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Date d'émission *</label>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">{t('date')} *</label>
                             <input 
                                 type="date" 
                                 value={date}
@@ -200,21 +201,22 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                     {/* Subject & Reference */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                          <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Objet</label>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">{t('subject')}</label>
                             <input 
                                 type="text" 
                                 value={subject}
                                 onChange={(e) => setSubject(e.target.value)}
-                                placeholder="Ex: Projet Site Web"
+                                placeholder={t('subject')}
                                 className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1">Référence (Optionnel)</label>
+                            <label className="block text-sm font-medium text-neutral-700 mb-1">{t('reference')}</label>
                             <input 
                                 type="text" 
                                 value={reference}
                                 onChange={(e) => setReference(e.target.value)}
+                                placeholder={t('reference')}
                                 className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                             />
                         </div>
@@ -224,20 +226,20 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                     <div className="bg-neutral-50 p-4 rounded-lg border border-neutral-200 space-y-4">
                         <div className="flex justify-between items-center">
                             <h4 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
-                                <ScanLine size={16} className="text-emerald-600"/> Ajouter des articles (Sélection ou Saisie Libre)
+                                <ScanLine size={16} className="text-emerald-600"/> {t('items')}
                             </h4>
                         </div>
                         
                         <div className="grid grid-cols-12 gap-3 items-end">
                             {/* Product Selector */}
-                            <div className="col-span-12 md:col-span-3">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Produit (Auto-remplissage)</label>
+                            <div className="col-span-12 md:col-span-2">
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">Produit (Auto)</label>
                                 <select 
                                     value={selectedProductId}
                                     onChange={(e) => setSelectedProductId(e.target.value)}
                                     className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm text-neutral-600"
                                 >
-                                    <option value="">-- Libre / Manuel --</option>
+                                    <option value="">-- {t('new')} --</option>
                                     {products.map(product => (
                                         <option key={product.id} value={product.id}>{product.name}</option>
                                     ))}
@@ -246,31 +248,31 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
 
                             {/* Reference Input - NEW */}
                             <div className="col-span-6 md:col-span-2">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Réf (Code)</label>
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">{t('reference')}</label>
                                 <input 
                                     type="text" 
                                     value={tempProductCode}
                                     onChange={(e) => setTempProductCode(e.target.value)}
-                                    placeholder="Réf"
+                                    placeholder={t('reference')}
                                     className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
                                 />
                             </div>
 
                             {/* Name Input */}
                             <div className="col-span-6 md:col-span-3">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Désignation *</label>
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">{t('description')} *</label>
                                 <input 
                                     type="text" 
                                     value={tempName}
                                     onChange={(e) => setTempName(e.target.value)}
-                                    placeholder="Désignation"
+                                    placeholder={t('description')}
                                     className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm font-medium"
                                 />
                             </div>
 
                             {/* Price Input */}
                             <div className="col-span-4 md:col-span-2">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Prix HT</label>
+                                <label className="block text-xs font-medium text-neutral-500 mb-1">{t('unitPrice')}</label>
                                 <input 
                                     type="number" 
                                     value={tempPrice}
@@ -279,41 +281,43 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 />
                             </div>
 
-                            {/* Qty Input */}
-                            <div className="col-span-4 md:col-span-1">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">Qté</label>
-                                <input 
-                                    type="number" 
-                                    min="1"
-                                    value={itemQuantity}
-                                    onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
-                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm text-center"
-                                />
+                            {/* Qty & VAT Grouped */}
+                            <div className="col-span-8 md:col-span-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-medium text-neutral-500 mb-1">{t('quantity')}</label>
+                                        <input 
+                                            type="number" 
+                                            min="1"
+                                            value={itemQuantity}
+                                            onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
+                                            className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm text-center"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium text-neutral-500 mb-1">{t('vat')}</label>
+                                        <select 
+                                            value={tempVat} 
+                                            onChange={(e) => setTempVat(parseInt(e.target.value))} 
+                                            className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                                        >
+                                            <option value="20">20%</option>
+                                            <option value="14">14%</option>
+                                            <option value="10">10%</option>
+                                            <option value="7">7%</option>
+                                            <option value="0">0%</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* VAT - Moved to align */}
-                            <div className="col-span-4 md:col-span-1">
-                                <label className="block text-xs font-medium text-neutral-500 mb-1">TVA</label>
-                                <select 
-                                    value={tempVat} 
-                                    onChange={(e) => setTempVat(parseInt(e.target.value))} 
-                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm p-1.5"
-                                >
-                                    <option value="20">20%</option>
-                                    <option value="14">14%</option>
-                                    <option value="10">10%</option>
-                                    <option value="7">7%</option>
-                                    <option value="0">0%</option>
-                                </select>
-                            </div>
-
-                            {/* Add Button - Moved to own row on mobile, float on desktop */}
+                            {/* Add Button - Consistent with Invoice */}
                             <div className="col-span-12 md:col-span-12 flex justify-end mt-2">
                                 <button 
                                     onClick={handleAddItem}
                                     className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-sm text-sm font-medium"
                                 >
-                                    <Plus size={16} className="mr-2" /> Ajouter Ligne
+                                    <Plus size={16} className={`mr-2 ${isRTL ? 'ml-2 mr-0' : ''}`} /> {t('add')}
                                 </button>
                             </div>
                         </div>
@@ -321,26 +325,26 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
 
                     {/* Items Table */}
                     {lineItems.length > 0 ? (
-                        <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                        <div className="border border-neutral-200 rounded-lg overflow-hidden overflow-x-auto">
                             <table className="min-w-full divide-y divide-neutral-200">
                                 <thead className="bg-neutral-50">
                                     <tr>
-                                        <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase">Réf</th>
-                                        <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase">Désignation</th>
-                                        <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase">Qté</th>
-                                        <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Prix HT</th>
-                                        <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase">Total</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase rtl:text-right">{t('reference')}</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium text-neutral-500 uppercase rtl:text-right">{t('description')}</th>
+                                        <th className="px-4 py-2 text-center text-xs font-medium text-neutral-500 uppercase">{t('quantity')}</th>
+                                        <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase rtl:text-left">{t('unitPrice')}</th>
+                                        <th className="px-4 py-2 text-right text-xs font-medium text-neutral-500 uppercase rtl:text-left">{t('totalHT')}</th>
                                         <th className="px-4 py-2 w-10"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-neutral-200">
                                     {lineItems.map(item => (
                                         <tr key={item.id}>
-                                            <td className="px-4 py-2 text-sm text-neutral-500">{item.productCode || '-'}</td>
-                                            <td className="px-4 py-2 text-sm text-neutral-900">{item.name}</td>
+                                            <td className="px-4 py-2 text-sm text-neutral-500 rtl:text-right">{item.productCode || '-'}</td>
+                                            <td className="px-4 py-2 text-sm text-neutral-900 rtl:text-right">{item.name}</td>
                                             <td className="px-4 py-2 text-sm text-center text-neutral-600">{item.quantity}</td>
-                                            <td className="px-4 py-2 text-sm text-right text-neutral-600">{item.unitPrice.toLocaleString('fr-FR')}</td>
-                                            <td className="px-4 py-2 text-sm text-right font-medium text-neutral-900">{(item.quantity * item.unitPrice).toLocaleString('fr-FR')}</td>
+                                            <td className="px-4 py-2 text-sm text-right text-neutral-600 rtl:text-left">{item.unitPrice.toLocaleString('fr-FR')}</td>
+                                            <td className="px-4 py-2 text-sm text-right font-medium text-neutral-900 rtl:text-left">{(item.quantity * item.unitPrice).toLocaleString('fr-FR')}</td>
                                             <td className="px-4 py-2 text-center">
                                                 <button onClick={() => handleRemoveItem(item.id)} className="text-neutral-400 hover:text-red-500 transition-colors">
                                                     <Trash2 size={16}/>
@@ -353,7 +357,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                         </div>
                     ) : (
                         <div className="text-center py-8 bg-neutral-50 rounded-lg border border-dashed border-neutral-300 text-neutral-500 text-sm">
-                            Aucun article ajouté au devis.
+                            {t('items')}
                         </div>
                     )}
 
@@ -361,16 +365,16 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                     <div className="flex justify-end border-t border-neutral-200 pt-6">
                         <div className="w-full max-w-xs space-y-3">
                              <div className="flex justify-between text-sm text-neutral-600">
-                                <span>Total HT</span>
+                                <span>{t('totalHT')}</span>
                                 <span>{totals.subTotal.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                             <div className="flex justify-between text-sm text-neutral-600">
-                                <span>TVA (Estimée)</span>
+                                <span>{t('vat')}</span>
                                 <span>{totals.vatAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                             <div className="h-px bg-neutral-200 my-1"></div>
                             <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg border border-emerald-100">
-                                <span className="text-base font-bold text-emerald-800">Total TTC</span>
+                                <span className="text-base font-bold text-emerald-800">{t('totalTTC')}</span>
                                 <span className="text-lg font-bold text-emerald-700">{totals.totalTTC.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                         </div>
@@ -384,13 +388,13 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                         onClick={handleClose}
                         className="px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg shadow-sm hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all"
                     >
-                        Annuler
+                        {t('cancel')}
                     </button>
                     <button 
                         onClick={handleSave}
                         className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-lg shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all flex items-center gap-2"
                     >
-                        <FileText size={16} /> {quoteToEdit ? 'Mettre à jour' : 'Enregistrer Devis'}
+                        <FileText size={16} /> {quoteToEdit ? t('update') : t('save')}
                     </button>
                 </div>
 

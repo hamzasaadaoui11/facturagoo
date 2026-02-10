@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '../types';
 import { X } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface AddProductModalProps {
     isOpen: boolean;
@@ -11,6 +12,7 @@ interface AddProductModalProps {
 }
 
 const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSave, productToEdit }) => {
+    const { t } = useLanguage();
     const [name, setName] = useState('');
     const [productCode, setProductCode] = useState('');
     const [salePrice, setSalePrice] = useState(0);
@@ -40,7 +42,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!name || salePrice <= 0) {
-            alert('Veuillez renseigner le nom et un prix de vente valide.');
+            alert(t('name') + ' & ' + t('unitPrice'));
             return;
         }
         
@@ -65,32 +67,32 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" aria-modal="true">
             <div className="relative w-full max-w-lg p-4 bg-white rounded-lg shadow-xl">
                 <div className="flex items-center justify-between pb-4 border-b">
-                    <h3 className="text-lg font-semibold text-slate-900">{isEditMode ? 'Modifier le produit' : 'Ajouter un nouveau produit'}</h3>
+                    <h3 className="text-lg font-semibold text-slate-900">{isEditMode ? t('editProduct') : t('newProduct')}</h3>
                     <button onClick={onClose} className="p-1 text-slate-400 rounded-full hover:bg-slate-100 hover:text-slate-600">
                         <X size={20} />
                     </button>
                 </div>
                 <form onSubmit={handleSubmit} className="mt-4 space-y-4">
                     <div>
-                        <label htmlFor="productName" className="block text-sm font-medium text-slate-700">Nom du produit</label>
+                        <label htmlFor="productName" className="block text-sm font-medium text-slate-700">{t('name')}</label>
                         <input type="text" id="productName" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                     </div>
                     <div>
-                        <label htmlFor="modalProductCode" className="block text-sm font-medium text-slate-700">Référence (Réf)</label>
-                        <input type="text" id="modalProductCode" value={productCode} onChange={(e) => setProductCode(e.target.value)} placeholder="Auto si vide" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                        <label htmlFor="modalProductCode" className="block text-sm font-medium text-slate-700">{t('reference')}</label>
+                        <input type="text" id="modalProductCode" value={productCode} onChange={(e) => setProductCode(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label htmlFor="salePrice" className="block text-sm font-medium text-slate-700">Prix de vente (HT)</label>
+                            <label htmlFor="salePrice" className="block text-sm font-medium text-slate-700">{t('unitPrice')}</label>
                             <input type="number" id="salePrice" value={salePrice} onChange={(e) => setSalePrice(parseFloat(e.target.value) || 0)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                         </div>
                          <div>
-                            <label htmlFor="purchasePrice" className="block text-sm font-medium text-slate-700">Prix d'achat (HT)</label>
+                            <label htmlFor="purchasePrice" className="block text-sm font-medium text-slate-700">{t('unitPrice')} (Achat)</label>
                             <input type="number" id="purchasePrice" value={purchasePrice} onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                         </div>
                     </div>
                      <div>
-                        <label htmlFor="vat" className="block text-sm font-medium text-slate-700">TVA (%)</label>
+                        <label htmlFor="vat" className="block text-sm font-medium text-slate-700">{t('vat')}</label>
                         <select id="vat" value={vat} onChange={(e) => setVat(parseInt(e.target.value))} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
                             <option>20</option>
                             <option>14</option>
@@ -101,10 +103,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                     </div>
                     <div className="flex justify-end pt-4 space-x-2 border-t">
                         <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
-                            Annuler
+                            {t('cancel')}
                         </button>
                         <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-slate-800 border border-transparent rounded-md shadow-sm hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-800">
-                            {isEditMode ? 'Mettre à jour' : 'Enregistrer'}
+                            {isEditMode ? t('update') : t('save')}
                         </button>
                     </div>
                 </form>

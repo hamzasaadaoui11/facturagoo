@@ -9,6 +9,7 @@ import ConfirmationModal from './ConfirmationModal';
 import { Plus, Search, Pencil, RefreshCw, Download, FileText, MoreVertical, CheckCircle, Loader2, Printer, Trash2 } from 'lucide-react';
 import { Quote, QuoteStatus, Client, Product, CompanySettings } from '../types';
 import { generatePDF, printDocument } from '../services/pdfService';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const statusColors: { [key in QuoteStatus]: string } = {
     [QuoteStatus.Created]: 'bg-blue-100 text-blue-700',
@@ -43,6 +44,7 @@ const Quotes: React.FC<QuotesProps> = ({
     companySettings
 }) => {
     const navigate = useNavigate();
+    const { t, isRTL } = useLanguage();
     const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [quoteToUpdate, setQuoteToUpdate] = useState<Quote | null>(null);
@@ -83,7 +85,7 @@ const Quotes: React.FC<QuotesProps> = ({
             setActiveMenuId(id);
             setMenuPosition({
                 top: rect.bottom + window.scrollY + 5,
-                left: rect.right + window.scrollX - 192 // 192px width
+                left: isRTL ? rect.left + window.scrollX : rect.right + window.scrollX - 192 // 192px width
             });
         }
     };
@@ -186,14 +188,14 @@ const Quotes: React.FC<QuotesProps> = ({
 
     return (
         <div>
-            <Header title="Devis">
+            <Header title={t('quotes')}>
                 <button
                     type="button"
                     onClick={handleCreateClick}
                     className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
                 >
-                    <Plus className="-ml-0.5 h-5 w-5" />
-                    Nouveau Devis
+                    <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
+                    {t('newQuote')}
                 </button>
             </Header>
 
@@ -217,20 +219,18 @@ const Quotes: React.FC<QuotesProps> = ({
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={confirmDelete}
-                title="Supprimer le devis"
-                message="Êtes-vous sûr de vouloir supprimer ce devis ? Cette action est irréversible."
             />
 
             <div className="rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
                 <div className="p-4 border-b border-neutral-200">
                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <div className="pointer-events-none absolute inset-y-0 flex items-center pl-3 rtl:right-0 rtl:pr-3">
                            <Search className="h-5 w-5 text-neutral-400" aria-hidden="true" />
                         </div>
                         <input
                            type="search"
-                           placeholder="Rechercher par numéro ou client..."
-                           className="block w-full rounded-lg border-neutral-300 py-2 pl-10 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                           placeholder={t('search')}
+                           className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
                         />
                     </div>
                 </div>
@@ -238,28 +238,28 @@ const Quotes: React.FC<QuotesProps> = ({
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Numéro</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Date</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Client</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Montant</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Statut</th>
-                                <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">Actions</span></th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">#</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('date')}</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('client')}</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('amount')}</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('status')}</th>
+                                <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">{t('actions')}</span></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-200 bg-white">
                             {quotes.length > 0 ? (
                                 quotes.map((quote) => (
                                     <tr key={quote.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-emerald-600">{quote.documentId || quote.id}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{new Date(quote.date).toLocaleDateString('fr-FR')}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{quote.clientName}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{quote.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base">
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-emerald-600 rtl:text-right">{quote.documentId || quote.id}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 rtl:text-right">{new Date(quote.date).toLocaleDateString('fr-FR')}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 rtl:text-right">{quote.clientName}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 rtl:text-right">{quote.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base rtl:text-right">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[quote.status]}`}>
                                                 {quote.status}
                                             </span>
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium relative">
+                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium relative rtl:text-left">
                                             <button 
                                                 onClick={(e) => toggleMenu(e, quote.id)}
                                                 className={`p-1.5 rounded-full transition-colors ${activeMenuId === quote.id ? 'bg-neutral-200 text-neutral-800' : 'text-neutral-500 hover:bg-neutral-100'}`}
@@ -274,8 +274,7 @@ const Quotes: React.FC<QuotesProps> = ({
                                     <td colSpan={7} className="text-center py-16 px-6 text-sm text-neutral-500">
                                        <div className="flex flex-col items-center">
                                             <FileText className="h-10 w-10 text-neutral-400 mb-2" />
-                                            <h3 className="font-semibold text-neutral-800">Aucun devis trouvé</h3>
-                                            <p>Commencez par créer votre premier devis.</p>
+                                            <h3 className="font-semibold text-neutral-800">{t('search')}</h3>
                                         </div>
                                     </td>
                                 </tr>
@@ -297,14 +296,14 @@ const Quotes: React.FC<QuotesProps> = ({
                             onClick={() => handleEdit(activeQuote)} 
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Pencil size={16} className="mr-3 text-emerald-600" /> Modifier
+                            <Pencil size={16} className={`text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('edit')}
                         </button>
 
                         <button 
                             onClick={() => handleOpenStatusModal(activeQuote)} 
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <RefreshCw size={16} className="mr-3 text-blue-600" /> Changer Statut
+                            <RefreshCw size={16} className={`text-blue-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('update')}
                         </button>
                         
                         {activeQuote.status !== QuoteStatus.Converted && (
@@ -314,11 +313,11 @@ const Quotes: React.FC<QuotesProps> = ({
                                 className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                             >
                                 {isConverting ? (
-                                    <Loader2 size={16} className="mr-3 animate-spin text-purple-600" />
+                                    <Loader2 size={16} className={`animate-spin text-purple-600 ${isRTL ? 'ml-3' : 'mr-3'}`} />
                                 ) : (
-                                    <CheckCircle size={16} className="mr-3 text-purple-600" />
+                                    <CheckCircle size={16} className={`text-purple-600 ${isRTL ? 'ml-3' : 'mr-3'}`} />
                                 )}
-                                Convertir Facture
+                                {t('convert')}
                             </button>
                         )}
                         
@@ -326,7 +325,7 @@ const Quotes: React.FC<QuotesProps> = ({
                             onClick={() => handlePrint(activeQuote)}
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Printer size={16} className="mr-3 text-neutral-500" /> Imprimer
+                            <Printer size={16} className={`text-neutral-500 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('print')}
                         </button>
 
                         <button 
@@ -334,14 +333,14 @@ const Quotes: React.FC<QuotesProps> = ({
                             disabled={isDownloading}
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                         >
-                            {isDownloading ? <Loader2 size={16} className="mr-3 animate-spin" /> : <Download size={16} className="mr-3 text-neutral-500" />} Télécharger PDF
+                            {isDownloading ? <Loader2 size={16} className={`animate-spin ${isRTL ? 'ml-3' : 'mr-3'}`} /> : <Download size={16} className={`text-neutral-500 ${isRTL ? 'ml-3' : 'mr-3'}`} />} {t('download')}
                         </button>
 
                         <button 
                             onClick={() => handleDeleteClick(activeQuote.id)} 
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Trash2 size={16} className="mr-3 text-red-600" /> Supprimer
+                            <Trash2 size={16} className={`text-red-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('delete')}
                         </button>
                     </div>
                 </div>,
