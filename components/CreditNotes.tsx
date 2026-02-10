@@ -202,11 +202,11 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={7} className="text-center py-16 px-6 text-sm text-neutral-500">
-                                        <div className="flex flex-col items-center">
-                                            <FileText className="h-10 w-10 text-neutral-400 mb-2" />
-                                            <h3 className="font-semibold text-neutral-800">Aucun avoir trouvé</h3>
-                                            <p>Créez des avoirs manuellement ou depuis une facture.</p>
+                                    <td colSpan={7} className="text-center py-20 px-6">
+                                        <div className="flex flex-col items-center justify-center">
+                                            <FileText className="h-12 w-12 text-slate-300 mb-4" />
+                                            <h3 className="text-lg font-bold text-slate-800">Aucun avoir trouvé</h3>
+                                            <p className="text-sm text-slate-500 mt-1">Créez des avoirs manuellement ou depuis une facture.</p>
                                         </div>
                                     </td>
                                 </tr>
