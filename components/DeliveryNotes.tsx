@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -330,11 +329,11 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                                 )})
                             ) : (
                                 <tr>
-                                    <td colSpan={7} className="text-center py-16 px-6 text-sm text-neutral-500">
-                                        <div className="flex flex-col items-center">
-                                            <Truck className="h-10 w-10 text-neutral-400 mb-2" />
-                                            <h3 className="font-semibold text-neutral-800">Aucun bon de livraison</h3>
-                                            <p>Générez votre premier bon de livraison.</p>
+                                    <td colSpan={7} className="text-center py-20 px-6">
+                                        <div className="flex flex-col items-center justify-center">
+                                            <Truck className="h-12 w-12 text-slate-300 mb-4" />
+                                            <h3 className="text-lg font-bold text-slate-800">Aucun bon de livraison trouvé</h3>
+                                            <p className="text-sm text-slate-500 mt-1">Générez votre premier bon de livraison pour commencer.</p>
                                         </div>
                                     </td>
                                 </tr>
