@@ -126,7 +126,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     return (
         <div className={`fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`} aria-modal="true">
             <div className="absolute inset-0 bg-neutral-900/75 backdrop-blur-sm" onClick={handleClose}></div>
-            <div className={`relative w-full md:max-w-6xl bg-white md:rounded-xl shadow-2xl transition-all duration-200 ease-in-out flex flex-col h-full md:h-auto md:max-h-[95vh] ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+            <div className={`relative w-full h-full md:h-auto md:max-h-[95vh] md:max-w-6xl bg-white md:rounded-xl shadow-2xl transition-all duration-200 ease-in-out flex flex-col ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
                 
                 <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
                     <div>
@@ -138,7 +138,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
 
                 {error && (<div className="px-6 pt-4"><div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start gap-3"><AlertCircle className="h-5 w-5 text-red-500 shrink-0" /><p className="text-xs text-red-700">{error}</p></div></div>)}
 
-                <div className="px-6 py-5 overflow-y-auto custom-scrollbar space-y-5 flex-1 pb-24 md:pb-6">
+                <div className="px-4 md:px-6 py-5 overflow-y-auto custom-scrollbar space-y-6 flex-1 pb-24 md:pb-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-semibold text-neutral-700 mb-1">{t('client')} *</label>
@@ -156,33 +156,33 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                             <div className="h-px bg-neutral-200 flex-1"></div>
                         </div>
                         
-                        <div className="grid grid-cols-24 gap-2 items-end">
-                            <div className="col-span-24 md:col-span-2">
+                        <div className="grid grid-cols-24 gap-3 items-end">
+                            <div className="col-span-12 lg:col-span-2">
                                 <label className="block text-[10px] font-bold text-neutral-500 mb-1 uppercase truncate">Réf.</label>
-                                <input type="text" value={tempProductCode} onChange={(e) => setTempProductCode(e.target.value)} placeholder="Réf" className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-9 text-left"/>
+                                <input type="text" value={tempProductCode} onChange={(e) => setTempProductCode(e.target.value)} placeholder="Réf" className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-10 text-left"/>
                             </div>
-                            <div className="col-span-24 md:col-span-4">
+                            <div className="col-span-12 lg:col-span-4">
                                 <label className="block text-[10px] font-bold text-neutral-500 mb-1 uppercase truncate">Produit (Auto)</label>
-                                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-9 bg-white"><option value="">-- {t('select')} --</option>{products.map(product => (<option key={product.id} value={product.id}>{product.name}</option>))}</select>
+                                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-10 bg-white"><option value="">-- {t('select')} --</option>{products.map(product => (<option key={product.id} value={product.id}>{product.name}</option>))}</select>
                             </div>
-                            <div className="col-span-24 md:col-span-8">
+                            <div className="col-span-24 lg:col-span-6">
                                 <label className="block text-[10px] font-bold text-neutral-500 mb-1 uppercase">Désignation *</label>
-                                <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} placeholder="Nom de l'article" className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-9 font-medium text-left"/>
+                                <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} placeholder="Nom de l'article" className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-10 font-medium text-left"/>
                             </div>
-                            <div className="col-span-24 md:col-span-3">
+                            <div className="col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-neutral-500 mb-1 uppercase">P.U. HT</label>
-                                <input type="number" value={tempPrice} onChange={(e) => setTempPrice(parseFloat(e.target.value) || 0)} className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-9 text-left"/>
+                                <input type="number" value={tempPrice} onChange={(e) => setTempPrice(parseFloat(e.target.value) || 0)} className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-10 text-left"/>
                             </div>
-                            <div className="col-span-12 md:col-span-2">
+                            <div className="col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-neutral-500 mb-1 uppercase truncate">Qté</label>
-                                <input type="number" min="1" value={itemQuantity} onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)} className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-9 text-left"/>
+                                <input type="number" min="1" value={itemQuantity} onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)} className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-10 text-left"/>
                             </div>
-                            <div className="col-span-12 md:col-span-2">
+                            <div className="col-span-24 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-neutral-500 mb-1 uppercase truncate">TVA</label>
-                                <select value={tempVat} onChange={(e) => setTempVat(parseInt(e.target.value))} className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-9 bg-white"><option value="20">20%</option><option value="14">14%</option><option value="10">10%</option><option value="7">7%</option><option value="0">0%</option></select>
+                                <select value={tempVat} onChange={(e) => setTempVat(parseInt(e.target.value))} className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-10 bg-white"><option value="20">20%</option><option value="14">14%</option><option value="10">10%</option><option value="7">7%</option><option value="0">0%</option></select>
                             </div>
-                            <div className="col-span-24 md:col-span-3">
-                                <button onClick={handleAddItem} className="w-full inline-flex items-center justify-center h-9 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-md active:scale-95 text-xs font-bold gap-2"><Plus size={18} /> {t('add')}</button>
+                            <div className="col-span-24 lg:col-span-3">
+                                <button onClick={handleAddItem} className="w-full inline-flex items-center justify-center h-10 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-md active:scale-95 text-xs font-bold gap-2"><Plus size={18} /> {t('add')}</button>
                             </div>
                         </div>
                     </div>
@@ -196,7 +196,9 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                 </tbody>
                             </table>
                         </div>
-                    ) : (<div className="text-center py-10 bg-neutral-50 rounded-lg border border-dashed border-neutral-300 text-neutral-400 text-xs italic">{t('items')}</div>)}
+                    ) : (
+                        <div className="text-center py-10 bg-neutral-50 rounded-lg border border-dashed border-neutral-300 text-neutral-400 text-xs italic">{t('items')}</div>
+                    )}
 
                     <div className="flex justify-end border-t border-neutral-200 pt-6">
                         <div className="w-full max-w-sm space-y-3">
@@ -208,18 +210,22 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-3 px-6 py-4 bg-neutral-50 border-t border-neutral-200 md:rounded-b-xl">
-                     <button onClick={handleClose} disabled={isSubmitting} className="px-5 py-2 text-sm font-bold text-neutral-600 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-all">{t('cancel')}</button>
-                    <button onClick={handleSave} disabled={isSubmitting} className="px-8 py-2 text-sm font-bold text-white bg-emerald-600 border border-transparent rounded-lg shadow-md hover:bg-emerald-700 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50">{isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />} {t('save')}</button>
+                <div className="flex flex-col md:flex-row justify-end gap-3 px-4 md:px-6 py-4 bg-neutral-50 border-t border-neutral-200 md:rounded-b-xl">
+                     <button onClick={handleClose} disabled={isSubmitting} className="px-5 py-2.5 text-sm font-bold text-neutral-600 bg-white border border-neutral-300 rounded-lg shadow-sm hover:bg-neutral-50 transition-all">{t('cancel')}</button>
+                    <button onClick={handleSave} disabled={isSubmitting} className="px-8 py-2.5 text-sm font-bold text-white bg-emerald-600 border border-transparent rounded-lg shadow-md hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">{isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />} {t('save')}</button>
                 </div>
             </div>
             <style>{`
                 .grid-cols-24 { grid-template-columns: repeat(24, minmax(0, 1fr)); }
-                @media (min-width: 768px) {
-                    .md\\:col-span-2 { grid-column: span 2 / span 2; }
-                    .md\\:col-span-4 { grid-column: span 4 / span 4; }
-                    .md\\:col-span-8 { grid-column: span 8 / span 8; }
-                    .md\\:col-span-3 { grid-column: span 3 / span 3; }
+                @media (max-width: 1023px) {
+                    .lg\\:col-span-2, .lg\\:col-span-4, .lg\\:col-span-3 { grid-column: span 12 / span 12; }
+                    .lg\\:col-span-6, .lg\\:col-span-24 { grid-column: span 24 / span 24; }
+                }
+                @media (min-width: 1024px) {
+                    .lg\\:col-span-2 { grid-column: span 2 / span 2; }
+                    .lg\\:col-span-4 { grid-column: span 4 / span 4; }
+                    .lg\\:col-span-6 { grid-column: span 6 / span 6; }
+                    .lg\\:col-span-3 { grid-column: span 3 / span 3; }
                 }
             `}</style>
         </div>
