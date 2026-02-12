@@ -142,6 +142,7 @@ const generateDocumentHTML = (
     }
 
     const showPrices = options?.showPrices !== false;
+    const showAmountInWords = settings.showAmountInWords !== false;
 
     // Extract custom labels with defaults
     const labels = settings.documentLabels || {};
@@ -208,7 +209,6 @@ const generateDocumentHTML = (
     const headerRowHtml = activeColumns.map(col => {
         let align = 'left';
         let width = '';
-        // Adjusted widths and padding for better spacing
         if (col.id === 'reference') { align = 'left'; width = 'width: 12%;'; }
         else if (col.id === 'quantity') { align = 'center'; width = 'width: 11%;'; }
         else if (col.id === 'vat') { align = 'center'; width = 'width: 11%;'; }
@@ -263,7 +263,6 @@ const generateDocumentHTML = (
     }).join('');
 
     let paymentInfoHtml = '';
-    // Show payment info for Invoice AND Delivery Note if payment recorded AND prices shown
     if ((docType === 'Facture' || docType === 'Bon de Livraison') && showPrices) {
         const paid = doc.amountPaid || doc.paymentAmount || 0;
         const remaining = totalAmount - paid;
@@ -337,12 +336,14 @@ const generateDocumentHTML = (
     const financialsHtml = `
         <div class="totals-section" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
             <div style="width: 55%; padding-top: 10px;">
-                <div style="background-color: #f3f4f6; padding: 10px; border-radius: 4px; border-left: 3px solid ${primaryColor};">
-                    <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">${txtAmountInWords}</div>
-                    <div style="font-size: 13px; color: #111827; font-weight: 600; font-style: italic;">
-                        ${amountInLetters}
+                ${showAmountInWords ? `
+                    <div style="background-color: #f3f4f6; padding: 10px; border-radius: 4px; border-left: 3px solid ${primaryColor};">
+                        <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">${txtAmountInWords}</div>
+                        <div style="font-size: 13px; color: #111827; font-weight: 600; font-style: italic;">
+                            ${amountInLetters}
+                        </div>
                     </div>
-                </div>
+                ` : ''}
                 ${doc.notes ? `
                     <div style="margin-top: 15px; font-size: 11px; color: #6b7280;">
                         <span style="font-weight: 600;">Notes:</span> ${doc.notes}
@@ -367,14 +368,12 @@ const generateDocumentHTML = (
         </div>
     `;
 
-    // Notes only block (for when prices are hidden)
     const notesOnlyHtml = doc.notes ? `
         <div style="margin-bottom: 20px; font-size: 11px; color: #6b7280;">
             <span style="font-weight: 600;">Notes:</span> ${doc.notes}
         </div>
     ` : '';
 
-    // Signatures Block
     const signaturesHtml = `
         <div class="totals-section" style="display: flex; justify-content: space-between; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
             <div style="width: 45%;">
@@ -386,9 +385,7 @@ const generateDocumentHTML = (
         </div>
     `;
 
-    // Construct final HTML based on type and options
     let totalsHtml = '';
-    
     if (isDeliveryNote) {
         if (!showPrices) {
             totalsHtml = notesOnlyHtml + signaturesHtml;
@@ -421,27 +418,23 @@ const generateDocumentHTML = (
             .totals-section { page-break-inside: avoid; break-inside: avoid; }
         </style>
         
-        <!-- WATERMARK -->
         ${settings.logo ? `
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; z-index: 0; opacity: 0.08; pointer-events: none;">
                 <img src="${settings.logo}" style="width: 100%; height: auto; object-fit: contain; filter: grayscale(100%);" />
             </div>
         ` : ''}
 
-        <!-- HEADER -->
         <div style="position: relative; z-index: 2;">
             ${topHeaderHtml}
             ${clientInfoHtml}
             ${subjectHtml}
         </div>
 
-        <!-- CONTENT (Grows to push footer) -->
         <div class="content-grow">
             ${itemsTableHtml}
             ${totalsHtml}
         </div>
 
-        <!-- FOOTER (Pushed to bottom) -->
         <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #000000; position: relative; z-index: 2;">
             ${footerHtml}
         </div>
@@ -449,7 +442,6 @@ const generateDocumentHTML = (
     `;
 };
 
-// Generates PDF and triggers Download
 export const generatePDF = async (
     docType: DocumentType,
     doc: DocumentData,
@@ -476,10 +468,9 @@ export const generatePDF = async (
         const contentElement = container.firstElementChild;
         
         const opt = {
-            margin: 0, // Zero margin here, handling padding inside CSS to control height better
+            margin: 0,
             filename: `${docType.toLowerCase()}_${displayId}.pdf`,
             image: { type: 'jpeg', quality: 1 },
-            // CSS mode respects flexbox better for footer positioning
             pagebreak: { mode: ['css', 'legacy'] },
             html2canvas: { 
                 scale: 2, 
@@ -498,7 +489,6 @@ export const generatePDF = async (
                 pdf.setTextColor(100);
                 const pageWidth = pdf.internal.pageSize.getWidth();
                 const pageHeight = pdf.internal.pageSize.getHeight();
-                // Right aligned page numbering
                 pdf.text(`Page ${i} / ${totalPages}`, pageWidth - 15, pageHeight - 10, { align: 'right' });
             }
         }).save();
@@ -507,7 +497,6 @@ export const generatePDF = async (
     }
 };
 
-// Opens Print Dialog Directly
 export const printDocument = (
     docType: DocumentType,
     doc: DocumentData,

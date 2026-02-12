@@ -223,4 +223,5 @@ export interface CompanySettings {
     defaultPaymentTerms?: string; // Added field
     documentColumns?: DocumentColumn[]; // New field for custom columns
     documentLabels?: DocumentLabels;
+    showAmountInWords?: boolean; // New field to toggle amount in letters
 }

@@ -2,7 +2,6 @@
 import { Client, Product, Supplier, Quote, Invoice, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, CreditNote } from './types';
 import { supabase } from './supabaseClient';
 
-// Correspondance entre les noms utilisés dans le service et les noms de tables Supabase
 const TABLE_MAP: Record<string, string> = {
     'clients': 'clients',
     'products': 'products',
@@ -17,25 +16,23 @@ const TABLE_MAP: Record<string, string> = {
     'purchase_orders': 'purchase_orders'
 };
 
-// Initialisation fictive pour garder la compatibilité avec App.tsx qui attend initDB
+const LOCAL_STORAGE_KEYS = {
+    SHOW_AMOUNT_IN_WORDS: 'facturago_show_amount_in_words'
+};
+
 export const initDB = async (): Promise<any> => {
-    // Avec Supabase, la connexion est gérée par le client, pas besoin d'ouvrir une DB locale
     return Promise.resolve(true);
 };
 
-// --- Helper to get current User ID ---
 const getCurrentUserId = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     return session?.user?.id;
 };
 
-// --- Generic CRUD Operations via Supabase ---
-
 const getAll = async <T>(storeName: string): Promise<T[]> => {
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
-    // RLS in Supabase will automatically filter rows based on the logged-in user
     const { data, error } = await supabase
         .from(tableName)
         .select('*');
@@ -54,7 +51,6 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
     const userId = await getCurrentUserId();
     if (!userId) throw new Error("User not authenticated");
 
-    // Inject user_id into the item
     const itemWithUser = { ...item, user_id: userId };
 
     const { data, error } = await supabase
@@ -103,15 +99,10 @@ const remove = async (storeName: string, id: string): Promise<void> => {
     }
 };
 
-// --- Operations spéciales ---
-
 const clearAllData = async (): Promise<void> => {
-    // Attention : Suppression massive sur toutes les tables
     const tables = Object.values(TABLE_MAP);
     for (const table of tables) {
         if (table === 'settings') continue; 
-        // Supabase ne permet pas TRUNCATE via l'API client par défaut, on delete tout
-        // RLS will ensure we only delete OUR data
         await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000'); 
     }
 };
@@ -134,8 +125,6 @@ const bulkAdd = async (storeName: string, items: any[]): Promise<void> => {
         throw error;
     }
 };
-
-// --- Exported Service Object ---
 
 export const dbService = {
     clients: {
@@ -200,8 +189,6 @@ export const dbService = {
             const userId = await getCurrentUserId();
             if (!userId) return null;
 
-            // RLS will ensure we only get the settings row for this user
-            // Nous utilisons order('created_at') pour prendre le plus récent si doublons
             const { data, error } = await supabase
                 .from('settings')
                 .select('*')
@@ -214,13 +201,23 @@ export const dbService = {
                 console.error("Error fetching settings:", error);
                 return null;
             }
-            return data as CompanySettings | null;
+
+            const settings = data as CompanySettings | null;
+            if (settings) {
+                const localShowWords = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS);
+                if (localShowWords !== null) {
+                    settings.showAmountInWords = localShowWords === 'true';
+                } else if (settings.showAmountInWords === undefined) {
+                    settings.showAmountInWords = true;
+                }
+            }
+
+            return settings;
         },
         update: async (settings: CompanySettings): Promise<CompanySettings> => {
             const userId = await getCurrentUserId();
             if (!userId) throw new Error("Utilisateur non connecté");
             
-            // 1. Chercher si une ligne existe déjà pour cet utilisateur
             const { data: existingRow, error: fetchError } = await supabase
                 .from('settings')
                 .select('id')
@@ -229,21 +226,18 @@ export const dbService = {
                 .limit(1)
                 .maybeSingle();
 
-            if (fetchError) {
-                console.error("Error checking settings existence:", fetchError);
-                throw fetchError;
-            }
+            if (fetchError) throw fetchError;
 
-            // Préparer les données
-            // On retire l'ID pour ne pas l'envoyer dans le body update (il est dans l'URL/query)
-            const { id, ...settingsData } = settings;
+            // Gérer showAmountInWords séparément pour éviter l'erreur de colonne manquante
+            const { showAmountInWords, id, ...settingsData } = settings;
+            
+            if (showAmountInWords !== undefined) {
+                localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS, String(showAmountInWords));
+            }
 
             let resultData, resultError;
 
             if (existingRow && existingRow.id) {
-                // MISE A JOUR : On ne touche pas à user_id, on update juste les champs de données
-                // IMPORTANT: Ne pas inclure user_id ici évite les conflits RLS si la policy est stricte
-                console.log("Updating existing settings row:", existingRow.id);
                 const response = await supabase
                     .from('settings')
                     .update(settingsData) 
@@ -253,8 +247,6 @@ export const dbService = {
                 resultData = response.data;
                 resultError = response.error;
             } else {
-                // INSERTION : On doit absolument inclure user_id
-                console.log("Creating new settings row");
                 const payload = { ...settingsData, user_id: userId };
                 const response = await supabase
                     .from('settings')
@@ -265,14 +257,13 @@ export const dbService = {
                 resultError = response.error;
             }
 
-            if (resultError) {
-                console.error("Error saving settings to Supabase:", resultError);
-                throw resultError;
-            }
-            return resultData as CompanySettings;
+            if (resultError) throw resultError;
+
+            const finalResult = resultData as CompanySettings;
+            finalResult.showAmountInWords = showAmountInWords;
+            return finalResult;
         }
     },
-    // Used for Export in Settings.tsx
     getAllData: async (): Promise<Record<string, any[]>> => {
         const data: Record<string, any[]> = {};
         const tables = Object.keys(TABLE_MAP);

@@ -5,7 +5,7 @@ import { CompanySettings, DocumentColumn } from '../types';
 import { 
     Save, Upload, Building, Palette, FileText, CheckCircle, X, 
     ArrowUp, ArrowDown, Eye, EyeOff, LayoutTemplate, Briefcase, 
-    CreditCard, MapPin, Globe, Mail, Phone, Hash, ShieldCheck, Loader2, AlertCircle
+    CreditCard, MapPin, Globe, Mail, Phone, Hash, ShieldCheck, Loader2, AlertCircle, Type
 } from 'lucide-react';
 
 interface TemplateCustomizerProps {
@@ -25,21 +25,19 @@ const DEFAULT_COLUMNS: DocumentColumn[] = [
 type TabId = 'general' | 'legal' | 'branding' | 'documents';
 
 const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSave }) => {
-    const [localSettings, setLocalSettings] = useState<Partial<CompanySettings>>({});
+    const [localSettings, setLocalSettings] = useState<Partial<CompanySettings>>({ showAmountInWords: true });
     const [columns, setColumns] = useState<DocumentColumn[]>(DEFAULT_COLUMNS);
     const [showToast, setShowToast] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<TabId>('general');
 
     useEffect(() => {
-        setLocalSettings(settings || { primaryColor: '#10b981' }); 
+        setLocalSettings(settings || { primaryColor: '#10b981', showAmountInWords: true }); 
         if (settings?.documentColumns && settings.documentColumns.length > 0) {
-            // Merge saved columns with default columns to ensure new columns (like 'reference') appear if they are missing
             const mergedColumns = DEFAULT_COLUMNS.map(defCol => {
                 const savedCol = settings.documentColumns?.find(c => c.id === defCol.id);
                 return savedCol || defCol;
             });
-            // Sort by order
             setColumns(mergedColumns.sort((a, b) => a.order - b.order));
         } else {
             setColumns(DEFAULT_COLUMNS);
@@ -49,6 +47,10 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setLocalSettings(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleToggleAmountInWords = () => {
+        setLocalSettings(prev => ({ ...prev, showAmountInWords: !prev.showAmountInWords }));
     };
 
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,8 +66,6 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
             alert("Veuillez sélectionner un fichier image valide.");
         }
     };
-
-    // --- Column Management Functions ---
 
     const toggleColumnVisibility = (id: string) => {
         const newColumns = columns.map(col => 
@@ -86,13 +86,8 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
 
         const newColumns = [...columns];
         const targetIndex = direction === 'up' ? index - 1 : index + 1;
-        
-        // Swap
         [newColumns[index], newColumns[targetIndex]] = [newColumns[targetIndex], newColumns[index]];
-        
-        // Reassign order numbers
         newColumns.forEach((col, idx) => col.order = idx + 1);
-        
         setColumns(newColumns);
     };
     
@@ -107,7 +102,6 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
             setTimeout(() => setShowToast(false), 3000);
         } catch (error: any) {
             console.error("Save failed", error);
-            // Show alert directly if save fails
             alert(`Erreur de sauvegarde: ${error.message || "Vérifiez votre connexion"}`);
         } finally {
             setIsSaving(false);
@@ -123,7 +117,6 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
 
     return (
         <div className="w-full max-w-7xl mx-auto">
-            {/* Notification Toast */}
             <div className={`fixed bottom-6 right-6 z-50 transform transition-all duration-500 ease-out ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}>
                 <div className="bg-emerald-600 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-4 min-w-[320px] border border-emerald-500/50 backdrop-blur-sm">
                     <div className="p-2 bg-white/20 rounded-full shrink-0">
@@ -152,7 +145,6 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
             </div>
             
             <div className="flex flex-col lg:flex-row gap-8">
-                {/* Sidebar Navigation */}
                 <div className="w-full lg:w-72 flex-shrink-0">
                     <nav className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-3 flex flex-col gap-1 sticky top-6">
                         {tabs.map((tab) => {
@@ -181,10 +173,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                     </nav>
                 </div>
 
-                {/* Main Content Area */}
                 <div className="flex-1 min-w-0">
-                    
-                    {/* SECTION 1: GENERAL */}
                     {activeTab === 'general' && (
                         <div className="space-y-6 animate-fadeIn">
                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
@@ -207,7 +196,6 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                         </div>
                     )}
 
-                    {/* SECTION 2: LEGAL */}
                     {activeTab === 'legal' && (
                         <div className="space-y-6 animate-fadeIn">
                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
@@ -227,7 +215,6 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                         </div>
                     )}
 
-                    {/* SECTION 3: BRANDING */}
                     {activeTab === 'branding' && (
                         <div className="space-y-6 animate-fadeIn">
                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
@@ -235,14 +222,11 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                     <div className="p-2 bg-pink-50 text-pink-600 rounded-lg"><Palette size={20}/></div>
                                     <h3 className="text-xl font-bold text-neutral-900">Identité Visuelle</h3>
                                 </div>
-                                
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                    {/* Logo Upload */}
                                     <div>
                                         <label className="block text-sm font-semibold text-neutral-700 mb-3">Logo de l'entreprise</label>
                                         <div className="group relative w-full h-48 border-2 border-dashed border-neutral-300 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden">
                                             <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/png, image/jpeg, image/svg+xml" onChange={handleLogoChange} />
-                                            
                                             {localSettings.logo ? (
                                                 <div className="relative w-full h-full p-4 flex items-center justify-center">
                                                     <img src={localSettings.logo} alt="Logo" className="max-w-full max-h-full object-contain" />
@@ -261,8 +245,6 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                             )}
                                         </div>
                                     </div>
-
-                                    {/* Colors */}
                                     <div>
                                         <label htmlFor="primaryColor" className="block text-sm font-semibold text-neutral-700 mb-3">Couleur principale</label>
                                         <div className="flex items-center gap-4 bg-neutral-50 p-4 rounded-xl border border-neutral-100">
@@ -285,10 +267,35 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                         </div>
                     )}
 
-                    {/* SECTION 4: DOCUMENTS */}
                     {activeTab === 'documents' && (
                         <div className="space-y-6 animate-fadeIn">
-                            {/* Column Configuration */}
+                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
+                                <div className="flex items-center gap-3 mb-2 pb-4 border-b border-neutral-100">
+                                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><LayoutTemplate size={20}/></div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-neutral-900">Affichage & Options</h3>
+                                        <p className="text-sm text-neutral-500 font-normal">Contrôlez les informations affichées sur vos PDF.</p>
+                                    </div>
+                                </div>
+                                <div className="mt-6 flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-white rounded-lg shadow-sm text-slate-600">
+                                            <Type size={20}/>
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-slate-900">Montant en toutes lettres</div>
+                                            <div className="text-xs text-slate-500">Affiche la somme totale écrite à la main en bas du document</div>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={handleToggleAmountInWords}
+                                        className={`w-12 h-7 rounded-full flex items-center transition-colors duration-300 px-1 ${localSettings.showAmountInWords ? 'bg-emerald-500 justify-end' : 'bg-neutral-300 justify-start'}`}
+                                    >
+                                        <div className="w-5 h-5 rounded-full bg-white shadow-md" />
+                                    </button>
+                                </div>
+                            </div>
+
                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
                                 <div className="flex items-center gap-3 mb-2 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-orange-50 text-orange-600 rounded-lg"><LayoutTemplate size={20}/></div>
@@ -297,48 +304,21 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                         <p className="text-sm text-neutral-500 font-normal">Personnalisez les colonnes de vos factures et devis.</p>
                                     </div>
                                 </div>
-
                                 <div className="mt-6 flex flex-col gap-3">
                                     {columns.map((col, index) => (
                                         <div key={col.id} className={`flex items-center gap-4 p-3 rounded-xl border transition-all duration-200 ${col.visible ? 'bg-white border-neutral-200 shadow-sm' : 'bg-neutral-50 border-transparent opacity-70'}`}>
                                             <div className="flex flex-col gap-1 text-neutral-400">
-                                                <button 
-                                                    onClick={() => moveColumn(index, 'up')} 
-                                                    disabled={index === 0}
-                                                    className="hover:text-neutral-700 disabled:opacity-20"
-                                                >
-                                                    <ArrowUp size={16} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => moveColumn(index, 'down')} 
-                                                    disabled={index === columns.length - 1}
-                                                    className="hover:text-neutral-700 disabled:opacity-20"
-                                                >
-                                                    <ArrowDown size={16} />
-                                                </button>
+                                                <button onClick={() => moveColumn(index, 'up')} disabled={index === 0} className="hover:text-neutral-700 disabled:opacity-20"><ArrowUp size={16} /></button>
+                                                <button onClick={() => moveColumn(index, 'down')} disabled={index === columns.length - 1} className="hover:text-neutral-700 disabled:opacity-20"><ArrowDown size={16} /></button>
                                             </div>
-
                                             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                                                 <div>
                                                     <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-1 block">Titre Colonne</label>
-                                                    <input 
-                                                        type="text" 
-                                                        value={col.label} 
-                                                        onChange={(e) => updateColumnLabel(col.id, e.target.value)}
-                                                        className={`block w-full bg-transparent border-b-2 border-transparent focus:border-emerald-500 focus:outline-none px-0 py-1 font-medium text-neutral-900 ${!col.visible && 'text-neutral-500'}`}
-                                                        disabled={!col.visible}
-                                                    />
+                                                    <input type="text" value={col.label} onChange={(e) => updateColumnLabel(col.id, e.target.value)} className={`block w-full bg-transparent border-b-2 border-transparent focus:border-emerald-500 focus:outline-none px-0 py-1 font-medium text-neutral-900 ${!col.visible && 'text-neutral-500'}`} disabled={!col.visible} />
                                                 </div>
                                                 <div className="flex items-center justify-end gap-3">
-                                                    <span className={`text-sm ${col.visible ? 'text-emerald-600 font-medium' : 'text-neutral-400'}`}>
-                                                        {col.visible ? 'Affichée' : 'Masquée'}
-                                                    </span>
-                                                    <button 
-                                                        onClick={() => toggleColumnVisibility(col.id)}
-                                                        className={`w-12 h-7 rounded-full flex items-center transition-colors duration-300 px-1 ${col.visible ? 'bg-emerald-500 justify-end' : 'bg-neutral-300 justify-start'}`}
-                                                    >
-                                                        <div className="w-5 h-5 rounded-full bg-white shadow-md" />
-                                                    </button>
+                                                    <span className={`text-sm ${col.visible ? 'text-emerald-600 font-medium' : 'text-neutral-400'}`}>{col.visible ? 'Affichée' : 'Masquée'}</span>
+                                                    <button onClick={() => toggleColumnVisibility(col.id)} className={`w-12 h-7 rounded-full flex items-center transition-colors duration-300 px-1 ${col.visible ? 'bg-emerald-500 justify-end' : 'bg-neutral-300 justify-start'}`}><div className="w-5 h-5 rounded-full bg-white shadow-md" /></button>
                                                 </div>
                                             </div>
                                         </div>
@@ -346,47 +326,26 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                 </div>
                             </div>
 
-                            {/* Footer & Conditions */}
                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><FileText size={20}/></div>
                                     <h3 className="text-xl font-bold text-neutral-900">Pied de page & Conditions</h3>
                                 </div>
                                 <div className="grid grid-cols-1 gap-6">
-                                    <InputField 
-                                        icon={CreditCard}
-                                        label="Conditions de paiement par défaut" 
-                                        name="defaultPaymentTerms" 
-                                        value={localSettings.defaultPaymentTerms || ''} 
-                                        onChange={handleInputChange}
-                                        placeholder="Ex: Paiement à 30 jours, Comptant..." 
-                                    />
-                                    
+                                    <InputField icon={CreditCard} label="Conditions de paiement par défaut" name="defaultPaymentTerms" value={localSettings.defaultPaymentTerms || ''} onChange={handleInputChange} placeholder="Ex: Paiement à 30 jours, Comptant..." />
                                     <div>
-                                        <TextAreaField 
-                                            label="Pied de page par défaut" 
-                                            name="footerNotes" 
-                                            value={localSettings.footerNotes || ''} 
-                                            onChange={handleInputChange} 
-                                            rows={3} 
-                                            placeholder="Remerciements, coordonnées bancaires..." 
-                                        />
-                                        <p className="mt-2 text-xs text-neutral-500 flex items-center gap-1">
-                                            <LayoutTemplate size={12}/> Ce texte apparaîtra en bas de tous vos documents.
-                                        </p>
+                                        <TextAreaField label="Pied de page par défaut" name="footerNotes" value={localSettings.footerNotes || ''} onChange={handleInputChange} rows={3} placeholder="Remerciements, coordonnées bancaires..." />
+                                        <p className="mt-2 text-xs text-neutral-500 flex items-center gap-1"><LayoutTemplate size={12}/> Ce texte apparaîtra en bas de tous vos documents.</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     )}
-
                 </div>
             </div>
         </div>
     );
 };
-
-// --- Helper Form Components ---
 
 const InputField = ({ label, icon: Icon, className, ...props }: { label: string, icon?: any, className?: string, [key: string]: any }) => (
     <div className={className}>
@@ -397,11 +356,7 @@ const InputField = ({ label, icon: Icon, className, ...props }: { label: string,
                     <Icon className="h-5 w-5 text-neutral-400 group-focus-within:text-emerald-500 transition-colors" />
                 </div>
             )}
-            <input 
-                id={props.name} 
-                {...props} 
-                className={`block w-full rounded-xl border-neutral-200 bg-neutral-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2.5 transition-all ${Icon ? 'pl-10' : 'pl-3'}`} 
-            />
+            <input id={props.name} {...props} className={`block w-full rounded-xl border-neutral-200 bg-neutral-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2.5 transition-all ${Icon ? 'pl-10' : 'pl-3'}`} />
         </div>
     </div>
 );
@@ -415,11 +370,7 @@ const TextAreaField = ({ label, icon: Icon, className, ...props }: { label: stri
                     <Icon className="h-5 w-5 text-neutral-400 group-focus-within:text-emerald-500 transition-colors" />
                 </div>
             )}
-            <textarea 
-                id={props.name} 
-                {...props} 
-                className={`block w-full rounded-xl border-neutral-200 bg-neutral-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2.5 transition-all ${Icon ? 'pl-10' : 'pl-3'}`} 
-            />
+            <textarea id={props.name} {...props} className={`block w-full rounded-xl border-neutral-200 bg-neutral-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2.5 transition-all ${Icon ? 'pl-10' : 'pl-3'}`} />
         </div>
     </div>
 );
