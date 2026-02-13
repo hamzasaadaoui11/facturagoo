@@ -113,15 +113,29 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const handleSave = async () => {
         if (!supplierId || lineItems.length === 0) return;
         const supplier = suppliers.find(s => s.id === supplierId);
+        // Priorité au nom de la société si disponible
+        const supplierNameDisplay = supplier ? (supplier.company || supplier.name) : 'Fournisseur inconnu';
+        
         setIsSubmitting(true);
         try {
             await onSave({
-                supplierId, supplierName: supplier?.name || 'Fournisseur inconnu', date, expectedDate, notes, lineItems,
+                supplierId, 
+                supplierName: supplierNameDisplay, 
+                date, 
+                expectedDate, 
+                notes, 
+                lineItems,
                 status: orderToEdit ? orderToEdit.status : PurchaseOrderStatus.Draft,
-                subTotal: totals.subTotal, vatAmount: totals.vatAmount, totalAmount: totals.totalAmount,
+                subTotal: totals.subTotal, 
+                vatAmount: totals.vatAmount, 
+                totalAmount: totals.totalAmount,
             }, orderToEdit?.id);
             handleClose();
-        } catch (error) { console.error(error); } finally { setIsSubmitting(false); }
+        } catch (error) { 
+            console.error(error); 
+        } finally { 
+            setIsSubmitting(false); 
+        }
     };
 
     if (!isOpen) return null;
@@ -133,7 +147,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 md:rounded-t-3xl">
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900">{orderToEdit ? t('newPurchaseOrder') : t('newPurchaseOrder')}</h3>
+                        <h3 className="text-lg font-bold text-slate-900">{orderToEdit ? t('editQuote') : t('newPurchaseOrder')}</h3>
                         {orderToEdit && <p className="text-xs text-slate-500 mt-0.5">#{orderToEdit.documentId || orderToEdit.id}</p>}
                     </div>
                     <button onClick={handleClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 transition-all"><X size={20} /></button>
@@ -145,7 +159,11 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('supplier')} *</label>
                             <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12">
                                 <option value="">-- {t('select')} --</option>
-                                {suppliers.map(supplier => (<option key={supplier.id} value={supplier.id}>{supplier.name}</option>))}
+                                {suppliers.map(supplier => (
+                                    <option key={supplier.id} value={supplier.id}>
+                                        {supplier.company || supplier.name}
+                                    </option>
+                                ))}
                             </select>
                         </div>
                         <div className="space-y-1">
