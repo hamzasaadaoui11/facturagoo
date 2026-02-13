@@ -139,8 +139,43 @@ const MainContent: React.FC = () => {
 
     const generateDocumentId = (type: 'quote' | 'invoice' | 'purchaseOrder' | 'deliveryNote' | 'creditNote', currentItems: { id: string, documentId?: string }[]) => {
         const currentYear = new Date().getFullYear();
-        let prefix = '';
         
+        // Mapping of custom numbering config keys
+        const configKeys: Record<string, keyof CompanySettings> = {
+            invoice: 'invoiceNumbering',
+            quote: 'quoteNumbering',
+            deliveryNote: 'deliveryNoteNumbering',
+            purchaseOrder: 'purchaseOrderNumbering',
+            creditNote: 'creditNoteNumbering'
+        };
+
+        const config = companySettings?.[configKeys[type]] as any;
+
+        if (config) {
+            const customPrefix = config.prefix || '';
+            const sep = config.separator || '/';
+            let yearStr = '';
+            if (config.yearFormat === 'YYYY') yearStr = String(currentYear);
+            else if (config.yearFormat === 'YY') yearStr = String(currentYear).slice(-2);
+            
+            const pattern = yearStr ? `${customPrefix}${sep}${yearStr}${sep}` : `${customPrefix}${sep}`;
+
+            const numbers = currentItems.map(item => {
+                const idToCheck = item.documentId || item.id;
+                if (idToCheck && idToCheck.startsWith(pattern)) {
+                    const numberPart = idToCheck.replace(pattern, '');
+                    return !isNaN(Number(numberPart)) ? parseInt(numberPart, 10) : 0;
+                }
+                return 0;
+            });
+
+            const maxExisting = numbers.length > 0 ? Math.max(...numbers) : 0;
+            const nextNumber = Math.max(config.startNumber || 1, maxExisting + 1);
+            return `${pattern}${String(nextNumber).padStart(config.padding || 5, '0')}`;
+        }
+
+        // Standard Default logic for other documents
+        let prefix = '';
         switch (type) {
             case 'invoice': prefix = 'FAC'; break;
             case 'quote': prefix = 'DEV'; break;
@@ -854,6 +889,7 @@ const MainContent: React.FC = () => {
     );
 };
 
+// Fix: Add missing default export for App component and wrap MainContent with required providers
 const App: React.FC = () => {
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);

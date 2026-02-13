@@ -203,6 +203,14 @@ export interface DocumentLabels {
     signatureRecipient?: string;
 }
 
+export interface NumberingConfig {
+    prefix: string;
+    yearFormat: 'YYYY' | 'YY' | 'NONE';
+    startNumber: number;
+    padding: number;
+    separator: string;
+}
+
 export interface CompanySettings {
     id: string; // Changed from fixed string literal to generic string to support UUIDs
     companyName?: string;
@@ -224,4 +232,9 @@ export interface CompanySettings {
     documentColumns?: DocumentColumn[]; // New field for custom columns
     documentLabels?: DocumentLabels;
     showAmountInWords?: boolean; // New field to toggle amount in letters
+    invoiceNumbering?: NumberingConfig;
+    quoteNumbering?: NumberingConfig;
+    deliveryNoteNumbering?: NumberingConfig;
+    purchaseOrderNumbering?: NumberingConfig;
+    creditNoteNumbering?: NumberingConfig;
 }

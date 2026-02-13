@@ -1,16 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
-import { CompanySettings, DocumentColumn } from '../types';
+import { CompanySettings, DocumentColumn, NumberingConfig } from '../types';
 import { 
     Save, Upload, Building, Palette, FileText, CheckCircle, X, 
-    ArrowUp, ArrowDown, Eye, EyeOff, LayoutTemplate, Briefcase, 
-    CreditCard, MapPin, Globe, Mail, Phone, Hash, ShieldCheck, Loader2, AlertCircle, Type
+    ArrowUp, ArrowDown, LayoutTemplate, Briefcase, 
+    CreditCard, MapPin, Globe, Mail, Phone, Hash, ShieldCheck, Loader2, Type, Settings2, FileBarChart, Truck, ShoppingBag, FileMinus
 } from 'lucide-react';
 
 interface TemplateCustomizerProps {
     settings: CompanySettings | null;
-    onSave: (settings: CompanySettings) => Promise<void>; // Changed to Promise
+    onSave: (settings: CompanySettings) => Promise<void>; 
 }
 
 const DEFAULT_COLUMNS: DocumentColumn[] = [
@@ -22,17 +22,39 @@ const DEFAULT_COLUMNS: DocumentColumn[] = [
     { id: 'total', label: 'Total HT', visible: true, order: 5 },
 ];
 
+const createDefaultConfig = (prefix: string): NumberingConfig => ({
+    prefix,
+    yearFormat: 'YYYY',
+    startNumber: 1,
+    padding: 5,
+    separator: '/'
+});
+
 type TabId = 'general' | 'legal' | 'branding' | 'documents';
+type DocConfigType = 'invoice' | 'quote' | 'deliveryNote' | 'purchaseOrder' | 'creditNote';
 
 const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSave }) => {
-    const [localSettings, setLocalSettings] = useState<Partial<CompanySettings>>({ showAmountInWords: true });
+    const [localSettings, setLocalSettings] = useState<Partial<CompanySettings>>({ 
+        showAmountInWords: true
+    });
     const [columns, setColumns] = useState<DocumentColumn[]>(DEFAULT_COLUMNS);
     const [showToast, setShowToast] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<TabId>('general');
+    const [activeDocType, setActiveDocType] = useState<DocConfigType>('invoice');
 
     useEffect(() => {
-        setLocalSettings(settings || { primaryColor: '#10b981', showAmountInWords: true }); 
+        const mergedSettings = { ...settings } || { primaryColor: '#10b981', showAmountInWords: true };
+        
+        // Ensure all configs exist
+        if (!mergedSettings.invoiceNumbering) mergedSettings.invoiceNumbering = createDefaultConfig('FAC');
+        if (!mergedSettings.quoteNumbering) mergedSettings.quoteNumbering = createDefaultConfig('DEV');
+        if (!mergedSettings.deliveryNoteNumbering) mergedSettings.deliveryNoteNumbering = createDefaultConfig('BL');
+        if (!mergedSettings.purchaseOrderNumbering) mergedSettings.purchaseOrderNumbering = createDefaultConfig('BC');
+        if (!mergedSettings.creditNoteNumbering) mergedSettings.creditNoteNumbering = createDefaultConfig('AVO');
+
+        setLocalSettings(mergedSettings); 
+        
         if (settings?.documentColumns && settings.documentColumns.length > 0) {
             const mergedColumns = DEFAULT_COLUMNS.map(defCol => {
                 const savedCol = settings.documentColumns?.find(c => c.id === defCol.id);
@@ -47,6 +69,17 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setLocalSettings(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleNumberingChange = (type: DocConfigType, field: keyof NumberingConfig, value: string | number) => {
+        const configKey = `${type}Numbering` as keyof CompanySettings;
+        setLocalSettings(prev => ({
+            ...prev,
+            [configKey]: {
+                ...(prev[configKey] as NumberingConfig),
+                [field]: value
+            }
+        }));
     };
 
     const handleToggleAmountInWords = () => {
@@ -108,12 +141,33 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
         }
     };
 
+    const getPreviewNumber = (type: DocConfigType) => {
+        const configKey = `${type}Numbering` as keyof CompanySettings;
+        const cfg = localSettings[configKey] as NumberingConfig;
+        if (!cfg) return '';
+        const year = cfg.yearFormat === 'YYYY' ? '2026' : (cfg.yearFormat === 'YY' ? '26' : '');
+        const sep = cfg.separator;
+        const num = String(cfg.startNumber).padStart(cfg.padding, '0');
+        return year ? `${cfg.prefix}${sep}${year}${sep}${num}` : `${cfg.prefix}${sep}${num}`;
+    };
+
     const tabs = [
         { id: 'general', label: 'Général', icon: Building, desc: 'Coordonnées & Contact' },
         { id: 'legal', label: 'Juridique', icon: ShieldCheck, desc: 'Identifiants fiscaux' },
         { id: 'branding', label: 'Marque', icon: Palette, desc: 'Logo & Couleurs' },
         { id: 'documents', label: 'Documents', icon: FileText, desc: 'Structure PDF' },
     ];
+
+    const docTypes: {id: DocConfigType, label: string, icon: any}[] = [
+        { id: 'invoice', label: 'Facture', icon: FileText },
+        { id: 'quote', label: 'Devis', icon: FileBarChart },
+        { id: 'deliveryNote', label: 'B. Livraison', icon: Truck },
+        { id: 'purchaseOrder', label: 'B. Commande', icon: ShoppingBag },
+        { id: 'creditNote', label: 'Avoir', icon: FileMinus },
+    ];
+
+    const currentDocConfigKey = `${activeDocType}Numbering` as keyof CompanySettings;
+    const currentDocConfig = localSettings[currentDocConfigKey] as NumberingConfig;
 
     return (
         <div className="w-full max-w-7xl mx-auto">
@@ -269,6 +323,95 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
 
                     {activeTab === 'documents' && (
                         <div className="space-y-6 animate-fadeIn">
+                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
+                                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
+                                    <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><Settings2 size={20}/></div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-neutral-900">Configuration de numérotation</h3>
+                                        <p className="text-sm text-neutral-500">Personnalisez le format de vos numéros par document.</p>
+                                    </div>
+                                </div>
+                                
+                                {/* Doc Type Tabs for Numbering */}
+                                <div className="flex flex-wrap gap-2 mb-8 bg-neutral-100 p-1 rounded-xl">
+                                    {docTypes.map(type => (
+                                        <button
+                                            key={type.id}
+                                            onClick={() => setActiveDocType(type.id)}
+                                            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${activeDocType === type.id ? 'bg-white text-emerald-600 shadow-sm' : 'text-neutral-500 hover:bg-white/50'}`}
+                                        >
+                                            <type.icon size={14} />
+                                            {type.label}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {currentDocConfig && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">Préfixe</label>
+                                            <input 
+                                                type="text" 
+                                                value={currentDocConfig.prefix} 
+                                                onChange={(e) => handleNumberingChange(activeDocType, 'prefix', e.target.value)}
+                                                className="block w-full rounded-xl border-neutral-200 bg-neutral-50 focus:ring-emerald-500 py-2.5 text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">Séparateur</label>
+                                            <input 
+                                                type="text" 
+                                                value={currentDocConfig.separator} 
+                                                onChange={(e) => handleNumberingChange(activeDocType, 'separator', e.target.value)}
+                                                className="block w-full rounded-xl border-neutral-200 bg-neutral-50 focus:ring-emerald-500 py-2.5 text-sm text-center"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">Format Année</label>
+                                            <select 
+                                                value={currentDocConfig.yearFormat} 
+                                                onChange={(e) => handleNumberingChange(activeDocType, 'yearFormat', e.target.value as any)}
+                                                className="block w-full rounded-xl border-neutral-200 bg-neutral-50 focus:ring-emerald-500 py-2.5 text-sm"
+                                            >
+                                                <option value="YYYY">Année (2026)</option>
+                                                <option value="YY">Année courte (26)</option>
+                                                <option value="NONE">Aucun</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">Départ à</label>
+                                            <input 
+                                                type="number" 
+                                                value={currentDocConfig.startNumber} 
+                                                onChange={(e) => handleNumberingChange(activeDocType, 'startNumber', parseInt(e.target.value) || 1)}
+                                                className="block w-full rounded-xl border-neutral-200 bg-neutral-50 focus:ring-emerald-500 py-2.5 text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">Remplissage (Zéros)</label>
+                                            <input 
+                                                type="number" 
+                                                min="1"
+                                                max="10"
+                                                value={currentDocConfig.padding} 
+                                                onChange={(e) => handleNumberingChange(activeDocType, 'padding', parseInt(e.target.value) || 5)}
+                                                className="block w-full rounded-xl border-neutral-200 bg-neutral-50 focus:ring-emerald-500 py-2.5 text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="mt-8 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-1">Aperçu pour {docTypes.find(d => d.id === activeDocType)?.label}</p>
+                                        <p className="text-2xl font-mono font-bold text-emerald-900 tracking-tight">{getPreviewNumber(activeDocType)}</p>
+                                    </div>
+                                    <div className="p-3 bg-white rounded-xl shadow-sm text-emerald-600">
+                                        {React.createElement(docTypes.find(d => d.id === activeDocType)?.icon || FileText, { size: 24 })}
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
                                 <div className="flex items-center gap-3 mb-2 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><LayoutTemplate size={20}/></div>

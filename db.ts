@@ -228,26 +228,30 @@ export const dbService = {
 
             if (fetchError) throw fetchError;
 
-            // Gérer showAmountInWords séparément pour éviter l'erreur de colonne manquante
+            // Gérer showAmountInWords séparément (local storage)
             const { showAmountInWords, id, ...settingsData } = settings;
             
             if (showAmountInWords !== undefined) {
                 localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS, String(showAmountInWords));
             }
 
+            // Supprimer created_at de settingsData pour éviter des erreurs lors de l'update
+            const cleanData = { ...settingsData };
+            delete (cleanData as any).created_at;
+
             let resultData, resultError;
 
             if (existingRow && existingRow.id) {
                 const response = await supabase
                     .from('settings')
-                    .update(settingsData) 
+                    .update(cleanData) 
                     .eq('id', existingRow.id)
                     .select()
                     .single();
                 resultData = response.data;
                 resultError = response.error;
             } else {
-                const payload = { ...settingsData, user_id: userId };
+                const payload = { ...cleanData, user_id: userId };
                 const response = await supabase
                     .from('settings')
                     .insert(payload)
@@ -257,7 +261,10 @@ export const dbService = {
                 resultError = response.error;
             }
 
-            if (resultError) throw resultError;
+            if (resultError) {
+                console.error("Supabase Save Error:", resultError);
+                throw new Error(resultError.message || "Erreur lors de la sauvegarde sur Supabase. Vérifiez que les colonnes SQL ont été ajoutées.");
+            }
 
             const finalResult = resultData as CompanySettings;
             finalResult.showAmountInWords = showAmountInWords;
