@@ -212,26 +212,26 @@ export interface NumberingConfig {
 }
 
 export interface CompanySettings {
-    id: string; // Changed from fixed string literal to generic string to support UUIDs
+    id: string; 
     companyName?: string;
     address?: string;
     phone?: string;
     email?: string;
     website?: string;
-    // New specific fields
-    rc?: string;       // Registre de Commerce
-    ice?: string;      // Identifiant Commun de l'Entreprise
-    fiscalId?: string; // Identifiant Fiscal (IF)
-    patente?: string;  // Taxe Professionnelle
-    cnss?: string;     // CNSS
-    capital?: string;  // Capital Social
+    rc?: string;       
+    ice?: string;      
+    fiscalId?: string; 
+    patente?: string;  
+    cnss?: string;     
+    capital?: string;  
     logo?: string;
     primaryColor?: string;
     footerNotes?: string;
-    defaultPaymentTerms?: string; // Added field
-    documentColumns?: DocumentColumn[]; // New field for custom columns
+    defaultPaymentTerms?: string; 
+    documentColumns?: DocumentColumn[]; 
     documentLabels?: DocumentLabels;
-    showAmountInWords?: boolean; // New field to toggle amount in letters
+    showAmountInWords?: boolean; 
+    priceDisplayMode?: 'HT' | 'TTC'; // Nouveau mode d'affichage
     invoiceNumbering?: NumberingConfig;
     quoteNumbering?: NumberingConfig;
     deliveryNoteNumbering?: NumberingConfig;

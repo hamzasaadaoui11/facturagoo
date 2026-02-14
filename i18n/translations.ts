@@ -66,6 +66,7 @@ export const translations = {
     actions: 'Actions',
     view: 'Voir',
     convert: 'Convertir',
+    select: 'Sélectionner',
     
     // Form Labels
     client: 'Client',
@@ -90,6 +91,18 @@ export const translations = {
     paid: 'Payé',
     items: 'Articles',
     addItem: 'Ajouter une ligne',
+    
+    // Documents Customization
+    priceDisplayMode: 'Mode d\'affichage des prix',
+    modeHT: 'Détail en Hors Taxe (HT)',
+    modeTTC: 'Détail en TTC',
+    customLabels: 'Libellés personnalisés',
+    labelTotalHt: 'Libellé Total HT',
+    labelTotalTax: 'Libellé Total TVA',
+    labelTotalNet: 'Libellé Net à Payer',
+    labelSignatureSender: 'Signature Expéditeur',
+    labelSignatureRecipient: 'Signature Destinataire',
+    labelAmountWordsPrefix: 'Préfixe montant en lettres',
     
     // Documents
     newQuote: 'Nouveau Devis',
@@ -195,6 +208,7 @@ export const translations = {
     actions: 'Actions',
     view: 'View',
     convert: 'Convert',
+    select: 'Select',
 
     // Form Labels
     client: 'Client',
@@ -219,6 +233,18 @@ export const translations = {
     paid: 'Paid',
     items: 'Items',
     addItem: 'Add Line Item',
+    
+    // Documents Customization
+    priceDisplayMode: 'Price Display Mode',
+    modeHT: 'Detail Excl. Tax (HT)',
+    modeTTC: 'Detail Incl. Tax (TTC)',
+    customLabels: 'Custom Labels',
+    labelTotalHt: 'Total Excl. Tax Label',
+    labelTotalTax: 'VAT Total Label',
+    labelTotalNet: 'Net to Pay Label',
+    labelSignatureSender: 'Sender Signature',
+    labelSignatureRecipient: 'Recipient Signature',
+    labelAmountWordsPrefix: 'Amount in words prefix',
 
     // Documents
     newQuote: 'New Quote',
@@ -324,6 +350,7 @@ export const translations = {
     actions: 'إجراءات',
     view: 'عرض',
     convert: 'تحويل',
+    select: 'اختيار',
 
     // Form Labels
     client: 'العميل',
@@ -348,6 +375,18 @@ export const translations = {
     paid: 'مدفوع',
     items: 'العناصر',
     addItem: 'إضافة سطر',
+    
+    // Documents Customization
+    priceDisplayMode: 'وضع عرض الأسعار',
+    modeHT: 'التفصيل بدون ضريبة (HT)',
+    modeTTC: 'التفصيل شامل الضريبة (TTC)',
+    customLabels: 'تسميات مخصصة',
+    labelTotalHt: 'تسمية المجموع بدون ضريبة',
+    labelTotalTax: 'تسمية مجموع الضريبة',
+    labelTotalNet: 'تسمية الصافي للدفع',
+    labelSignatureSender: 'توقيع المرسل',
+    labelSignatureRecipient: 'توقيع المستلم',
+    labelAmountWordsPrefix: 'بادئة المبلغ بالحروف',
 
     // Documents
     newQuote: 'عرض سعر جديد',

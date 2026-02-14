@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, ScanLine, FileText, Loader2 } from 'lucide-react';
-import { Supplier, Product, PurchaseOrder, LineItem, PurchaseOrderStatus } from '../types';
+import { Supplier, Product, PurchaseOrder, LineItem, PurchaseOrderStatus, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface CreatePurchaseOrderModalProps {
@@ -10,13 +11,16 @@ interface CreatePurchaseOrderModalProps {
     suppliers: Supplier[];
     products: Product[];
     orderToEdit?: PurchaseOrder | null;
+    companySettings?: CompanySettings | null;
 }
 
-const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isOpen, onClose, onSave, suppliers, products, orderToEdit }) => {
+const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isOpen, onClose, onSave, suppliers, products, orderToEdit, companySettings }) => {
     const { t, isRTL, language } = useLanguage();
     const [isVisible, setIsVisible] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
+    const isModeTTC = companySettings?.priceDisplayMode === 'TTC';
+
     const [supplierId, setSupplierId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [expectedDate, setExpectedDate] = useState('');
@@ -70,6 +74,10 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
         setTimeout(onClose, 200);
     };
 
+    const updateLineItem = (id: string, updatedField: Partial<LineItem>) => {
+        setLineItems(prev => prev.map(item => item.id === id ? { ...item, ...updatedField } : item));
+    };
+
     useEffect(() => {
         if (selectedProductId) {
             const product = products.find(p => p.id === selectedProductId);
@@ -113,29 +121,17 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const handleSave = async () => {
         if (!supplierId || lineItems.length === 0) return;
         const supplier = suppliers.find(s => s.id === supplierId);
-        // Priorité au nom de la société si disponible
         const supplierNameDisplay = supplier ? (supplier.company || supplier.name) : 'Fournisseur inconnu';
         
         setIsSubmitting(true);
         try {
             await onSave({
-                supplierId, 
-                supplierName: supplierNameDisplay, 
-                date, 
-                expectedDate, 
-                notes, 
-                lineItems,
+                supplierId, supplierName: supplierNameDisplay, date, expectedDate, notes, lineItems,
                 status: orderToEdit ? orderToEdit.status : PurchaseOrderStatus.Draft,
-                subTotal: totals.subTotal, 
-                vatAmount: totals.vatAmount, 
-                totalAmount: totals.totalAmount,
+                subTotal: totals.subTotal, vatAmount: totals.vatAmount, totalAmount: totals.totalAmount,
             }, orderToEdit?.id);
             handleClose();
-        } catch (error) { 
-            console.error(error); 
-        } finally { 
-            setIsSubmitting(false); 
-        }
+        } catch (error) { console.error(error); } finally { setIsSubmitting(false); }
     };
 
     if (!isOpen) return null;
@@ -159,11 +155,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('supplier')} *</label>
                             <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12">
                                 <option value="">-- {t('select')} --</option>
-                                {suppliers.map(supplier => (
-                                    <option key={supplier.id} value={supplier.id}>
-                                        {supplier.company || supplier.name}
-                                    </option>
-                                ))}
+                                {suppliers.map(supplier => (<option key={supplier.id} value={supplier.id}>{supplier.company || supplier.name}</option>))}
                             </select>
                         </div>
                         <div className="space-y-1">
@@ -199,8 +191,16 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                 <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} placeholder="Nom de l'article" className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 font-medium"/>
                             </div>
                             <div className="col-span-12 lg:col-span-3">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">P.U. HT</label>
-                                <input type="number" value={tempPrice} onChange={(e) => setTempPrice(parseFloat(e.target.value) || 0)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{isModeTTC ? 'P.U. TTC' : 'P.U. HT'}</label>
+                                <input 
+                                    type="number" 
+                                    value={isModeTTC ? (tempPrice * (1 + tempVat/100)) : tempPrice} 
+                                    onChange={(e) => {
+                                        const val = parseFloat(e.target.value) || 0;
+                                        setTempPrice(isModeTTC ? (val / (1 + tempVat/100)) : val);
+                                    }} 
+                                    className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"
+                                />
                             </div>
                             <div className="col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Qté</label>
@@ -227,22 +227,48 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                     <tr>
                                         <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('description')}</th>
                                         <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
-                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{t('totalHT')}</th>
+                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? 'P.U. TTC' : 'P.U. HT'}</th>
+                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? 'Total TTC' : 'Total HT'}</th>
                                         <th className="px-4 py-3 w-10"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-slate-100">
-                                    {lineItems.map(item => (
+                                    {lineItems.map(item => {
+                                        const displayPrice = isModeTTC ? (item.unitPrice * (1 + item.vat/100)) : item.unitPrice;
+                                        const displayLineTotal = isModeTTC ? (item.quantity * item.unitPrice * (1 + item.vat/100)) : (item.quantity * item.unitPrice);
+                                        
+                                        return (
                                         <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-4 py-3">
                                                 <div className="text-xs font-bold text-slate-900">{item.name}</div>
                                                 {item.productCode && <div className="text-[10px] text-slate-400">{item.productCode}</div>}
                                             </td>
-                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">{item.quantity}</td>
-                                            <td className="px-4 py-3 text-right text-xs font-bold text-slate-900">{(item.quantity * item.unitPrice).toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</td>
+                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                <input 
+                                                    type="number" 
+                                                    value={item.quantity} 
+                                                    onChange={(e) => updateLineItem(item.id, { quantity: parseInt(e.target.value) || 0 })}
+                                                    className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                />
+                                            </td>
+                                            <td className="px-4 py-3 text-right text-xs">
+                                                 <input 
+                                                    type="number" 
+                                                    step="0.01"
+                                                    value={displayPrice.toFixed(2)} 
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value) || 0;
+                                                        updateLineItem(item.id, { unitPrice: isModeTTC ? (val / (1 + item.vat/100)) : val });
+                                                    }}
+                                                    className="w-24 p-1 text-right border-none focus:ring-0 text-xs font-medium bg-transparent"
+                                                />
+                                            </td>
+                                            <td className="px-4 py-3 text-right text-xs font-bold text-slate-900">
+                                                {displayLineTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })}
+                                            </td>
                                             <td className="px-4 py-3 text-center"><button onClick={() => handleRemoveItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1"><Trash2 size={16}/></button></td>
                                         </tr>
-                                    ))}
+                                    )})}
                                 </tbody>
                             </table>
                         </div>

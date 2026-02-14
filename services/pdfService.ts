@@ -143,6 +143,7 @@ const generateDocumentHTML = (
 
     const showPrices = options?.showPrices !== false;
     const showAmountInWords = settings.showAmountInWords !== false;
+    const isModeTTC = settings.priceDisplayMode === 'TTC';
 
     // Extract custom labels with defaults
     const labels = settings.documentLabels || {};
@@ -173,6 +174,15 @@ const generateDocumentHTML = (
 
     if (isDeliveryNote && !showPrices) {
         activeColumns = activeColumns.filter(c => c.id === 'name' || c.id === 'quantity' || c.id === 'reference');
+    }
+
+    // --- Override labels for TTC mode ---
+    if (isModeTTC) {
+        activeColumns = activeColumns.map(col => {
+            if (col.id === 'unitPrice' && col.label === 'P.U. HT') return { ...col, label: 'P.U. TTC' };
+            if (col.id === 'total' && col.label === 'Total HT') return { ...col, label: 'Total TTC' };
+            return col;
+        });
     }
 
     let extraDateLabel = '';
@@ -224,6 +234,9 @@ const generateDocumentHTML = (
             let align = 'left';
             let style = '';
 
+            const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
+            const totalTTC = (item.quantity * item.unitPrice) * (1 + item.vat / 100);
+
             switch (col.id) {
                 case 'reference':
                     content = item.productCode || '-';
@@ -242,7 +255,7 @@ const generateDocumentHTML = (
                     style = 'font-weight: 600; font-size: 12px;';
                     break;
                 case 'unitPrice':
-                    content = item.unitPrice.toLocaleString('fr-MA', { minimumFractionDigits: 2 });
+                    content = (isModeTTC ? unitPriceTTC : item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
                     align = 'right';
                     break;
                 case 'vat':
@@ -250,7 +263,7 @@ const generateDocumentHTML = (
                     align = 'center';
                     break;
                 case 'total':
-                    content = (item.quantity * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
+                    content = (isModeTTC ? totalTTC : (item.quantity * item.unitPrice)).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
                     align = 'right';
                     style = 'font-weight: 600;';
                     break;

@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
-import { CompanySettings, DocumentColumn, NumberingConfig } from '../types';
+import { CompanySettings, DocumentColumn, NumberingConfig, DocumentLabels } from '../types';
 import { 
     Save, Upload, Building, Palette, FileText, CheckCircle, X, 
     ArrowUp, ArrowDown, LayoutTemplate, Briefcase, 
-    CreditCard, MapPin, Globe, Mail, Phone, Hash, ShieldCheck, Loader2, Type, Settings2, FileBarChart, Truck, ShoppingBag, FileMinus
+    CreditCard, MapPin, Globe, Mail, Phone, Hash, ShieldCheck, Loader2, Type, Settings2, FileBarChart, Truck, ShoppingBag, FileMinus, PencilLine, Eye
 } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface TemplateCustomizerProps {
     settings: CompanySettings | null;
@@ -22,6 +23,15 @@ const DEFAULT_COLUMNS: DocumentColumn[] = [
     { id: 'total', label: 'Total HT', visible: true, order: 5 },
 ];
 
+const DEFAULT_LABELS: DocumentLabels = {
+    totalHt: 'Total HT',
+    totalTax: 'Total TVA',
+    totalNet: 'Net à Payer',
+    amountInWordsPrefix: 'Arrêté le présent document à la somme de :',
+    signatureSender: 'Signature Expéditeur',
+    signatureRecipient: 'Signature & Cachet Client'
+};
+
 const createDefaultConfig = (prefix: string): NumberingConfig => ({
     prefix,
     yearFormat: 'YYYY',
@@ -34,8 +44,10 @@ type TabId = 'general' | 'legal' | 'branding' | 'documents';
 type DocConfigType = 'invoice' | 'quote' | 'deliveryNote' | 'purchaseOrder' | 'creditNote';
 
 const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSave }) => {
+    const { t, isRTL } = useLanguage();
     const [localSettings, setLocalSettings] = useState<Partial<CompanySettings>>({ 
-        showAmountInWords: true
+        showAmountInWords: true,
+        priceDisplayMode: 'HT'
     });
     const [columns, setColumns] = useState<DocumentColumn[]>(DEFAULT_COLUMNS);
     const [showToast, setShowToast] = useState(false);
@@ -44,7 +56,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
     const [activeDocType, setActiveDocType] = useState<DocConfigType>('invoice');
 
     useEffect(() => {
-        const mergedSettings = { ...settings } || { primaryColor: '#10b981', showAmountInWords: true };
+        const mergedSettings = { ...settings } || { primaryColor: '#10b981', showAmountInWords: true, priceDisplayMode: 'HT' };
         
         // Ensure all configs exist
         if (!mergedSettings.invoiceNumbering) mergedSettings.invoiceNumbering = createDefaultConfig('FAC');
@@ -52,6 +64,9 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
         if (!mergedSettings.deliveryNoteNumbering) mergedSettings.deliveryNoteNumbering = createDefaultConfig('BL');
         if (!mergedSettings.purchaseOrderNumbering) mergedSettings.purchaseOrderNumbering = createDefaultConfig('BC');
         if (!mergedSettings.creditNoteNumbering) mergedSettings.creditNoteNumbering = createDefaultConfig('AVO');
+        
+        if (!mergedSettings.documentLabels) mergedSettings.documentLabels = DEFAULT_LABELS;
+        if (!mergedSettings.priceDisplayMode) mergedSettings.priceDisplayMode = 'HT';
 
         setLocalSettings(mergedSettings); 
         
@@ -69,6 +84,16 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setLocalSettings(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleLabelChange = (field: keyof DocumentLabels, value: string) => {
+        setLocalSettings(prev => ({
+            ...prev,
+            documentLabels: {
+                ...(prev.documentLabels || DEFAULT_LABELS),
+                [field]: value
+            }
+        }));
     };
 
     const handleNumberingChange = (type: DocConfigType, field: keyof NumberingConfig, value: string | number) => {
@@ -152,22 +177,23 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
     };
 
     const tabs = [
-        { id: 'general', label: 'Général', icon: Building, desc: 'Coordonnées & Contact' },
-        { id: 'legal', label: 'Juridique', icon: ShieldCheck, desc: 'Identifiants fiscaux' },
+        { id: 'general', label: t('settings'), icon: Building, desc: 'Coordonnées & Contact' },
+        { id: 'legal', label: t('ice'), icon: ShieldCheck, desc: 'Identifiants fiscaux' },
         { id: 'branding', label: 'Marque', icon: Palette, desc: 'Logo & Couleurs' },
         { id: 'documents', label: 'Documents', icon: FileText, desc: 'Structure PDF' },
     ];
 
     const docTypes: {id: DocConfigType, label: string, icon: any}[] = [
-        { id: 'invoice', label: 'Facture', icon: FileText },
-        { id: 'quote', label: 'Devis', icon: FileBarChart },
+        { id: 'invoice', label: t('invoices'), icon: FileText },
+        { id: 'quote', label: t('quotes'), icon: FileBarChart },
         { id: 'deliveryNote', label: 'B. Livraison', icon: Truck },
         { id: 'purchaseOrder', label: 'B. Commande', icon: ShoppingBag },
-        { id: 'creditNote', label: 'Avoir', icon: FileMinus },
+        { id: 'creditNote', label: t('creditNotes'), icon: FileMinus },
     ];
 
     const currentDocConfigKey = `${activeDocType}Numbering` as keyof CompanySettings;
     const currentDocConfig = localSettings[currentDocConfigKey] as NumberingConfig;
+    const currentLabels = localSettings.documentLabels || DEFAULT_LABELS;
 
     return (
         <div className="w-full max-w-7xl mx-auto">
@@ -187,7 +213,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
             </div>
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                <Header title="Paramètres de l'entreprise" />
+                <Header title={t('settings')} />
                 <button 
                     onClick={handleManualSave} 
                     disabled={isSaving}
@@ -323,6 +349,34 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
 
                     {activeTab === 'documents' && (
                         <div className="space-y-6 animate-fadeIn">
+                             {/* Pricing Mode Section */}
+                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
+                                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
+                                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Eye size={20}/></div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-neutral-900">{t('priceDisplayMode')}</h3>
+                                        <p className="text-sm text-neutral-500 font-normal">Choisissez comment afficher les prix unitaires et totaux dans vos documents.</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <button 
+                                        onClick={() => setLocalSettings(prev => ({ ...prev, priceDisplayMode: 'HT' }))}
+                                        className={`flex flex-col p-4 rounded-xl border-2 transition-all text-left ${localSettings.priceDisplayMode === 'HT' ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-100 hover:border-neutral-200 bg-white'}`}
+                                    >
+                                        <div className="font-bold text-neutral-900">Mode Classique (HT)</div>
+                                        <div className="text-xs text-neutral-500 mt-1">Affiche P.U. HT et Total HT dans le tableau. Recommandé pour le B2B.</div>
+                                    </button>
+                                    <button 
+                                        onClick={() => setLocalSettings(prev => ({ ...prev, priceDisplayMode: 'TTC' }))}
+                                        className={`flex flex-col p-4 rounded-xl border-2 transition-all text-left ${localSettings.priceDisplayMode === 'TTC' ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-100 hover:border-neutral-200 bg-white'}`}
+                                    >
+                                        <div className="font-bold text-neutral-900">Mode Simplifié (TTC)</div>
+                                        <div className="text-xs text-neutral-500 mt-1">Affiche directement les montants TTC par article. Recommandé pour les particuliers.</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                             {/* Numbering Section */}
                              <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><Settings2 size={20}/></div>
@@ -332,7 +386,6 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                     </div>
                                 </div>
                                 
-                                {/* Doc Type Tabs for Numbering */}
                                 <div className="flex flex-wrap gap-2 mb-8 bg-neutral-100 p-1 rounded-xl">
                                     {docTypes.map(type => (
                                         <button
@@ -391,8 +444,8 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                             <label className="block text-sm font-semibold text-neutral-700 mb-2">Remplissage (Zéros)</label>
                                             <input 
                                                 type="number" 
-                                                min="1"
-                                                max="10"
+                                                min="1" 
+                                                max="10" 
                                                 value={currentDocConfig.padding} 
                                                 onChange={(e) => handleNumberingChange(activeDocType, 'padding', parseInt(e.target.value) || 5)}
                                                 className="block w-full rounded-xl border-neutral-200 bg-neutral-50 focus:ring-emerald-500 py-2.5 text-sm"
@@ -409,6 +462,55 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                     <div className="p-3 bg-white rounded-xl shadow-sm text-emerald-600">
                                         {React.createElement(docTypes.find(d => d.id === activeDocType)?.icon || FileText, { size: 24 })}
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Custom Labels Section */}
+                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
+                                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
+                                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><PencilLine size={20}/></div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-neutral-900">{t('customLabels')}</h3>
+                                        <p className="text-sm text-neutral-500 font-normal">Modifiez les textes affichés dans vos tableaux et signatures PDF.</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <InputField 
+                                        label={t('labelTotalHt')} 
+                                        value={currentLabels.totalHt || ''} 
+                                        onChange={(e: any) => handleLabelChange('totalHt', e.target.value)} 
+                                        placeholder="Ex: Total HT" 
+                                    />
+                                    <InputField 
+                                        label={t('labelTotalTax')} 
+                                        value={currentLabels.totalTax || ''} 
+                                        onChange={(e: any) => handleLabelChange('totalTax', e.target.value)} 
+                                        placeholder="Ex: Total TVA" 
+                                    />
+                                    <InputField 
+                                        label={t('labelTotalNet')} 
+                                        value={currentLabels.totalNet || ''} 
+                                        onChange={(e: any) => handleLabelChange('totalNet', e.target.value)} 
+                                        placeholder="Ex: Net à Payer" 
+                                    />
+                                    <InputField 
+                                        label={t('labelSignatureSender')} 
+                                        value={currentLabels.signatureSender || ''} 
+                                        onChange={(e: any) => handleLabelChange('signatureSender', e.target.value)} 
+                                        placeholder="Ex: Cachet & Signature" 
+                                    />
+                                    <InputField 
+                                        label={t('labelSignatureRecipient')} 
+                                        value={currentLabels.signatureRecipient || ''} 
+                                        onChange={(e: any) => handleLabelChange('signatureRecipient', e.target.value)} 
+                                        placeholder="Ex: Signature Client" 
+                                    />
+                                    <InputField 
+                                        label={t('labelAmountWordsPrefix')} 
+                                        value={currentLabels.amountInWordsPrefix || ''} 
+                                        onChange={(e: any) => handleLabelChange('amountInWordsPrefix', e.target.value)} 
+                                        placeholder="Arrêté le présent..." 
+                                    />
                                 </div>
                             </div>
 
