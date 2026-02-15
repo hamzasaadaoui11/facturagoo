@@ -175,6 +175,8 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                                 <option value="kg">{t('uKg')}</option>
                                 <option value="L">{t('uL')}</option>
                                 <option value="m">{t('uM')}</option>
+                                <option value="Tonne">{t('uTon')}</option>
+                                <option value="m3">{t('uM3')}</option>
                             </select>
                         </div>
                         {productType === 'Produit' && (
