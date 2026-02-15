@@ -87,9 +87,10 @@ export const parseDecimalInput = (value: string): number => {
 
 /**
  * Formats a decimal number for input display based on language.
+ * Return "0" if value is 0 instead of empty string for better UX in forms.
  */
 export const formatDecimalForInput = (value: number, language: string): string => {
-    if (value === 0) return '';
+    if (value === 0) return '0';
     const str = value.toString();
     if (language === 'fr' || language === 'ar') {
         return str.replace('.', ',');

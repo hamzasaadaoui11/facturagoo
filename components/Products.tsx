@@ -57,13 +57,15 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
     const [unitOfMeasure, setUnitOfMeasure] = useState('Aucune');
     const [vat, setVat] = useState(20);
 
-    const [salePriceHT, setSalePriceHT] = useState(0);
-    const [purchasePriceHT, setPurchasePriceHT] = useState(0);
+    // Using string states for all numeric inputs to preserve decimal separators and trailing zeros during typing
+    const [salePriceHTStr, setSalePriceHTStr] = useState('0');
+    const [salePriceTTCStr, setSalePriceTTCStr] = useState('0');
+    const [purchasePriceHTStr, setPurchasePriceHTStr] = useState('0');
+    const [purchasePriceTTCStr, setPurchasePriceTTCStr] = useState('0');
+    const [stockQuantityStr, setStockQuantityStr] = useState('0');
 
     const [salePriceIsTTC, setSalePriceIsTTC] = useState(false);
     const [purchasePriceIsTTC, setPurchasePriceIsTTC] = useState(false);
-    
-    const [stockQuantityStr, setStockQuantityStr] = useState('0');
 
     useEffect(() => {
         if (isEditMode && existingProduct) {
@@ -73,35 +75,61 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
             setProductType(existingProduct.productType || 'Produit');
             setUnitOfMeasure(existingProduct.unitOfMeasure || 'Aucune');
             setVat(existingProduct.vat);
-            setSalePriceHT(existingProduct.salePrice);
-            setPurchasePriceHT(existingProduct.purchasePrice);
+            
+            const sPriceHT = existingProduct.salePrice;
+            const pPriceHT = existingProduct.purchasePrice;
+            const vatRate = 1 + (existingProduct.vat / 100);
+
+            setSalePriceHTStr(formatDecimalForInput(sPriceHT, language));
+            setSalePriceTTCStr(formatDecimalForInput(round(sPriceHT * vatRate), language));
+            setPurchasePriceHTStr(formatDecimalForInput(pPriceHT, language));
+            setPurchasePriceTTCStr(formatDecimalForInput(round(pPriceHT * vatRate), language));
             setStockQuantityStr(formatDecimalForInput(existingProduct.stockQuantity || 0, language));
         } else if (!isEditMode) {
              setVat(language === 'es' ? 21 : 20);
         }
     }, [isEditMode, existingProduct, language]);
-    
-    const handlePriceChange = (value: string, type: 'sale' | 'purchase', from: 'ht' | 'ttc') => {
-        const numericValue = parseDecimalInput(value);
+
+    // Update TTC strings when VAT changes
+    useEffect(() => {
         const vatRate = 1 + (vat / 100);
+        const sHT = parseDecimalInput(salePriceHTStr);
+        const pHT = parseDecimalInput(purchasePriceHTStr);
+        
+        setSalePriceTTCStr(formatDecimalForInput(round(sHT * vatRate), language));
+        setPurchasePriceTTCStr(formatDecimalForInput(round(pHT * vatRate), language));
+    }, [vat, language]);
+    
+    const handlePriceInputChange = (value: string, type: 'sale' | 'purchase', from: 'ht' | 'ttc') => {
+        const vatRate = 1 + (vat / 100);
+        const numericValue = parseDecimalInput(value);
 
         if (type === 'sale') {
-            const newHT = from === 'ht' ? numericValue : numericValue / vatRate;
-            setSalePriceHT(round(newHT));
+            if (from === 'ht') {
+                setSalePriceHTStr(value);
+                setSalePriceTTCStr(formatDecimalForInput(round(numericValue * vatRate), language));
+            } else {
+                setSalePriceTTCStr(value);
+                setSalePriceHTStr(formatDecimalForInput(round(numericValue / vatRate), language));
+            }
         } else {
-            const newHT = from === 'ht' ? numericValue : numericValue / vatRate;
-            setPurchasePriceHT(round(newHT));
+            if (from === 'ht') {
+                setPurchasePriceHTStr(value);
+                setPurchasePriceTTCStr(formatDecimalForInput(round(numericValue * vatRate), language));
+            } else {
+                setPurchasePriceTTCStr(value);
+                setPurchasePriceHTStr(formatDecimalForInput(round(numericValue / vatRate), language));
+            }
         }
     };
     
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const stockQuantity = parseDecimalInput(stockQuantityStr);
         const productData = {
             name, productCode, description, productType, unitOfMeasure, vat,
-            salePrice: salePriceHT,
-            purchasePrice: purchasePriceHT,
-            stockQuantity,
+            salePrice: parseDecimalInput(salePriceHTStr),
+            purchasePrice: parseDecimalInput(purchasePriceHTStr),
+            stockQuantity: parseDecimalInput(stockQuantityStr),
             minStockAlert: 5 
         };
         if (isEditMode && existingProduct) {
@@ -177,11 +205,11 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label htmlFor="salePriceHT" className="block text-sm font-medium text-neutral-700">{t('salePrice')} HT</label>
-                                    <input type="text" id="salePriceHT" value={formatDecimalForInput(salePriceHT, language)} onChange={e => handlePriceChange(e.target.value, 'sale', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                    <input type="text" id="salePriceHT" value={salePriceHTStr} onChange={e => handlePriceInputChange(e.target.value, 'sale', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                                 </div>
                                 <div>
                                     <label htmlFor="salePriceTTC" className="block text-sm font-medium text-neutral-700">{t('salePrice')} TTC</label>
-                                    <input type="text" id="salePriceTTC" value={formatDecimalForInput(round(salePriceHT * (1 + vat / 100)), language)} onChange={e => handlePriceChange(e.target.value, 'sale', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-neutral-50" />
+                                    <input type="text" id="salePriceTTC" value={salePriceTTCStr} onChange={e => handlePriceInputChange(e.target.value, 'sale', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-neutral-50" />
                                 </div>
                             </div>
                         </div>
@@ -195,11 +223,11 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label htmlFor="purchasePriceHT" className="block text-sm font-medium text-neutral-700">{t('purchasePrice')} HT</label>
-                                    <input type="text" id="purchasePriceHT" value={formatDecimalForInput(purchasePriceHT, language)} onChange={e => handlePriceChange(e.target.value, 'purchase', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                    <input type="text" id="purchasePriceHT" value={purchasePriceHTStr} onChange={e => handlePriceInputChange(e.target.value, 'purchase', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                                 </div>
                                 <div>
                                     <label htmlFor="purchasePriceTTC" className="block text-sm font-medium text-neutral-700">{t('purchasePrice')} TTC</label>
-                                    <input type="text" id="purchasePriceTTC" value={formatDecimalForInput(round(purchasePriceHT * (1 + vat / 100)), language)} onChange={e => handlePriceChange(e.target.value, 'purchase', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-neutral-50" />
+                                    <input type="text" id="purchasePriceTTC" value={purchasePriceTTCStr} onChange={e => handlePriceInputChange(e.target.value, 'purchase', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-neutral-50" />
                                 </div>
                             </div>
                         </div>
