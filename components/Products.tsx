@@ -4,8 +4,9 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import Header from './Header';
 import ConfirmationModal from './ConfirmationModal';
 import { Plus, Pencil, Trash2, ArrowLeft, Package, AlertTriangle } from 'lucide-react';
-import { Product } from '../types';
+import { Product, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { formatCurrency, parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
 
 // --- Helper Functions and Components ---
 
@@ -62,7 +63,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
     const [salePriceIsTTC, setSalePriceIsTTC] = useState(false);
     const [purchasePriceIsTTC, setPurchasePriceIsTTC] = useState(false);
     
-    const [stockQuantity, setStockQuantity] = useState(0);
+    const [stockQuantityStr, setStockQuantityStr] = useState('0');
 
     useEffect(() => {
         if (isEditMode && existingProduct) {
@@ -74,14 +75,14 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
             setVat(existingProduct.vat);
             setSalePriceHT(existingProduct.salePrice);
             setPurchasePriceHT(existingProduct.purchasePrice);
-            setStockQuantity(existingProduct.stockQuantity || 0);
+            setStockQuantityStr(formatDecimalForInput(existingProduct.stockQuantity || 0, language));
         } else if (!isEditMode) {
              setVat(language === 'es' ? 21 : 20);
         }
     }, [isEditMode, existingProduct, language]);
     
     const handlePriceChange = (value: string, type: 'sale' | 'purchase', from: 'ht' | 'ttc') => {
-        const numericValue = parseFloat(value) || 0;
+        const numericValue = parseDecimalInput(value);
         const vatRate = 1 + (vat / 100);
 
         if (type === 'sale') {
@@ -95,6 +96,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
     
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const stockQuantity = parseDecimalInput(stockQuantityStr);
         const productData = {
             name, productCode, description, productType, unitOfMeasure, vat,
             salePrice: salePriceHT,
@@ -151,10 +153,10 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                             <div>
                                 <label htmlFor="stockQuantity" className="block text-sm font-medium text-neutral-700">{t('stock')}</label>
                                 <input 
-                                    type="number" 
+                                    type="text" 
                                     id="stockQuantity" 
-                                    value={stockQuantity} 
-                                    onChange={e => setStockQuantity(parseFloat(e.target.value) || 0)} 
+                                    value={stockQuantityStr} 
+                                    onChange={e => setStockQuantityStr(e.target.value)} 
                                     className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
                                 />
                                 <p className="mt-1 text-xs text-neutral-500">{t('stockUpdateNote')}</p>
@@ -175,11 +177,11 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label htmlFor="salePriceHT" className="block text-sm font-medium text-neutral-700">{t('salePrice')} HT</label>
-                                    <input type="number" step="0.01" id="salePriceHT" value={salePriceHT} onChange={e => handlePriceChange(e.target.value, 'sale', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                    <input type="text" id="salePriceHT" value={formatDecimalForInput(salePriceHT, language)} onChange={e => handlePriceChange(e.target.value, 'sale', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                                 </div>
                                 <div>
                                     <label htmlFor="salePriceTTC" className="block text-sm font-medium text-neutral-700">{t('salePrice')} TTC</label>
-                                    <input type="number" step="0.01" id="salePriceTTC" value={round(salePriceHT * (1 + vat / 100))} onChange={e => handlePriceChange(e.target.value, 'sale', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-neutral-50" />
+                                    <input type="text" id="salePriceTTC" value={formatDecimalForInput(round(salePriceHT * (1 + vat / 100)), language)} onChange={e => handlePriceChange(e.target.value, 'sale', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-neutral-50" />
                                 </div>
                             </div>
                         </div>
@@ -193,11 +195,11 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label htmlFor="purchasePriceHT" className="block text-sm font-medium text-neutral-700">{t('purchasePrice')} HT</label>
-                                    <input type="number" step="0.01" id="purchasePriceHT" value={purchasePriceHT} onChange={e => handlePriceChange(e.target.value, 'purchase', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                    <input type="text" id="purchasePriceHT" value={formatDecimalForInput(purchasePriceHT, language)} onChange={e => handlePriceChange(e.target.value, 'purchase', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                                 </div>
                                 <div>
                                     <label htmlFor="purchasePriceTTC" className="block text-sm font-medium text-neutral-700">{t('purchasePrice')} TTC</label>
-                                    <input type="number" step="0.01" id="purchasePriceTTC" value={round(purchasePriceHT * (1 + vat / 100))} onChange={e => handlePriceChange(e.target.value, 'purchase', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-neutral-50" />
+                                    <input type="text" id="purchasePriceTTC" value={formatDecimalForInput(round(purchasePriceHT * (1 + vat / 100)), language)} onChange={e => handlePriceChange(e.target.value, 'purchase', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-neutral-50" />
                                 </div>
                             </div>
                         </div>
@@ -238,10 +240,11 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
 interface ProductListProps {
     products: Product[];
     onDeleteProduct: (productId: string) => void;
+    companySettings?: CompanySettings | null;
 }
 
-const ProductList = ({ products, onDeleteProduct }: ProductListProps) => {
-    const { t, language, isRTL } = useLanguage();
+const ProductList = ({ products, onDeleteProduct, companySettings }: ProductListProps) => {
+    const { t, language } = useLanguage();
     const navigate = useNavigate();
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [productIdToDelete, setProductIdToDelete] = useState<string | null>(null);
@@ -310,11 +313,11 @@ const ProductList = ({ products, onDeleteProduct }: ProductListProps) => {
                                             ) : (
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(product.stockQuantity || 0) <= (product.minStockAlert || 5) ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                                                     {(product.stockQuantity || 0) <= (product.minStockAlert || 5) && <AlertTriangle className="w-3 h-3 mr-1"/>}
-                                                    {product.stockQuantity || 0} {product.unitOfMeasure !== 'Aucune' ? product.unitOfMeasure : ''}
+                                                    {formatDecimalForInput(product.stockQuantity || 0, language)} {product.unitOfMeasure !== 'Aucune' ? product.unitOfMeasure : ''}
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{product.salePrice.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{formatCurrency(product.salePrice, companySettings)}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{product.vat}%</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-right rtl:text-left text-sm font-medium">
                                             <div className="flex items-center justify-end rtl:justify-start space-x-2 rtl:space-x-reverse">
@@ -363,6 +366,7 @@ interface ProductsProps {
     onAddProduct: (product: Omit<Product, 'id'>) => void;
     onUpdateProduct: (product: Product) => void;
     onDeleteProduct: (productId: string) => void;
+    companySettings?: CompanySettings | null;
 }
 
 const Products: React.FC<ProductsProps> = (props) => {

@@ -232,6 +232,8 @@ export interface CompanySettings {
     documentLabels?: DocumentLabels;
     showAmountInWords?: boolean; 
     priceDisplayMode?: 'HT' | 'TTC'; // Nouveau mode d'affichage
+    // Fix: added defaultCurrencyCode property to match usage in currencyService.ts
+    defaultCurrencyCode?: string;
     invoiceNumbering?: NumberingConfig;
     quoteNumbering?: NumberingConfig;
     deliveryNoteNumbering?: NumberingConfig;

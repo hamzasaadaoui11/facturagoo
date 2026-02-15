@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, ScanLine, Calculator, FileText } from 'lucide-react';
 import { Client, Product, Quote, LineItem, QuoteStatus, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
 
 interface CreateQuoteModalProps {
     isOpen: boolean;
@@ -30,9 +31,9 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
     const [selectedProductId, setSelectedProductId] = useState('');
     const [tempName, setTempName] = useState('');
     const [tempDesc, setTempDesc] = useState('');
-    const [tempPrice, setTempPrice] = useState(0);
+    const [tempPrice, setTempPrice] = useState<string>('0');
     const [tempVat, setTempVat] = useState(20);
-    const [itemQuantity, setItemQuantity] = useState(1);
+    const [itemQuantity, setItemQuantity] = useState<string>('1');
     const [tempProductCode, setTempProductCode] = useState('');
 
     useEffect(() => {
@@ -62,9 +63,9 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
         setSelectedProductId('');
         setTempName('');
         setTempDesc('');
-        setTempPrice(0);
+        setTempPrice('0');
         setTempVat(language === 'es' ? 21 : 20);
-        setItemQuantity(1);
+        setItemQuantity('1');
         setTempProductCode('');
     };
 
@@ -79,23 +80,26 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
             if (product) {
                 setTempName(product.name);
                 setTempDesc(product.description || '');
-                setTempPrice(product.salePrice);
+                setTempPrice(formatDecimalForInput(product.salePrice, language));
                 setTempVat(product.vat);
                 setTempProductCode(product.productCode);
             }
         }
-    }, [selectedProductId, products]);
+    }, [selectedProductId, products, language]);
 
     const handleAddItem = () => {
         if (!tempName) return;
+        const qty = parseDecimalInput(itemQuantity);
+        const price = parseDecimalInput(tempPrice);
+
         const newItem: LineItem = {
             id: `temp-${Date.now()}`,
             productId: selectedProductId || null,
             productCode: tempProductCode,
             name: tempName,
             description: tempDesc,
-            quantity: itemQuantity,
-            unitPrice: tempPrice,
+            quantity: qty,
+            unitPrice: price,
             vat: tempVat
         };
         setLineItems(prev => [...prev, newItem]);
@@ -184,18 +188,15 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             <div className="col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</label>
                                 <input 
-                                    type="number" 
-                                    value={isModeTTC ? (tempPrice * (1 + tempVat/100)) : tempPrice} 
-                                    onChange={(e) => {
-                                        const val = parseFloat(e.target.value) || 0;
-                                        setTempPrice(isModeTTC ? (val / (1 + tempVat/100)) : val);
-                                    }} 
+                                    type="text" 
+                                    value={tempPrice} 
+                                    onChange={(e) => setTempPrice(e.target.value)} 
                                     className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"
                                 />
                             </div>
                             <div className="col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('quantity')}</label>
-                                <input type="number" min="1" value={itemQuantity} onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                <input type="text" value={itemQuantity} onChange={(e) => setItemQuantity(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                             </div>
                             <div className="col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('vat')}</label>
@@ -226,7 +227,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 <tbody className="bg-white divide-y divide-slate-100">
                                     {lineItems.map(item => {
                                         const displayPrice = isModeTTC ? (item.unitPrice * (1 + item.vat/100)) : item.unitPrice;
-                                        const displayLineTotal = isModeTTC ? (item.quantity * item.unitPrice * (1 + item.vat/100)) : (item.quantity * item.unitPrice);
+                                        const displayLineTotal = item.quantity * displayPrice;
                                         
                                         return (
                                         <tr key={item.id} className="hover:bg-slate-50 transition-colors">
@@ -236,19 +237,18 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                             </td>
                                             <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
                                                 <input 
-                                                    type="number" 
-                                                    value={item.quantity} 
-                                                    onChange={(e) => updateLineItem(item.id, { quantity: parseInt(e.target.value) || 0 })}
+                                                    type="text" 
+                                                    value={formatDecimalForInput(item.quantity, language)} 
+                                                    onChange={(e) => updateLineItem(item.id, { quantity: parseDecimalInput(e.target.value) })}
                                                     className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
                                                 />
                                             </td>
                                             <td className="px-4 py-3 text-right text-xs">
                                                 <input 
-                                                    type="number" 
-                                                    step="0.01"
-                                                    value={displayPrice.toFixed(2)} 
+                                                    type="text" 
+                                                    value={formatDecimalForInput(displayPrice, language)} 
                                                     onChange={(e) => {
-                                                        const val = parseFloat(e.target.value) || 0;
+                                                        const val = parseDecimalInput(e.target.value);
                                                         updateLineItem(item.id, { unitPrice: isModeTTC ? (val / (1 + item.vat/100)) : val });
                                                     }}
                                                     className="w-24 p-1 text-right border-none focus:ring-0 text-xs font-medium bg-transparent"
