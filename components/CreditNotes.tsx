@@ -2,11 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Header from './Header';
-import { FileText, Download, Plus, Pencil, Printer, MoreVertical, Trash2, CheckCircle, RefreshCw } from 'lucide-react';
+// Fix: Added missing Loader2 import
+import { FileText, Download, Plus, Pencil, Printer, MoreVertical, Trash2, CheckCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { CreditNote, CreditNoteStatus, Client, Product, CompanySettings } from '../types';
 import CreateCreditNoteModal from './CreateCreditNoteModal';
 import ConfirmationModal from './ConfirmationModal';
 import { generatePDF, printDocument } from '../services/pdfService';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const statusColors: { [key in CreditNoteStatus]: string } = {
     [CreditNoteStatus.Draft]: 'bg-neutral-100 text-neutral-600',
@@ -35,6 +37,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
     products = [],
     companySettings 
 }) => {
+    const { t, isRTL } = useLanguage();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [creditNoteToEdit, setCreditNoteToEdit] = useState<CreditNote | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -72,7 +75,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
             setActiveMenuId(id);
             setMenuPosition({
                 top: rect.bottom + window.scrollY + 5,
-                left: Math.max(10, rect.right + window.scrollX - 192) // Prevent overflow
+                left: isRTL ? rect.left + window.scrollX : Math.max(10, rect.right + window.scrollX - 192) // Prevent overflow
             });
         }
     };
@@ -111,6 +114,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
 
     const handleDownload = async (note: CreditNote) => {
         setDownloadingId(note.id);
+        setActiveMenuId(null);
         try {
             const client = clients.find(c => c.id === note.clientId);
             await generatePDF('Avoir', note, companySettings || null, client);
@@ -122,6 +126,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
     };
 
     const handlePrint = (note: CreditNote) => {
+        setActiveMenuId(null);
         try {
             const client = clients.find(c => c.id === note.clientId);
             printDocument('Avoir', note, companySettings || null, client);
@@ -130,18 +135,28 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
         }
     };
 
+    const getStatusLabel = (status: CreditNoteStatus) => {
+        switch(status) {
+            case CreditNoteStatus.Draft: return t('statusManual');
+            case CreditNoteStatus.Validated: return t('statusValidated');
+            case CreditNoteStatus.Refunded: return t('statusRefunded');
+            default: return status;
+        }
+    };
+
     const activeNote = creditNotes.find(n => n.id === activeMenuId);
+    const isDownloading = activeNote ? downloadingId === activeNote.id : false;
 
     return (
         <div>
-            <Header title="Avoirs">
+            <Header title={t('creditNotes')}>
                  <button
                     type="button"
                     onClick={handleCreateClick}
                     className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-all"
                 >
-                    <Plus className="-ml-0.5 h-5 w-5" />
-                    Nouvel Avoir
+                    <Plus className={`${isRTL ? 'ml-0.5' : '-ml-0.5'} h-5 w-5`} />
+                    {t('newCreditNote')}
                 </button>
             </Header>
             
@@ -158,8 +173,8 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={confirmDelete}
-                title="Supprimer l'avoir"
-                message="Êtes-vous sûr de vouloir supprimer cet avoir ? Cette action est irréversible."
+                title={t('confirmDelete')}
+                message={t('confirmDeleteMessage')}
             />
 
             <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
@@ -167,27 +182,27 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">N° Avoir</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Date</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Client</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Réf. Facture</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Montant</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Statut</th>
-                                <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">Actions</span></th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('creditNoteNumber')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('date')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('client')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('invoiceReference')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{t('amount')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('status')}</th>
+                                <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">{t('actions')}</span></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-200 bg-white">
                             {creditNotes.length > 0 ? (
                                 creditNotes.map((note) => (
                                     <tr key={note.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600">{note.documentId || note.id}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-600">{new Date(note.date).toLocaleDateString('fr-FR')}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-medium">{note.clientName}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">{note.invoiceId || '-'}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-bold">{note.amount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600 ${isRTL ? 'text-right' : 'text-left'}`}>{note.documentId || note.id}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-600 ${isRTL ? 'text-right' : 'text-left'}`}>{new Date(note.date).toLocaleDateString()}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-medium ${isRTL ? 'text-right' : 'text-left'}`}>{note.clientName}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{note.invoiceId || '-'}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-bold ${isRTL ? 'text-left' : 'text-right'}`}>{note.amount.toLocaleString(undefined, { style: 'currency', currency: 'MAD' })}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[note.status]}`}>
-                                                {note.status}
+                                                {getStatusLabel(note.status)}
                                             </span>
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium relative">
@@ -205,8 +220,8 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                                     <td colSpan={7} className="text-center py-20 px-6">
                                         <div className="flex flex-col items-center justify-center">
                                             <FileText className="h-12 w-12 text-slate-300 mb-4" />
-                                            <h3 className="text-lg font-bold text-slate-800">Aucun avoir trouvé</h3>
-                                            <p className="text-sm text-slate-500 mt-1">Créez des avoirs manuellement ou depuis une facture.</p>
+                                            <h3 className="text-lg font-bold text-slate-800">{t('noCreditNotesFound')}</h3>
+                                            <p className="text-sm text-slate-500 mt-1">{t('firstCreditNotePrompt')}</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -228,7 +243,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                             onClick={() => { handleEditClick(activeNote); setActiveMenuId(null); }} 
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Pencil size={16} className="mr-3 text-emerald-600" /> Modifier
+                            <Pencil size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-emerald-600`} /> {t('edit')}
                         </button>
 
                         {activeNote.status === CreditNoteStatus.Draft && (
@@ -236,7 +251,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                                 onClick={() => { onUpdateCreditNoteStatus(activeNote.id, CreditNoteStatus.Validated); setActiveMenuId(null); }} 
                                 className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                             >
-                                <CheckCircle size={16} className="mr-3 text-green-600" /> Valider
+                                <CheckCircle size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-green-600`} /> {t('validate')}
                             </button>
                         )}
 
@@ -245,7 +260,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                                 onClick={() => { onUpdateCreditNoteStatus(activeNote.id, CreditNoteStatus.Refunded); setActiveMenuId(null); }} 
                                 className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                             >
-                                <RefreshCw size={16} className="mr-3 text-blue-600" /> Marquer Remboursé
+                                <RefreshCw size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-blue-600`} /> {t('markRefunded')}
                             </button>
                         )}
                         
@@ -255,21 +270,22 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                             onClick={() => { handlePrint(activeNote); setActiveMenuId(null); }}
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Printer size={16} className="mr-3 text-neutral-500" /> Imprimer
+                            <Printer size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-neutral-500`} /> {t('print')}
                         </button>
 
                         <button 
                             onClick={() => { handleDownload(activeNote); setActiveMenuId(null); }}
-                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                            disabled={isDownloading}
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                         >
-                            <Download size={16} className="mr-3 text-neutral-500" /> Télécharger PDF
+                            {isDownloading ? <Loader2 size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} animate-spin`} /> : <Download size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-neutral-500`} />} {t('download')}
                         </button>
 
                         <button 
                             onClick={() => handleDeleteClick(activeNote.id)} 
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Trash2 size={16} className="mr-3 text-red-600" /> Supprimer
+                            <Trash2 size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-red-600`} /> {t('delete')}
                         </button>
                     </div>
                 </div>,

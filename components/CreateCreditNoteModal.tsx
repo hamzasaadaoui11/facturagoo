@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, ScanLine, Calculator, FileText, Loader2, AlertCircle } from 'lucide-react';
 import { Client, Product, CreditNote, LineItem, CreditNoteStatus } from '../types';
@@ -18,6 +19,8 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
+    const vatOptions = language === 'es' ? [21, 10, 4, 0] : [20, 14, 10, 7, 0];
+
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [reason, setReason] = useState('');
@@ -45,19 +48,20 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 setDate(new Date().toISOString().split('T')[0]);
                 setReason('');
                 setLineItems([]);
+                setTempVat(language === 'es' ? 21 : 20);
             }
             resetItemForm();
         } else {
             setIsVisible(false);
         }
-    }, [isOpen, creditNoteToEdit]);
+    }, [isOpen, creditNoteToEdit, language]);
 
     const resetItemForm = () => {
         setSelectedProductId('');
         setTempName('');
         setTempDesc('');
         setTempPrice(0);
-        setTempVat(20);
+        setTempVat(language === 'es' ? 21 : 20);
         setItemQuantity(1);
         setTempProductCode('');
     };
@@ -100,6 +104,10 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
         setLineItems(prev => prev.filter(item => item.id !== id));
     };
 
+    const updateLineItem = (id: string, updatedField: Partial<LineItem>) => {
+        setLineItems(prev => prev.map(item => item.id === id ? { ...item, ...updatedField } : item));
+    };
+
     const totals = useMemo(() => {
         const subTotal = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
         const vatAmount = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * (item.vat / 100)), 0);
@@ -110,7 +118,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const handleSave = async () => {
         if (!clientId || lineItems.length === 0) return;
         const client = clients.find(c => c.id === clientId);
-        const clientNameDisplay = client ? (client.company || client.name) : 'Client inconnu';
+        const clientNameDisplay = client ? (client.company || client.name) : (language === 'es' ? 'Cliente desconocido' : 'Client inconnu');
         const creditNoteData: Omit<CreditNote, 'id'> = {
             clientId, clientName: clientNameDisplay, date, subject: reason, lineItems,
             status: creditNoteToEdit ? creditNoteToEdit.status : CreditNoteStatus.Draft,
@@ -118,7 +126,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
         };
         setIsSubmitting(true);
         setError(null);
-        try { await onSave(creditNoteData, creditNoteToEdit?.id); handleClose(); } catch (err: any) { setError(err.message || "Erreur."); } finally { setIsSubmitting(false); }
+        try { await onSave(creditNoteData, creditNoteToEdit?.id); handleClose(); } catch (err: any) { setError(err.message || "Error."); } finally { setIsSubmitting(false); }
     };
 
     if (!isOpen) return null;
@@ -139,7 +147,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 {error && (<div className="px-6 pt-4"><div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start gap-3"><AlertCircle className="h-5 w-5 text-red-500 shrink-0" /><p className="text-xs text-red-700">{error}</p></div></div>)}
 
                 <div className="px-4 md:px-6 py-5 overflow-y-auto custom-scrollbar flex-1 space-y-6 pb-24 md:pb-8">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('client')} *</label>
                             <select value={clientId} onChange={(e) => setClientId(e.target.value)} disabled={!!creditNoteToEdit?.invoiceId} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 bg-white disabled:bg-gray-100">
@@ -151,6 +159,10 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('date')} *</label>
                             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('reasonLabel')}</label>
+                            <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={language === 'es' ? 'Ej: Devolución de producto' : 'Ex: Retour produit'} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
+                        </div>
                     </div>
 
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 shadow-inner space-y-4">
@@ -161,32 +173,32 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                         
                         <div className="grid grid-cols-24 gap-3 items-end">
                             <div className="col-span-12 lg:col-span-2">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Réf.</label>
-                                <input type="text" value={tempProductCode} onChange={(e) => setTempProductCode(e.target.value)} placeholder="Réf" className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('refLabel')}</label>
+                                <input type="text" value={tempProductCode} onChange={(e) => setTempProductCode(e.target.value)} placeholder={t('reference')} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                             </div>
                             <div className="col-span-12 lg:col-span-4">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Produit (Auto)</label>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('productAutoLabel')}</label>
                                 <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 bg-white">
                                     <option value="">-- {t('select')} --</option>
                                     {products.map(product => (<option key={product.id} value={product.id}>{product.name}</option>))}
                                 </select>
                             </div>
                             <div className="col-span-24 lg:col-span-6">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Désignation *</label>
-                                <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} placeholder="Nom de l'article" className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 font-medium"/>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('designationLabel')} *</label>
+                                <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} placeholder={t('description')} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-[11px] h-11 font-medium"/>
                             </div>
                             <div className="col-span-12 lg:col-span-3">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">P.U. HT</label>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('puHTLabel')}</label>
                                 <input type="number" value={tempPrice} onChange={(e) => setTempPrice(parseFloat(e.target.value) || 0)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                             </div>
                             <div className="col-span-12 lg:col-span-3">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Qté</label>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('quantity')}</label>
                                 <input type="number" min="1" value={itemQuantity} onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                             </div>
                             <div className="col-span-12 lg:col-span-3">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">TVA</label>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('vat')}</label>
                                 <select value={tempVat} onChange={(e) => setTempVat(parseInt(e.target.value))} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11">
-                                    <option value="20">20%</option><option value="14">14%</option><option value="10">10%</option><option value="7">7%</option><option value="0">0%</option>
+                                    {vatOptions.map(v => <option key={v} value={v}>{v}%</option>)}
                                 </select>
                             </div>
                             <div className="col-span-24 lg:col-span-3">
@@ -204,7 +216,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     <tr>
                                         <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('description')}</th>
                                         <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
-                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{t('totalHT')}</th>
+                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{t('totalHTLabel')}</th>
                                         <th className="px-4 py-3 w-10"></th>
                                     </tr>
                                 </thead>
@@ -212,11 +224,11 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     {lineItems.map(item => (
                                         <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-4 py-3">
-                                                <div className="text-xs font-bold text-slate-900">{item.name}</div>
-                                                {item.productCode && <div className="text-[10px] text-slate-400">{item.productCode}</div>}
+                                                <div className="text-[11px] font-bold text-slate-900 leading-tight">{item.name}</div>
+                                                {item.productCode && <div className="text-[9px] text-slate-400 font-mono mt-0.5">{item.productCode}</div>}
                                             </td>
                                             <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">{item.quantity}</td>
-                                            <td className="px-4 py-3 text-right text-xs font-bold text-slate-900">{(item.quantity * item.unitPrice).toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</td>
+                                            <td className="px-4 py-3 text-right text-xs font-bold text-slate-900">{(item.quantity * item.unitPrice).toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })}</td>
                                             <td className="px-4 py-3 text-center"><button onClick={() => handleRemoveItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1"><Trash2 size={16}/></button></td>
                                         </tr>
                                     ))}
@@ -225,7 +237,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                         </div>
                     ) : (
                         <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-slate-400 text-sm italic">
-                            {t('items')} (Vide)
+                            {t('items')} ({language === 'ar' ? 'فارغ' : 'Vide'})
                         </div>
                     )}
 

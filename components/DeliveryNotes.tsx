@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +9,7 @@ import CreateDeliveryNoteModal from './CreateDeliveryNoteModal';
 import ConfirmationModal from './ConfirmationModal';
 import DeliveryNoteOptionModal from './DeliveryNoteOptionModal';
 import { generatePDF, printDocument } from '../services/pdfService';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface DeliveryNotesProps {
     deliveryNotes: DeliveryNote[];
@@ -33,31 +35,27 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     companySettings
 }) => {
     const navigate = useNavigate();
+    const { t, isRTL, language } = useLanguage();
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [convertingId, setConvertingId] = useState<string | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
     
-    // Menu Dropdown State
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [menuPosition, setMenuPosition] = useState<{top: number, left: number} | null>(null);
     
-    // Edit & Delete State
     const [noteToEdit, setNoteToEdit] = useState<DeliveryNote | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [noteIdToDelete, setNoteIdToDelete] = useState<string | null>(null);
 
-    // Print/PDF Option Modal State
     const [isOptionModalOpen, setIsOptionModalOpen] = useState(false);
     const [selectedNoteForOutput, setSelectedNoteForOutput] = useState<DeliveryNote | null>(null);
     const [outputAction, setOutputAction] = useState<'print' | 'download'>('download');
 
-    // Close menu when clicking outside
     useEffect(() => {
         const handleClickOutside = () => setActiveMenuId(null);
         if(activeMenuId) {
             document.addEventListener('click', handleClickOutside);
-            // Handle window resize/scroll to close menu as position might become invalid
             window.addEventListener('scroll', handleClickOutside, true);
             window.addEventListener('resize', handleClickOutside);
         }
@@ -71,13 +69,14 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     const handleCreateFromInvoice = (invoiceId: string) => {
         const invoice = invoices.find(i => i.id === invoiceId);
         if(invoice) {
+            // FIX: Store the professional documentId instead of technical UUID
             onCreateDeliveryNote({
-                invoiceId: invoice.id,
+                invoiceId: invoice.documentId || invoice.id,
                 clientId: invoice.clientId,
                 clientName: invoice.clientName,
                 date: new Date().toISOString().split('T')[0],
                 lineItems: invoice.lineItems,
-                status: 'Payé', 
+                status: 'Livré', 
                 subTotal: invoice.subTotal,
                 vatAmount: invoice.vatAmount,
                 totalAmount: invoice.amount,
@@ -115,7 +114,6 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
         }
     };
 
-    // Open Option Modal instead of direct action
     const handlePDFClick = (note: DeliveryNote) => {
         setSelectedNoteForOutput(note);
         setOutputAction('download');
@@ -130,13 +128,10 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
         setActiveMenuId(null);
     };
 
-    // Callback from Option Modal
     const handleOptionConfirm = async (showPrices: boolean) => {
         const note = selectedNoteForOutput;
         if (!note) return;
-
-        setIsOptionModalOpen(false); // Close modal first
-
+        setIsOptionModalOpen(false);
         try {
             const client = clients.find(c => c.id === note.clientId);
             if (outputAction === 'download') {
@@ -168,7 +163,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
             setActiveMenuId(id);
             setMenuPosition({
                 top: rect.bottom + window.scrollY + 5,
-                left: rect.right + window.scrollX - 192 // 192px = w-48
+                left: isRTL ? rect.left + window.scrollX : rect.right + window.scrollX - 192 
             });
         }
     };
@@ -190,19 +185,17 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     const getStatusDisplay = (note: DeliveryNote) => {
         const total = note.totalAmount || 0;
         const paid = note.paymentAmount || 0;
-
-        if (note.invoiceId) {
-            return { label: 'Facturé', color: 'bg-purple-100 text-purple-800', icon: FileText };
+        // Check if invoiceId is linked (pro or technical)
+        if (note.invoiceId && note.invoiceId.length > 0) {
+            return { label: t('statusBilled'), color: 'bg-purple-100 text-purple-800', icon: FileText };
         }
-
-        if (total === 0) return { label: 'Gratuit', color: 'bg-gray-100 text-gray-800', icon: CheckCircle };
-
+        if (total === 0) return { label: t('statusFree'), color: 'bg-gray-100 text-gray-800', icon: CheckCircle };
         if (paid >= total) {
-            return { label: 'Payé', color: 'bg-green-100 text-green-800', icon: CheckCircle };
+            return { label: t('paid'), color: 'bg-green-100 text-green-800', icon: CheckCircle };
         } else if (paid > 0) {
-            return { label: 'Partiel', color: 'bg-blue-100 text-blue-800', icon: Clock };
+            return { label: t('statusPartial'), color: 'bg-blue-100 text-blue-800', icon: Clock };
         } else {
-            return { label: 'Non Payé', color: 'bg-red-100 text-red-800', icon: AlertCircle };
+            return { label: t('statusUnpaid'), color: 'bg-red-100 text-red-800', icon: AlertCircle };
         }
     };
 
@@ -212,21 +205,21 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
 
     return (
         <div>
-            <Header title="Bons de Livraison">
-                 <div className="flex gap-3">
+            <Header title={t('deliveryNotes')}>
+                 <div className={`flex gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <button 
                         onClick={() => setIsInvoiceModalOpen(true)}
                         className="inline-flex items-center gap-x-2 rounded-lg bg-white px-3.5 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all"
                     >
-                        <FileText className="-ml-0.5 h-5 w-5 text-neutral-500" />
-                        Depuis Facture
+                        <FileText className={`${isRTL ? 'ml-0.5' : '-ml-0.5'} h-5 w-5 text-neutral-500`} />
+                        {t('fromInvoice')}
                     </button>
                     <button 
                         onClick={openNewModal}
                         className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all"
                     >
-                        <Plus className="-ml-0.5 h-5 w-5" />
-                        Nouveau Bon
+                        <Plus className={`${isRTL ? 'ml-0.5' : '-ml-0.5'} h-5 w-5`} />
+                        {t('newNote')}
                     </button>
                  </div>
             </Header>
@@ -238,14 +231,13 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                 clients={clients}
                 products={products}
                 noteToEdit={noteToEdit || undefined}
+                companySettings={companySettings}
             />
             
             <ConfirmationModal 
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={confirmDelete}
-                title="Supprimer le bon de livraison"
-                message="Êtes-vous sûr de vouloir supprimer ce bon de livraison ? Cette action est irréversible."
             />
 
             <DeliveryNoteOptionModal 
@@ -257,25 +249,25 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
             {isInvoiceModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                     <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-                        <h3 className="text-lg font-bold mb-4">Générer un Bon de Livraison</h3>
-                        <p className="text-sm text-gray-500 mb-4">Sélectionnez une facture pour générer le BL correspondant.</p>
+                        <h3 className="text-lg font-bold mb-4">{t('generateDeliveryNote')}</h3>
+                        <p className="text-sm text-gray-500 mb-4">{language === 'es' ? 'Seleccione una factura para generar el albarán correspondiente.' : 'Sélectionnez une facture pour générer le BL correspondant.'}</p>
                         <div className="max-h-60 overflow-y-auto space-y-2">
-                            {invoices.filter(inv => !deliveryNotes.some(dn => dn.invoiceId === inv.id)).map(invoice => (
+                            {invoices.filter(inv => !deliveryNotes.some(dn => dn.invoiceId === inv.id || dn.invoiceId === inv.documentId)).map(invoice => (
                                 <button 
                                     key={invoice.id} 
                                     onClick={() => handleCreateFromInvoice(invoice.id)}
-                                    className="w-full text-left p-3 rounded-lg border hover:bg-emerald-50 hover:border-emerald-500 transition-colors flex justify-between items-center"
+                                    className={`w-full text-left p-3 rounded-lg border hover:bg-emerald-50 hover:border-emerald-500 transition-colors flex justify-between items-center ${isRTL ? 'flex-row-reverse text-right' : ''}`}
                                 >
                                     <span>#{invoice.documentId || invoice.id} - {invoice.clientName}</span>
                                     <span className="text-xs bg-gray-100 px-2 py-1 rounded">{new Date(invoice.date).toLocaleDateString()}</span>
                                 </button>
                             ))}
-                            {invoices.filter(inv => !deliveryNotes.some(dn => dn.invoiceId === inv.id)).length === 0 && (
-                                <p className="text-center text-gray-500 italic">Aucune facture disponible pour livraison.</p>
+                            {invoices.filter(inv => !deliveryNotes.some(dn => dn.invoiceId === inv.id || dn.invoiceId === inv.documentId)).length === 0 && (
+                                <p className="text-center text-gray-500 italic">{language === 'es' ? 'No hay facturas disponibles para entrega.' : 'Aucune facture disponible pour livraison.'}</p>
                             )}
                         </div>
                          <div className="flex justify-end gap-2 mt-4">
-                            <button type="button" onClick={() => setIsInvoiceModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">Fermer</button>
+                            <button type="button" onClick={() => setIsInvoiceModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">{t('close')}</button>
                         </div>
                     </div>
                 </div>
@@ -286,13 +278,13 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">N° BL</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Date</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Client</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Référence</th>
-                                <th scope="col" className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-neutral-500">Montant</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500">Statut</th>
-                                <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">Actions</span></th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('deliveryNoteNumber')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('date')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('client')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('reference')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{t('amount')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('status')}</th>
+                                <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">{t('actions')}</span></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-200 bg-white">
@@ -301,20 +293,24 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                                     const statusInfo = getStatusDisplay(note);
                                     const StatusIcon = statusInfo.icon;
                                     
+                                    // Clean Reference Display: If it looks like a UUID (long with dashes), show '-' or try to find pro ID
+                                    const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+                                    const displayReference = note.invoiceId && !isUUID(note.invoiceId) ? `#${note.invoiceId}` : (note.invoiceId ? t('statusBilled') : t('statusManual'));
+
                                     return (
                                     <tr key={note.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-emerald-600">{note.documentId || note.id}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{new Date(note.date).toLocaleDateString('fr-FR')}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-neutral-900">{note.clientName}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">
-                                            {note.invoiceId ? `#${note.invoiceId}` : 'Manuel'}
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-emerald-600 ${isRTL ? 'text-right' : 'text-left'}`}>{note.documentId || note.id.slice(0, 8)}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{new Date(note.date).toLocaleDateString()}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-neutral-900 ${isRTL ? 'text-right' : 'text-left'}`}>{note.clientName}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                            {displayReference}
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm md:text-base font-medium text-neutral-900">
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-neutral-900 ${isRTL ? 'text-left' : 'text-right'}`}>
                                             {note.totalAmount ? note.totalAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base">
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base ${isRTL ? 'text-right' : 'text-left'}`}>
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusInfo.color}`}>
-                                                <StatusIcon size={12} className="mr-1" /> {statusInfo.label}
+                                                <StatusIcon size={12} className={`${isRTL ? 'ml-1' : 'mr-1'}`} /> {statusInfo.label}
                                             </span>
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium relative">
@@ -332,8 +328,8 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                                     <td colSpan={7} className="text-center py-20 px-6">
                                         <div className="flex flex-col items-center justify-center">
                                             <Truck className="h-12 w-12 text-slate-300 mb-4" />
-                                            <h3 className="text-lg font-bold text-slate-800">Aucun bon de livraison trouvé</h3>
-                                            <p className="text-sm text-slate-500 mt-1">Générez votre premier bon de livraison pour commencer.</p>
+                                            <h3 className="text-lg font-bold text-slate-800">{t('noDeliveryNotesFound')}</h3>
+                                            <p className="text-sm text-slate-500 mt-1">{t('firstDeliveryNotePrompt')}</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -343,7 +339,6 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                 </div>
             </div>
 
-            {/* Menu Dropdown - Rendered in Portal */}
             {activeMenuId && activeNote && menuPosition && createPortal(
                 <div 
                     className="absolute z-50 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
@@ -355,7 +350,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                             onClick={() => handleEditClick(activeNote)} 
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Pencil size={16} className="mr-3 text-emerald-600" /> Modifier
+                            <Pencil size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-emerald-600`} /> {t('edit')}
                         </button>
                         
                         {!activeNote.invoiceId ? (
@@ -366,11 +361,11 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                                     className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                                 >
                                     {isConverting ? (
-                                        <Loader2 size={16} className="mr-3 animate-spin text-purple-600" />
+                                        <Loader2 size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} animate-spin text-purple-600`} />
                                     ) : (
-                                        <FileText size={16} className="mr-3 text-purple-600" />
+                                        <FileText size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-purple-600`} />
                                     )}
-                                    Convertir Facture
+                                    {t('convert')}
                                 </button>
                             )
                         ) : (
@@ -378,7 +373,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                                 onClick={() => navigate('/sales/invoices')} 
                                 className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                             >
-                                <FileCheck size={16} className="mr-3 text-teal-600" /> Voir Facture
+                                <FileCheck size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-teal-600`} /> {t('view')} {t('invoices')}
                             </button>
                         )}
                         
@@ -386,7 +381,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                             onClick={() => handlePrintClick(activeNote)}
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Printer size={16} className="mr-3 text-neutral-500" /> Imprimer
+                            <Printer size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-neutral-500`} /> {t('print')}
                         </button>
 
                         <button 
@@ -394,14 +389,14 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                             disabled={isDownloading}
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                         >
-                            {isDownloading ? <Loader2 size={16} className="mr-3 animate-spin" /> : <Download size={16} className="mr-3 text-neutral-500" />} Télécharger PDF
+                            {isDownloading ? <Loader2 size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} animate-spin`} /> : <Download size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-neutral-500`} />} {t('download')}
                         </button>
                         
                         <button 
                             onClick={() => handleDeleteClick(activeNote.id)} 
                             className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Trash2 size={16} className="mr-3 text-red-600" /> Supprimer
+                            <Trash2 size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-red-600`} /> {t('delete')}
                         </button>
                     </div>
                 </div>,

@@ -19,6 +19,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
     const [isVisible, setIsVisible] = useState(false);
     
     const isModeTTC = companySettings?.priceDisplayMode === 'TTC';
+    const vatOptions = language === 'es' ? [21, 10, 4, 0] : [20, 14, 10, 7, 0];
 
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -49,19 +50,20 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setSubject('');
                 setReference('');
                 setLineItems([]);
+                setTempVat(language === 'es' ? 21 : 20);
             }
             resetItemForm();
         } else {
             setIsVisible(false);
         }
-    }, [isOpen, quoteToEdit]);
+    }, [isOpen, quoteToEdit, language]);
 
     const resetItemForm = () => {
         setSelectedProductId('');
         setTempName('');
         setTempDesc('');
         setTempPrice(0);
-        setTempVat(20);
+        setTempVat(language === 'es' ? 21 : 20);
         setItemQuantity(1);
         setTempProductCode('');
     };
@@ -165,22 +167,22 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                         
                         <div className="grid grid-cols-24 gap-3 items-end">
                             <div className="col-span-12 lg:col-span-2">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Réf.</label>
-                                <input type="text" value={tempProductCode} onChange={(e) => setTempProductCode(e.target.value)} placeholder="Réf" className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('refLabel')}</label>
+                                <input type="text" value={tempProductCode} onChange={(e) => setTempProductCode(e.target.value)} placeholder={t('reference')} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                             </div>
                             <div className="col-span-12 lg:col-span-4">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Produit (Auto)</label>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('productAutoLabel')}</label>
                                 <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 bg-white">
                                     <option value="">-- {t('select')} --</option>
                                     {products.map(product => (<option key={product.id} value={product.id}>{product.name}</option>))}
                                 </select>
                             </div>
                             <div className="col-span-24 lg:col-span-6">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Désignation *</label>
-                                <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} placeholder="Nom de l'article" className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 font-medium"/>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('designationLabel')} *</label>
+                                <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} placeholder={t('description')} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-[11px] h-11 font-medium"/>
                             </div>
                             <div className="col-span-12 lg:col-span-3">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{isModeTTC ? 'P.U. TTC' : 'P.U. HT'}</label>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</label>
                                 <input 
                                     type="number" 
                                     value={isModeTTC ? (tempPrice * (1 + tempVat/100)) : tempPrice} 
@@ -192,13 +194,13 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 />
                             </div>
                             <div className="col-span-12 lg:col-span-3">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Qté</label>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('quantity')}</label>
                                 <input type="number" min="1" value={itemQuantity} onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                             </div>
                             <div className="col-span-12 lg:col-span-3">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">TVA</label>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('vat')}</label>
                                 <select value={tempVat} onChange={(e) => setTempVat(parseInt(e.target.value))} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11">
-                                    <option value="20">20%</option><option value="14">14%</option><option value="10">10%</option><option value="7">7%</option><option value="0">0%</option>
+                                    {vatOptions.map(v => <option key={v} value={v}>{v}%</option>)}
                                 </select>
                             </div>
                             <div className="col-span-24 lg:col-span-3">
@@ -216,8 +218,8 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                     <tr>
                                         <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('description')}</th>
                                         <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
-                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? 'P.U. TTC' : 'P.U. HT'}</th>
-                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? 'Total TTC' : 'Total HT'}</th>
+                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</th>
+                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('totalTTCLabel') : t('totalHTLabel')}</th>
                                         <th className="px-4 py-3 w-10"></th>
                                     </tr>
                                 </thead>
@@ -229,8 +231,8 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                         return (
                                         <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-4 py-3">
-                                                <div className="text-xs font-bold text-slate-900">{item.name}</div>
-                                                {item.productCode && <div className="text-[10px] text-slate-400">{item.productCode}</div>}
+                                                <div className="text-[11px] font-bold text-slate-900 leading-tight">{item.name}</div>
+                                                {item.productCode && <div className="text-[9px] text-slate-400 font-mono mt-0.5">{item.productCode}</div>}
                                             </td>
                                             <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
                                                 <input 
@@ -263,7 +265,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                         </div>
                     ) : (
                         <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-slate-400 text-sm italic">
-                            {t('items')} (Vide)
+                            {t('items')} ({language === 'ar' ? 'فارغ' : 'Vide'})
                         </div>
                     )}
 

@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { CompanySettings, Quote, Invoice, Client, DeliveryNote } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface DocumentPreviewProps {
     settings: Partial<CompanySettings>;
@@ -9,6 +10,7 @@ interface DocumentPreviewProps {
 }
 
 const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, client }) => {
+    const { t, language } = useLanguage();
     const primaryColor = settings.primaryColor || '#059669'; // Default to emerald-600
     
     // Détermination du type de document
@@ -17,13 +19,13 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
     let isQuote = false;
 
     if ('expiryDate' in document) {
-        documentType = 'DEVIS';
+        documentType = t('quotes').toUpperCase();
         isQuote = true;
     } else if ('dueDate' in document) {
-        documentType = 'FACTURE';
+        documentType = t('invoices').toUpperCase();
     } else {
-        // Logique par défaut pour DeliveryNote (qui n'a ni date d'échéance ni validité explicite dans l'interface de base)
-        documentType = 'BON DE LIVRAISON';
+        // Logique par défaut pour DeliveryNote
+        documentType = t('deliveryNotes').toUpperCase();
         isDeliveryNote = true;
     }
 
@@ -36,8 +38,10 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
         ));
     };
 
+    const iceLabel = language === 'es' ? 'NIF' : (language === 'en' ? 'Tax ID' : 'ICE');
+
     const legalIds = [
-        settings.ice ? `ICE: ${settings.ice}` : '',
+        settings.ice ? `${iceLabel}: ${settings.ice}` : '',
         settings.rc ? `RC: ${settings.rc}` : '',
         settings.fiscalId ? `IF: ${settings.fiscalId}` : '',
         settings.patente ? `TP: ${settings.patente}` : '',
@@ -73,8 +77,8 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                             {settings.address && <p className="font-medium text-neutral-800 mb-1">{renderAddress(settings.address)}</p>}
                             
                             <div className="flex flex-wrap gap-y-1 gap-x-4 mt-2">
-                                 {settings.phone && <p>Tél: {settings.phone}</p>}
-                                 {settings.email && <p>Email: {settings.email}</p>}
+                                 {settings.phone && <p>{t('phone')}: {settings.phone}</p>}
+                                 {settings.email && <p>{t('email')}: {settings.email}</p>}
                                  {settings.website && <p>Web: {settings.website}</p>}
                             </div>
                         </div>
@@ -83,9 +87,8 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                         <h2 className="text-3xl font-bold uppercase tracking-widest" style={{ color: primaryColor }}>{documentType}</h2>
                         <p className="font-semibold mt-2 text-lg text-neutral-700">#{document.documentId || document.id}</p>
                         <div className="text-xs mt-4 text-neutral-600 space-y-1">
-                            <p>Date : <span className="font-medium text-neutral-900">{new Date(document.date).toLocaleDateString('fr-FR')}</span></p>
-                            {/* Due date and expiry date display removed */}
-                            {document.reference && <p>Réf. client : <span className="font-medium text-neutral-900">{document.reference}</span></p>}
+                            <p>{t('date')} : <span className="font-medium text-neutral-900">{new Date(document.date).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
+                            {document.reference && <p>{t('reference')} : <span className="font-medium text-neutral-900">{document.reference}</span></p>}
                         </div>
                     </div>
                 </header>
@@ -93,14 +96,14 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                 {/* Client Info */}
                 <section className="mt-8 flex justify-end">
                     <div className="w-1/2 bg-neutral-50 p-4 rounded-lg border border-neutral-100">
-                        <p className="text-xs uppercase font-bold text-neutral-500 mb-2">Adressé à :</p>
+                        <p className="text-xs uppercase font-bold text-neutral-500 mb-2">{t('client')} :</p>
                         <div className="font-medium text-base text-neutral-900">
                             {client.company && <p className="font-bold">{client.company}</p>}
                             <p>{client.name}</p>
                         </div>
                         <div className="mt-2 text-sm text-neutral-600">
                             {client.address && <div className="mb-2">{renderAddress(client.address)}</div>}
-                            {client.ice && <p>ICE: {client.ice}</p>}
+                            {client.ice && <p>{iceLabel}: {client.ice}</p>}
                             <p>{client.email}</p>
                             <p>{client.phone}</p>
                         </div>
@@ -109,7 +112,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
 
                  {document.subject && (
                      <section className="mt-6 mb-4">
-                        <p className="text-sm"><span className="font-bold text-neutral-700">Objet :</span> {document.subject}</p>
+                        <p className="text-sm"><span className="font-bold text-neutral-700">{t('subject')} :</span> {document.subject}</p>
                     </section>
                 )}
 
@@ -118,13 +121,13 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr style={{ backgroundColor: primaryColor, color: 'white' }}>
-                                <th className="p-3 font-semibold uppercase text-xs rounded-tl-lg rounded-bl-lg">Désignation</th>
-                                <th className="p-3 text-center font-semibold uppercase text-xs w-16">Qté</th>
+                                <th className="p-3 font-semibold uppercase text-xs rounded-tl-lg rounded-bl-lg">{t('description')}</th>
+                                <th className="p-3 text-center font-semibold uppercase text-xs w-16">{t('quantity')}</th>
                                 {!isDeliveryNote && (
                                     <>
-                                        <th className="p-3 text-right font-semibold uppercase text-xs w-28">P.U. HT</th>
-                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">TVA</th>
-                                        <th className="p-3 text-right font-semibold uppercase text-xs w-28 rounded-tr-lg rounded-br-lg">Total HT</th>
+                                        <th className="p-3 text-right font-semibold uppercase text-xs w-28">{t('unitPrice')}</th>
+                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">{t('vat')}</th>
+                                        <th className="p-3 text-right font-semibold uppercase text-xs w-28 rounded-tr-lg rounded-br-lg">{t('totalHT')}</th>
                                     </>
                                 )}
                             </tr>
@@ -133,15 +136,15 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                             {document.lineItems.map(item => (
                                 <tr key={item.id} className="text-neutral-700">
                                     <td className="p-3">
-                                        <p className="font-semibold text-neutral-900">{item.name}</p>
-                                        {item.description && <p className="text-xs text-neutral-500 mt-0.5">{item.description}</p>}
+                                        <p className="text-[12px] font-semibold text-neutral-900">{item.name}</p>
+                                        {item.description && <p className="text-[10px] text-neutral-500 mt-0.5">{item.description}</p>}
                                     </td>
-                                    <td className="p-3 text-center align-top font-bold">{item.quantity}</td>
+                                    <td className="p-3 text-center align-top font-bold text-[12px]">{item.quantity}</td>
                                     {!isDeliveryNote && (
                                         <>
-                                            <td className="p-3 text-right align-top">{item.unitPrice.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
-                                            <td className="p-3 text-center align-top text-xs text-neutral-500">{item.vat}%</td>
-                                            <td className="p-3 text-right align-top font-medium text-neutral-900">{(item.quantity * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
+                                            <td className="p-3 text-right align-top text-[12px]">{item.unitPrice.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
+                                            <td className="p-3 text-center align-top text-[11px] text-neutral-500">{item.vat}%</td>
+                                            <td className="p-3 text-right align-top font-medium text-neutral-900 text-[12px]">{(item.quantity * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                 </tr>
@@ -150,32 +153,23 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                     </table>
                 </section>
 
-                {/* Totals - Hidden for Delivery Notes */}
-                {!isDeliveryNote ? (
+                {/* Totals */}
+                {!isDeliveryNote && (
                     <section className="flex justify-end mt-8">
                         <div className="w-full max-w-xs space-y-3">
                             <div className="flex justify-between text-neutral-600">
-                                <span>Total HT</span>
+                                <span>{t('totalHT')}</span>
                                 <span className="font-medium">{(document as Invoice).subTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                             <div className="flex justify-between text-neutral-600">
-                                <span>Total TVA</span>
+                                <span>{t('vat')}</span>
                                 <span className="font-medium">{(document as Invoice).vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                             <div className="h-px bg-neutral-200 my-2"></div>
                             <div className="flex justify-between text-lg font-bold bg-neutral-50 p-2 rounded" style={{ color: '#000000' }}>
-                                <span>Net à Payer</span>
+                                <span>{t('totalTTC')}</span>
                                 <span>{((document as any).amount || (document as any).totalAmount).toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
-                        </div>
-                    </section>
-                ) : (
-                    <section className="mt-12 pt-8 border-t border-neutral-200 flex justify-between px-10">
-                        <div className="text-center w-40">
-                            <p className="font-bold text-neutral-400 mb-8 border-b pb-2">Signature Expéditeur</p>
-                        </div>
-                        <div className="text-center w-40">
-                            <p className="font-bold text-neutral-400 mb-8 border-b pb-2">Signature Client</p>
                         </div>
                     </section>
                 )}

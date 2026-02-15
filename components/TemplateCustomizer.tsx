@@ -44,7 +44,7 @@ type TabId = 'general' | 'legal' | 'branding' | 'documents';
 type DocConfigType = 'invoice' | 'quote' | 'deliveryNote' | 'purchaseOrder' | 'creditNote';
 
 const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSave }) => {
-    const { t, isRTL } = useLanguage();
+    const { t, isRTL, language } = useLanguage();
     const [localSettings, setLocalSettings] = useState<Partial<CompanySettings>>({ 
         showAmountInWords: true,
         priceDisplayMode: 'HT'
@@ -177,17 +177,17 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
     };
 
     const tabs = [
-        { id: 'general', label: t('settings'), icon: Building, desc: 'Coordonnées & Contact' },
-        { id: 'legal', label: t('ice'), icon: ShieldCheck, desc: 'Identifiants fiscaux' },
-        { id: 'branding', label: 'Marque', icon: Palette, desc: 'Logo & Couleurs' },
-        { id: 'documents', label: 'Documents', icon: FileText, desc: 'Structure PDF' },
+        { id: 'general', label: t('settings'), icon: Building, desc: language === 'es' ? 'Datos y Contacto' : 'Coordonnées & Contact' },
+        { id: 'legal', label: language === 'es' ? 'NIF / Fiscal' : t('ice'), icon: ShieldCheck, desc: language === 'es' ? 'Identificadores' : 'Identifiants fiscaux' },
+        { id: 'branding', label: language === 'es' ? 'Imagen' : 'Marque', icon: Palette, desc: language === 'es' ? 'Logo y Colores' : 'Logo & Couleurs' },
+        { id: 'documents', label: language === 'es' ? 'Documentos' : 'Documents', icon: FileText, desc: language === 'es' ? 'Estructura PDF' : 'Structure PDF' },
     ];
 
     const docTypes: {id: DocConfigType, label: string, icon: any}[] = [
         { id: 'invoice', label: t('invoices'), icon: FileText },
         { id: 'quote', label: t('quotes'), icon: FileBarChart },
-        { id: 'deliveryNote', label: 'B. Livraison', icon: Truck },
-        { id: 'purchaseOrder', label: 'B. Commande', icon: ShoppingBag },
+        { id: 'deliveryNote', label: language === 'es' ? 'Albarán' : 'B. Livraison', icon: Truck },
+        { id: 'purchaseOrder', label: language === 'es' ? 'Pedido' : 'B. Commande', icon: ShoppingBag },
         { id: 'creditNote', label: t('creditNotes'), icon: FileMinus },
     ];
 
@@ -203,8 +203,8 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                         <CheckCircle size={24} className="text-white" />
                     </div>
                     <div className="flex-1">
-                        <h4 className="font-bold text-base">Modifications enregistrées</h4>
-                        <p className="text-sm text-emerald-50 mt-0.5">Vos paramètres ont été mis à jour.</p>
+                        <h4 className="font-bold text-base">{language === 'es' ? 'Cambios guardados' : 'Modifications enregistrées'}</h4>
+                        <p className="text-sm text-emerald-50 mt-0.5">{language === 'es' ? 'Sus ajustes han sido actualizados.' : 'Vos paramètres ont été mis à jour.'}</p>
                     </div>
                     <button onClick={() => setShowToast(false)} className="text-emerald-200 hover:text-white transition-colors p-1 rounded-md hover:bg-emerald-700">
                         <X size={18} />
@@ -220,7 +220,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                     className="inline-flex items-center justify-center gap-x-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-200 hover:bg-emerald-700 hover:shadow-emerald-300 transition-all duration-200 ease-in-out transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                     {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                    {isSaving ? 'Sauvegarde...' : 'Sauvegarder tout'}
+                    {isSaving ? (language === 'es' ? 'Guardando...' : 'Sauvegarde...') : (language === 'es' ? 'Guardar todo' : 'Sauvegarder tout')}
                 </button>
             </div>
             
@@ -259,17 +259,17 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Building size={20}/></div>
-                                    <h3 className="text-xl font-bold text-neutral-900">Informations Générales</h3>
+                                    <h3 className="text-xl font-bold text-neutral-900">{language === 'es' ? 'Datos Generales' : 'Informations Générales'}</h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                                     <div className="md:col-span-2">
-                                         <InputField icon={Briefcase} label="Nom de la société / Raison sociale" name="companyName" value={localSettings.companyName || ''} onChange={handleInputChange} placeholder="Ex: Facturago SARL" />
+                                         <InputField icon={Briefcase} label={t('company')} name="companyName" value={localSettings.companyName || ''} onChange={handleInputChange} placeholder="Ex: Facturago SARL" />
                                     </div>
                                     <div className="md:col-span-2">
-                                        <TextAreaField icon={MapPin} label="Adresse du siège" name="address" value={localSettings.address || ''} onChange={handleInputChange} rows={3} placeholder="Adresse complète..." />
+                                        <TextAreaField icon={MapPin} label={t('address')} name="address" value={localSettings.address || ''} onChange={handleInputChange} rows={3} placeholder="Adresse complète..." />
                                     </div>
-                                    <InputField icon={Phone} label="Téléphone" name="phone" value={localSettings.phone || ''} onChange={handleInputChange} placeholder="+212 6..." />
-                                    <InputField icon={Mail} label="Email de contact" name="email" type="email" value={localSettings.email || ''} onChange={handleInputChange} placeholder="contact@entreprise.com" />
+                                    <InputField icon={Phone} label={t('phone')} name="phone" value={localSettings.phone || ''} onChange={handleInputChange} placeholder="+212 6..." />
+                                    <InputField icon={Mail} label={t('email')} name="email" type="email" value={localSettings.email || ''} onChange={handleInputChange} placeholder="contact@entreprise.com" />
                                     <InputField icon={Globe} label="Site Web" name="website" value={localSettings.website || ''} onChange={handleInputChange} className="md:col-span-2" placeholder="www.votre-site.com" />
                                 </div>
                             </div>
@@ -281,10 +281,10 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><ShieldCheck size={20}/></div>
-                                    <h3 className="text-xl font-bold text-neutral-900">Identifiants Légaux</h3>
+                                    <h3 className="text-xl font-bold text-neutral-900">{language === 'es' ? 'Identificadores Legales' : 'Identifiants Légaux'}</h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    <InputField icon={Hash} label="I.C.E" name="ice" value={localSettings.ice || ''} onChange={handleInputChange} placeholder="000000000" />
+                                    <InputField icon={Hash} label={language === 'es' ? 'N.I.F' : 'I.C.E'} name="ice" value={localSettings.ice || ''} onChange={handleInputChange} placeholder="000000000" />
                                     <InputField icon={Hash} label="R.C" name="rc" value={localSettings.rc || ''} onChange={handleInputChange} placeholder="Registre de Commerce" />
                                     <InputField icon={Hash} label="I.F" name="fiscalId" value={localSettings.fiscalId || ''} onChange={handleInputChange} placeholder="Identifiant Fiscal" />
                                     <InputField icon={Hash} label="T.P / Patente" name="patente" value={localSettings.patente || ''} onChange={handleInputChange} placeholder="Taxe Professionnelle" />
@@ -300,18 +300,18 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-pink-50 text-pink-600 rounded-lg"><Palette size={20}/></div>
-                                    <h3 className="text-xl font-bold text-neutral-900">Identité Visuelle</h3>
+                                    <h3 className="text-xl font-bold text-neutral-900">{language === 'es' ? 'Identidad Visual' : 'Identité Visuelle'}</h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                     <div>
-                                        <label className="block text-sm font-semibold text-neutral-700 mb-3">Logo de l'entreprise</label>
+                                        <label className="block text-sm font-semibold text-neutral-700 mb-3">{language === 'es' ? 'Logo de la empresa' : "Logo de l'entreprise"}</label>
                                         <div className="group relative w-full h-48 border-2 border-dashed border-neutral-300 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden">
                                             <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/png, image/jpeg, image/svg+xml" onChange={handleLogoChange} />
                                             {localSettings.logo ? (
                                                 <div className="relative w-full h-full p-4 flex items-center justify-center">
                                                     <img src={localSettings.logo} alt="Logo" className="max-w-full max-h-full object-contain" />
                                                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <span className="text-white font-medium flex items-center gap-2"><Upload size={18}/> Changer</span>
+                                                        <span className="text-white font-medium flex items-center gap-2"><Upload size={18}/> {language === 'es' ? 'Cambiar' : 'Changer'}</span>
                                                     </div>
                                                 </div>
                                             ) : (
@@ -319,14 +319,14 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                                     <div className="w-12 h-12 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-3 text-neutral-400 group-hover:bg-emerald-100 group-hover:text-emerald-600 transition-colors">
                                                         <Upload size={24} />
                                                     </div>
-                                                    <p className="text-sm font-medium text-neutral-700">Cliquez pour importer</p>
+                                                    <p className="text-sm font-medium text-neutral-700">{language === 'es' ? 'Subir logo' : 'Cliquez pour importer'}</p>
                                                     <p className="text-xs text-neutral-400 mt-1">PNG, JPG (Max 500x500px)</p>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
                                     <div>
-                                        <label htmlFor="primaryColor" className="block text-sm font-semibold text-neutral-700 mb-3">Couleur principale</label>
+                                        <label htmlFor="primaryColor" className="block text-sm font-semibold text-neutral-700 mb-3">{language === 'es' ? 'Color principal' : 'Couleur principale'}</label>
                                         <div className="flex items-center gap-4 bg-neutral-50 p-4 rounded-xl border border-neutral-100">
                                             <div className="relative overflow-hidden w-16 h-16 rounded-xl shadow-sm ring-2 ring-white ring-offset-2 ring-offset-neutral-100">
                                                 <input type="color" id="primaryColor" name="primaryColor" value={localSettings.primaryColor || '#10b981'} onChange={handleInputChange} className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 cursor-pointer p-0 border-0" />
@@ -337,7 +337,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                                     <input type="text" value={(localSettings.primaryColor || '#10b981').replace('#', '')} onChange={handleInputChange} name="primaryColor" className="w-full text-sm font-mono uppercase focus:outline-none text-neutral-700" />
                                                 </div>
                                                 <p className="mt-2 text-xs text-neutral-500 leading-relaxed">
-                                                    Utilisée pour les titres, bordures et accents dans vos factures.
+                                                    {language === 'es' ? 'Usado para títulos y bordes en los PDFs.' : 'Utilisée pour les titres, bordures et accents dans vos factures.'}
                                                 </p>
                                             </div>
                                         </div>
@@ -355,7 +355,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                     <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Eye size={20}/></div>
                                     <div>
                                         <h3 className="text-xl font-bold text-neutral-900">{t('priceDisplayMode')}</h3>
-                                        <p className="text-sm text-neutral-500 font-normal">Choisissez comment afficher les prix unitaires et totaux dans vos documents.</p>
+                                        <p className="text-sm text-neutral-500 font-normal">{language === 'es' ? 'Elija cómo mostrar los precios en sus documentos.' : 'Choisissez comment afficher les prix unitaires et totaux dans vos documents.'}</p>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -363,15 +363,15 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                         onClick={() => setLocalSettings(prev => ({ ...prev, priceDisplayMode: 'HT' }))}
                                         className={`flex flex-col p-4 rounded-xl border-2 transition-all text-left ${localSettings.priceDisplayMode === 'HT' ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-100 hover:border-neutral-200 bg-white'}`}
                                     >
-                                        <div className="font-bold text-neutral-900">Mode Classique (HT)</div>
-                                        <div className="text-xs text-neutral-500 mt-1">Affiche P.U. HT et Total HT dans le tableau. Recommandé pour le B2B.</div>
+                                        <div className="font-bold text-neutral-900">{language === 'es' ? 'Modo Base (Base imp.)' : 'Mode Classique (HT)'}</div>
+                                        <div className="text-xs text-neutral-500 mt-1">{language === 'es' ? 'Muestra precios sin IVA. Recomendado para B2B.' : 'Affiche P.U. HT et Total HT dans le tableau. Recommandé pour le B2B.'}</div>
                                     </button>
                                     <button 
                                         onClick={() => setLocalSettings(prev => ({ ...prev, priceDisplayMode: 'TTC' }))}
                                         className={`flex flex-col p-4 rounded-xl border-2 transition-all text-left ${localSettings.priceDisplayMode === 'TTC' ? 'border-emerald-500 bg-emerald-50' : 'border-neutral-100 hover:border-neutral-200 bg-white'}`}
                                     >
-                                        <div className="font-bold text-neutral-900">Mode Simplifié (TTC)</div>
-                                        <div className="text-xs text-neutral-500 mt-1">Affiche directement les montants TTC par article. Recommandé pour les particuliers.</div>
+                                        <div className="font-bold text-neutral-900">{language === 'es' ? 'Modo con IVA (Total)' : 'Mode Simplifié (TTC)'}</div>
+                                        <div className="text-xs text-neutral-500 mt-1">{language === 'es' ? 'Muestra precios con IVA incluido. Recomendado para particulares.' : 'Affiche directement les montants TTC par article. Recommandé pour les particuliers.'}</div>
                                     </button>
                                 </div>
                             </div>
@@ -381,8 +381,8 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><Settings2 size={20}/></div>
                                     <div>
-                                        <h3 className="text-xl font-bold text-neutral-900">Configuration de numérotation</h3>
-                                        <p className="text-sm text-neutral-500">Personnalisez le format de vos numéros par document.</p>
+                                        <h3 className="text-xl font-bold text-neutral-900">{language === 'es' ? 'Numeración de documentos' : 'Configuration de numérotation'}</h3>
+                                        <p className="text-sm text-neutral-500">{language === 'es' ? 'Personalice el formato de sus números.' : 'Personnalisez le format de vos numéros par document.'}</p>
                                     </div>
                                 </div>
                                 
@@ -402,7 +402,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                 {currentDocConfig && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
                                         <div>
-                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">Préfixe</label>
+                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Prefijo' : 'Préfixe'}</label>
                                             <input 
                                                 type="text" 
                                                 value={currentDocConfig.prefix} 
@@ -411,7 +411,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">Séparateur</label>
+                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Separador' : 'Séparateur'}</label>
                                             <input 
                                                 type="text" 
                                                 value={currentDocConfig.separator} 
@@ -420,19 +420,19 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">Format Année</label>
+                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Formato Año' : 'Format Année'}</label>
                                             <select 
                                                 value={currentDocConfig.yearFormat} 
                                                 onChange={(e) => handleNumberingChange(activeDocType, 'yearFormat', e.target.value as any)}
                                                 className="block w-full rounded-xl border-neutral-200 bg-neutral-50 focus:ring-emerald-500 py-2.5 text-sm"
                                             >
-                                                <option value="YYYY">Année (2026)</option>
-                                                <option value="YY">Année courte (26)</option>
-                                                <option value="NONE">Aucun</option>
+                                                <option value="YYYY">{language === 'es' ? 'Año (2026)' : 'Année (2026)'}</option>
+                                                <option value="YY">{language === 'es' ? 'Año corto (26)' : 'Année courte (26)'}</option>
+                                                <option value="NONE">{language === 'es' ? 'Ninguno' : 'Aucun'}</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">Départ à</label>
+                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Empezar en' : 'Départ à'}</label>
                                             <input 
                                                 type="number" 
                                                 value={currentDocConfig.startNumber} 
@@ -441,7 +441,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">Remplissage (Zéros)</label>
+                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Relleno (Ceros)' : 'Remplissage (Zéros)'}</label>
                                             <input 
                                                 type="number" 
                                                 min="1" 
@@ -456,7 +456,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
 
                                 <div className="mt-8 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-between">
                                     <div>
-                                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-1">Aperçu pour {docTypes.find(d => d.id === activeDocType)?.label}</p>
+                                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-1">{language === 'es' ? 'Vista previa' : 'Aperçu'} pour {docTypes.find(d => d.id === activeDocType)?.label}</p>
                                         <p className="text-2xl font-mono font-bold text-emerald-900 tracking-tight">{getPreviewNumber(activeDocType)}</p>
                                     </div>
                                     <div className="p-3 bg-white rounded-xl shadow-sm text-emerald-600">
@@ -471,7 +471,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                     <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><PencilLine size={20}/></div>
                                     <div>
                                         <h3 className="text-xl font-bold text-neutral-900">{t('customLabels')}</h3>
-                                        <p className="text-sm text-neutral-500 font-normal">Modifiez les textes affichés dans vos tableaux et signatures PDF.</p>
+                                        <p className="text-sm text-neutral-500 font-normal">{language === 'es' ? 'Modifique los textos de sus PDFs.' : 'Modifiez les textes affichés dans vos tableaux et signatures PDF.'}</p>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -479,37 +479,37 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                         label={t('labelTotalHt')} 
                                         value={currentLabels.totalHt || ''} 
                                         onChange={(e: any) => handleLabelChange('totalHt', e.target.value)} 
-                                        placeholder="Ex: Total HT" 
+                                        placeholder="Ex: Base imponible" 
                                     />
                                     <InputField 
                                         label={t('labelTotalTax')} 
                                         value={currentLabels.totalTax || ''} 
                                         onChange={(e: any) => handleLabelChange('totalTax', e.target.value)} 
-                                        placeholder="Ex: Total TVA" 
+                                        placeholder="Ex: IVA Total" 
                                     />
                                     <InputField 
                                         label={t('labelTotalNet')} 
                                         value={currentLabels.totalNet || ''} 
                                         onChange={(e: any) => handleLabelChange('totalNet', e.target.value)} 
-                                        placeholder="Ex: Net à Payer" 
+                                        placeholder="Ex: Total a pagar" 
                                     />
                                     <InputField 
                                         label={t('labelSignatureSender')} 
                                         value={currentLabels.signatureSender || ''} 
                                         onChange={(e: any) => handleLabelChange('signatureSender', e.target.value)} 
-                                        placeholder="Ex: Cachet & Signature" 
+                                        placeholder="Ex: Firma del emisor" 
                                     />
                                     <InputField 
                                         label={t('labelSignatureRecipient')} 
                                         value={currentLabels.signatureRecipient || ''} 
                                         onChange={(e: any) => handleLabelChange('signatureRecipient', e.target.value)} 
-                                        placeholder="Ex: Signature Client" 
+                                        placeholder="Ex: Firma del receptor" 
                                     />
                                     <InputField 
                                         label={t('labelAmountWordsPrefix')} 
                                         value={currentLabels.amountInWordsPrefix || ''} 
                                         onChange={(e: any) => handleLabelChange('amountInWordsPrefix', e.target.value)} 
-                                        placeholder="Arrêté le présent..." 
+                                        placeholder="Importe en letras..." 
                                     />
                                 </div>
                             </div>
@@ -518,8 +518,8 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                 <div className="flex items-center gap-3 mb-2 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><LayoutTemplate size={20}/></div>
                                     <div>
-                                        <h3 className="text-xl font-bold text-neutral-900">Affichage & Options</h3>
-                                        <p className="text-sm text-neutral-500 font-normal">Contrôlez les informations affichées sur vos PDF.</p>
+                                        <h3 className="text-xl font-bold text-neutral-900">{language === 'es' ? 'Opciones de visualización' : 'Affichage & Options'}</h3>
+                                        <p className="text-sm text-neutral-500 font-normal">{language === 'es' ? 'Controle la información en sus PDFs.' : 'Contrôlez les informations affichées sur vos PDF.'}</p>
                                     </div>
                                 </div>
                                 <div className="mt-6 flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
@@ -528,8 +528,8 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                             <Type size={20}/>
                                         </div>
                                         <div>
-                                            <div className="font-bold text-slate-900">Montant en toutes lettres</div>
-                                            <div className="text-xs text-slate-500">Affiche la somme totale écrite à la main en bas du document</div>
+                                            <div className="font-bold text-slate-900">{language === 'es' ? 'Importe en letras' : 'Montant en toutes lettres'}</div>
+                                            <div className="text-xs text-slate-500">{language === 'es' ? 'Muestra el total escrito en letras al final.' : 'Affiche la somme totale écrite à la main en bas du document'}</div>
                                         </div>
                                     </div>
                                     <button 
@@ -545,8 +545,8 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                 <div className="flex items-center gap-3 mb-2 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-orange-50 text-orange-600 rounded-lg"><LayoutTemplate size={20}/></div>
                                     <div>
-                                        <h3 className="text-xl font-bold text-neutral-900">Tableaux PDF</h3>
-                                        <p className="text-sm text-neutral-500 font-normal">Personnalisez les colonnes de vos factures et devis.</p>
+                                        <h3 className="text-xl font-bold text-neutral-900">{language === 'es' ? 'Tablas PDF' : 'Tableaux PDF'}</h3>
+                                        <p className="text-sm text-neutral-500 font-normal">{language === 'es' ? 'Personalice las columnas de sus documentos.' : 'Personnalisez les colonnes de vos factures et devis.'}</p>
                                     </div>
                                 </div>
                                 <div className="mt-6 flex flex-col gap-3">
@@ -558,11 +558,11 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                             </div>
                                             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                                                 <div>
-                                                    <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-1 block">Titre Colonne</label>
+                                                    <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-1 block">{language === 'es' ? 'Título' : 'Titre Colonne'}</label>
                                                     <input type="text" value={col.label} onChange={(e) => updateColumnLabel(col.id, e.target.value)} className={`block w-full bg-transparent border-b-2 border-transparent focus:border-emerald-500 focus:outline-none px-0 py-1 font-medium text-neutral-900 ${!col.visible && 'text-neutral-500'}`} disabled={!col.visible} />
                                                 </div>
                                                 <div className="flex items-center justify-end gap-3">
-                                                    <span className={`text-sm ${col.visible ? 'text-emerald-600 font-medium' : 'text-neutral-400'}`}>{col.visible ? 'Affichée' : 'Masquée'}</span>
+                                                    <span className={`text-sm ${col.visible ? 'text-emerald-600 font-medium' : 'text-neutral-400'}`}>{col.visible ? (language === 'es' ? 'Visible' : 'Affichée') : (language === 'es' ? 'Oculta' : 'Masquée')}</span>
                                                     <button onClick={() => toggleColumnVisibility(col.id)} className={`w-12 h-7 rounded-full flex items-center transition-colors duration-300 px-1 ${col.visible ? 'bg-emerald-500 justify-end' : 'bg-neutral-300 justify-start'}`}><div className="w-5 h-5 rounded-full bg-white shadow-md" /></button>
                                                 </div>
                                             </div>
@@ -571,16 +571,16 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
+                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 p-8">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><FileText size={20}/></div>
-                                    <h3 className="text-xl font-bold text-neutral-900">Pied de page & Conditions</h3>
+                                    <h3 className="text-xl font-bold text-neutral-900">{language === 'es' ? 'Pie de página y Condiciones' : 'Pied de page & Conditions'}</h3>
                                 </div>
                                 <div className="grid grid-cols-1 gap-6">
-                                    <InputField icon={CreditCard} label="Conditions de paiement par défaut" name="defaultPaymentTerms" value={localSettings.defaultPaymentTerms || ''} onChange={handleInputChange} placeholder="Ex: Paiement à 30 jours, Comptant..." />
+                                    <InputField icon={CreditCard} label={language === 'es' ? 'Condiciones de pago por defecto' : "Conditions de paiement par défaut"} name="defaultPaymentTerms" value={localSettings.defaultPaymentTerms || ''} onChange={handleInputChange} placeholder="Ex: Pago a 30 días, Al contado..." />
                                     <div>
-                                        <TextAreaField label="Pied de page par défaut" name="footerNotes" value={localSettings.footerNotes || ''} onChange={handleInputChange} rows={3} placeholder="Remerciements, coordonnées bancaires..." />
-                                        <p className="mt-2 text-xs text-neutral-500 flex items-center gap-1"><LayoutTemplate size={12}/> Ce texte apparaîtra en bas de tous vos documents.</p>
+                                        <TextAreaField label={language === 'es' ? 'Notas al pie por defecto' : "Pied de page par défaut"} name="footerNotes" value={localSettings.footerNotes || ''} onChange={handleInputChange} rows={3} placeholder="Gracias, datos bancarios..." />
+                                        <p className="mt-2 text-xs text-neutral-500 flex items-center gap-1"><LayoutTemplate size={12}/> {language === 'es' ? 'Este texto aparecerá en todos sus documentos.' : 'Ce texte apparaîtra en bas de tous vos documents.'}</p>
                                     </div>
                                 </div>
                             </div>

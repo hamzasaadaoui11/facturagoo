@@ -9,6 +9,7 @@ import {
     CreditCard, ShoppingBag, ArrowUpRight, ArrowDownRight, Filter, PieChart as PieIcon, Activity
 } from 'lucide-react';
 import { Invoice, Payment, PurchaseOrder, Product, PurchaseOrderStatus, InvoiceStatus, CreditNote, CreditNoteStatus } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface StatisticsProps {
     invoices: Invoice[];
@@ -21,6 +22,8 @@ interface StatisticsProps {
 type DateRangeType = 'today' | 'week' | 'month' | 'year' | 'custom';
 
 const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrders, products, creditNotes = [] }) => {
+    const { t, isRTL, language } = useLanguage();
+    
     // State for filtering
     const [rangeType, setRangeType] = useState<DateRangeType>('month');
     const [startDate, setStartDate] = useState<string>('');
@@ -169,10 +172,11 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
         return ((current - previous) / previous) * 100;
     };
 
-    const formatMoney = (amount: number) => amount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 });
+    const currencyLocale = language === 'ar' ? 'ar-MA' : (language === 'es' ? 'es-ES' : 'fr-FR');
+    const formatMoney = (amount: number) => amount.toLocaleString(currencyLocale, { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 });
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10" dir={isRTL ? 'rtl' : 'ltr'}>
             
             {/* Header & Filters Section */}
             <div className="relative bg-slate-900 rounded-3xl p-8 overflow-hidden shadow-2xl">
@@ -182,9 +186,9 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                 <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
                     <div>
                         <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                            <Activity className="text-emerald-400" /> Analyse Financière
+                            <Activity className="text-emerald-400" /> {t('financialAnalysis')}
                         </h2>
-                        <p className="text-slate-400 mt-2">Vue détaillée de votre performance et de votre rentabilité.</p>
+                        <p className="text-slate-400 mt-2">{t('analysisDesc')}</p>
                     </div>
 
                     {/* Modern Floating Filter Bar */}
@@ -200,7 +204,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                         : 'text-slate-300 hover:text-white hover:bg-white/5'
                                     }`}
                                 >
-                                    {type === 'today' ? "Auj." : type === 'week' ? 'Semaine' : type === 'month' ? 'Mois' : 'Année'}
+                                    {type === 'today' ? t('today').split(' ')[0] : type === 'week' ? t('periodWeek') : type === 'month' ? t('periodMonth') : t('periodYear')}
                                 </button>
                             ))}
                             <button
@@ -211,7 +215,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                     : 'text-slate-300 hover:text-white hover:bg-white/5'
                                 }`}
                             >
-                                Perso
+                                {t('customRange')}
                             </button>
                         </div>
 
@@ -256,7 +260,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                 );
                             })()}
                         </div>
-                        <p className="text-slate-500 text-sm font-medium">Chiffre d'Affaires (Net)</p>
+                        <p className="text-slate-500 text-sm font-medium">{t('revenueNet')}</p>
                         <h3 className="text-3xl font-extrabold text-slate-900 mt-1">{formatMoney(currentMetrics.revenue)}</h3>
                     </div>
                 </div>
@@ -279,7 +283,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                 );
                             })()}
                         </div>
-                        <p className="text-slate-500 text-sm font-medium">Dépenses Totales</p>
+                        <p className="text-slate-500 text-sm font-medium">{t('totalExpenses')}</p>
                         <h3 className="text-3xl font-extrabold text-slate-900 mt-1">{formatMoney(currentMetrics.expenses)}</h3>
                     </div>
                 </div>
@@ -294,10 +298,10 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                 <TrendingUp size={24} className="text-white" />
                             </div>
                             <span className="text-xs font-medium bg-white/20 px-2 py-1 rounded-full text-indigo-100">
-                                Marge: {currentMetrics.revenue > 0 ? ((currentMetrics.profit / currentMetrics.revenue) * 100).toFixed(1) : 0}%
+                                {t('margin')}: {currentMetrics.revenue > 0 ? ((currentMetrics.profit / currentMetrics.revenue) * 100).toFixed(1) : 0}%
                             </span>
                         </div>
-                        <p className="text-indigo-100 text-sm font-medium">Bénéfice Net</p>
+                        <p className="text-indigo-100 text-sm font-medium">{t('netProfit')}</p>
                         <h3 className="text-3xl font-extrabold mt-1">{formatMoney(currentMetrics.profit)}</h3>
                     </div>
                 </div>
@@ -309,10 +313,10 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                 {/* Evolution Chart */}
                 <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col">
                     <div className="flex justify-between items-center mb-8">
-                        <h3 className="text-lg font-bold text-slate-900">Évolution dans le temps</h3>
+                        <h3 className="text-lg font-bold text-slate-900">{t('evolutionTime')}</h3>
                         <div className="flex items-center gap-2 text-xs font-medium">
-                            <span className="flex items-center gap-1 text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Recettes</span>
-                            <span className="flex items-center gap-1 text-red-600"><span className="w-2 h-2 rounded-full bg-red-500"></span> Dépenses</span>
+                            <span className="flex items-center gap-1 text-emerald-600"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> {t('receipts')}</span>
+                            <span className="flex items-center gap-1 text-red-600"><span className="w-2 h-2 rounded-full bg-red-500"></span> {t('expenses')}</span>
                         </div>
                     </div>
                     <div className="flex-1 h-80 w-full min-h-[300px]">
@@ -334,7 +338,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                         tick={{fontSize: 12, fill: '#94a3b8'}} 
                                         axisLine={false}
                                         tickLine={false}
-                                        tickFormatter={(val) => new Date(val).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })} 
+                                        tickFormatter={(val) => new Date(val).toLocaleDateString(currencyLocale, { day: '2-digit', month: '2-digit' })} 
                                         dy={10}
                                     />
                                     <YAxis 
@@ -345,17 +349,17 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <Tooltip 
                                         formatter={(value: number) => formatMoney(value)}
-                                        labelFormatter={(label) => new Date(label).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                        labelFormatter={(label) => new Date(label).toLocaleDateString(currencyLocale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                         contentStyle={{ backgroundColor: 'white', borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                     />
-                                    <Area type="monotone" dataKey="revenue" name="Recettes" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
-                                    <Area type="monotone" dataKey="expense" name="Dépenses" stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExp)" />
+                                    <Area type="monotone" dataKey="revenue" name={t('receipts')} stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                                    <Area type="monotone" dataKey="expense" name={t('expenses')} stroke="#ef4444" strokeWidth={3} fillOpacity={1} fill="url(#colorExp)" />
                                 </AreaChart>
                             </ResponsiveContainer>
                         ) : (
                             <div className="h-full flex items-center justify-center text-slate-400 flex-col bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                                 <Filter className="h-10 w-10 mb-2 opacity-20" />
-                                <p>Pas de données sur cette période</p>
+                                <p>{t('noDataPeriod')}</p>
                             </div>
                         )}
                     </div>
@@ -364,7 +368,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                 {/* Top Products Chart */}
                 <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 flex flex-col">
                     <div className="flex justify-between items-center mb-8">
-                        <h3 className="text-lg font-bold text-slate-900">Top 5 Produits</h3>
+                        <h3 className="text-lg font-bold text-slate-900">{t('top5Products')}</h3>
                         <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
                             <PieIcon size={20} />
                         </div>
@@ -381,7 +385,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                         formatter={(value: number) => formatMoney(value)}
                                         contentStyle={{ backgroundColor: 'white', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                     />
-                                    <Bar dataKey="revenue" name="CA Généré" fill="#3b82f6" radius={[0, 6, 6, 0]} barSize={24}>
+                                    <Bar dataKey="revenue" name={t('revenueGenerated')} fill="#3b82f6" radius={[0, 6, 6, 0]} barSize={24}>
                                         {productPerformance.slice(0, 5).map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={['#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef'][index % 5]} />
                                         ))}
@@ -391,7 +395,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                          ) : (
                             <div className="h-full flex items-center justify-center text-slate-400 flex-col bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                                 <ShoppingBag className="h-10 w-10 mb-2 opacity-20" />
-                                <p>Aucune vente sur cette période</p>
+                                <p>{t('noSalesPeriod')}</p>
                             </div>
                          )}
                     </div>
@@ -401,33 +405,33 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             {/* Detailed Table */}
             <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
                 <div className="px-8 py-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-slate-900">Détail par Produit</h3>
-                    <button className="text-sm font-medium text-emerald-600 hover:text-emerald-700">Exporter CSV</button>
+                    <h3 className="text-lg font-bold text-slate-900">{t('productDetail')}</h3>
+                    <button className="text-sm font-medium text-emerald-600 hover:text-emerald-700">{t('exportCSV')}</button>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full">
                         <thead className="bg-slate-50">
                             <tr>
-                                <th className="px-8 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Produit</th>
-                                <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Qté</th>
-                                <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">CA Total</th>
-                                <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Coût Est.</th>
-                                <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Marge Brut</th>
-                                <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">% Marge</th>
+                                <th className={`px-8 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'}`}>{t('pProduct')}</th>
+                                <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">{t('quantity')}</th>
+                                <th className={`px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider ${isRTL ? 'text-left' : 'text-right'}`}>{t('totalRevenue')}</th>
+                                <th className={`px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider ${isRTL ? 'text-left' : 'text-right'}`}>{t('estCost')}</th>
+                                <th className={`px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider ${isRTL ? 'text-left' : 'text-right'}`}>{t('grossMargin')}</th>
+                                <th className={`px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider ${isRTL ? 'text-left' : 'text-right'}`}>{t('marginPercent')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
                             {productPerformance.length > 0 ? (
                                 productPerformance.map((p) => (
                                     <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                                        <td className="px-8 py-4 text-sm font-medium text-slate-900">{p.name}</td>
+                                        <td className={`px-8 py-4 text-sm font-medium text-slate-900 ${isRTL ? 'text-right' : 'text-left'}`}>{p.name}</td>
                                         <td className="px-6 py-4 text-sm text-center text-slate-600 font-medium bg-slate-50/50">{p.qty}</td>
-                                        <td className="px-6 py-4 text-sm text-right text-slate-900 font-bold">{formatMoney(p.revenue)}</td>
-                                        <td className="px-6 py-4 text-sm text-right text-slate-500">{formatMoney(p.cost)}</td>
-                                        <td className={`px-6 py-4 text-sm text-right font-medium ${p.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                        <td className={`px-6 py-4 text-sm text-slate-900 font-bold ${isRTL ? 'text-left' : 'text-right'}`}>{formatMoney(p.revenue)}</td>
+                                        <td className={`px-6 py-4 text-sm text-slate-500 ${isRTL ? 'text-left' : 'text-right'}`}>{formatMoney(p.cost)}</td>
+                                        <td className={`px-6 py-4 text-sm font-medium ${isRTL ? 'text-left' : 'text-right'} ${p.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                             {formatMoney(p.profit)}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-right">
+                                        <td className={`px-6 py-4 text-sm ${isRTL ? 'text-left' : 'text-right'}`}>
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${p.margin > 30 ? 'bg-emerald-100 text-emerald-800' : p.margin > 0 ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
                                                 {p.margin.toFixed(1)}%
                                             </span>
@@ -436,7 +440,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">Aucune donnée disponible pour la période sélectionnée.</td>
+                                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">{t('noDataSelectedPeriod')}</td>
                                 </tr>
                             )}
                         </tbody>

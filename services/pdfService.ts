@@ -1,5 +1,6 @@
 
 import { CompanySettings, Invoice, Quote, DeliveryNote, PurchaseOrder, Client, Supplier, LineItem, DocumentColumn, CreditNote } from '../types';
+import { translations } from '../i18n/translations';
 
 interface DocumentData {
     id: string;
@@ -52,6 +53,7 @@ const convertGroup = (n: number): string => {
     const tenString = TENS[ten];
     
     if (unit === 0) return tenString;
+    // Fix: replaced undefined 'maxCode' with 'tenString' for correct French number formation (e.g., vingt-et-un)
     if (unit === 1 && ten < 8) return `${tenString}-et-un`;
     
     return `${tenString}-${UNITS[unit]}`;
@@ -141,32 +143,54 @@ const generateDocumentHTML = (
         throw new Error("Impossible de générer le document : Les informations du client/fournisseur sont introuvables.");
     }
 
+    const lang = localStorage.getItem('app_language') || 'fr';
+    const dict = (translations as any)[lang] || translations['fr'];
     const showPrices = options?.showPrices !== false;
     const showAmountInWords = settings.showAmountInWords !== false;
     const isModeTTC = settings.priceDisplayMode === 'TTC';
 
-    // Extract custom labels with defaults
+    // Extract custom labels with defaults from translations
     const labels = settings.documentLabels || {};
-    const txtTotalHt = labels.totalHt || 'Total HT';
-    const txtTotalTax = labels.totalTax || 'Total TVA';
-    const txtTotalNet = labels.totalNet || (docType === 'Avoir' ? 'Total Avoir' : 'Net à Payer');
-    const txtAmountInWords = labels.amountInWordsPrefix || 'Arrêté le présent document à la somme de :';
-    const txtSigSender = labels.signatureSender || 'Signature Expéditeur';
-    const txtSigRecipient = labels.signatureRecipient || 'Signature & Cachet Client';
+    
+    // Core Labels for Totals using the specific pdf prefixes
+    let txtTotalHt = labels.totalHt || dict.pdfTotalHT || 'Total HT';
+    let txtTotalTax = labels.totalTax || dict.pdfTotalTax || 'Total TVA';
+    let txtTotalNet = labels.totalNet || dict.pdfTotalNet || 'Net à Payer';
+    
+    let txtAmountInWords = labels.amountInWordsPrefix || dict.pdfAmountPrefix || 'Arrêté le présent document à la somme de :';
+    let txtSigSender = labels.signatureSender || dict.pdfSigSender || 'Signature Expéditeur';
+    let txtSigRecipient = labels.signatureRecipient || dict.pdfSigRecipient || 'Signature & Cachet Client';
+
+    // Strict ICE -> NIF mapping for Spanish
+    const taxIdLabel = lang === 'es' ? 'NIF' : (lang === 'en' ? 'Tax ID' : 'ICE');
 
     const primaryColor = settings.primaryColor || '#10b981';
     const totalAmount = doc.amount !== undefined ? doc.amount : (doc.totalAmount || 0);
     const subTotal = doc.subTotal || 0;
     const vatAmount = doc.vatAmount || 0;
-    const dateStr = new Date(doc.date).toLocaleDateString('fr-FR');
-    const amountInLetters = numberToWordsFr(totalAmount);
+    const dateStr = new Date(doc.date).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
+    const amountInLetters = lang === 'es' ? `${totalAmount.toFixed(2)} MAD` : (lang === 'en' ? `${totalAmount.toFixed(2)} MAD` : numberToWordsFr(totalAmount));
     
     const displayId = doc.documentId || doc.id;
     const isDeliveryNote = docType === 'Bon de Livraison';
 
-    // Ensure document type title is uppercase and correct
+    // Document Titles translation
     let titleDisplay = docType.toUpperCase();
-    if (docType === 'Avoir') titleDisplay = "FACTURE D’AVOIR";
+    if (lang === 'es') {
+        if (docType === 'Facture') titleDisplay = "FACTURA";
+        else if (docType === 'Devis') titleDisplay = "PRESUPUESTO";
+        else if (docType === 'Bon de Livraison') titleDisplay = "ALBARÁN";
+        else if (docType === 'Bon de Commande') titleDisplay = "PEDIDO";
+        else if (docType === 'Avoir') titleDisplay = "NOTA DE CRÉDITO";
+    } else if (lang === 'en') {
+        if (docType === 'Facture') titleDisplay = "INVOICE";
+        else if (docType === 'Devis') titleDisplay = "QUOTE";
+        else if (docType === 'Bon de Livraison') titleDisplay = "DELIVERY NOTE";
+        else if (docType === 'Bon de Commande') titleDisplay = "PURCHASE ORDER";
+        else if (docType === 'Avoir') titleDisplay = "CREDIT NOTE";
+    } else if (docType === 'Avoir') {
+        titleDisplay = "FACTURE D’AVOIR";
+    }
 
     let activeColumns = (settings.documentColumns && settings.documentColumns.length > 0) 
         ? settings.documentColumns.filter(c => c.visible).sort((a, b) => a.order - b.order)
@@ -176,20 +200,33 @@ const generateDocumentHTML = (
         activeColumns = activeColumns.filter(c => c.id === 'name' || c.id === 'quantity' || c.id === 'reference');
     }
 
-    // --- Override labels for TTC mode ---
-    if (isModeTTC) {
-        activeColumns = activeColumns.map(col => {
-            if (col.id === 'unitPrice' && col.label === 'P.U. HT') return { ...col, label: 'P.U. TTC' };
-            if (col.id === 'total' && col.label === 'Total HT') return { ...col, label: 'Total TTC' };
-            return col;
-        });
-    }
+    // --- Override labels for Language context ---
+    activeColumns = activeColumns.map(col => {
+        let label = col.label;
+        if (lang === 'es') {
+            if (col.id === 'unitPrice') label = isModeTTC ? 'P.U. Total' : 'P.U. Base';
+            if (col.id === 'total') label = isModeTTC ? 'Total con IVA' : 'Base imponible';
+            if (col.id === 'vat') label = 'IVA';
+            if (col.id === 'name') label = 'Descripción';
+            if (col.id === 'quantity') label = 'Cant.';
+        } else if (lang === 'en') {
+            if (col.id === 'unitPrice') label = isModeTTC ? 'Unit Price (Incl.)' : 'Unit Price';
+            if (col.id === 'total') label = isModeTTC ? 'Total (Incl.)' : 'Total';
+            if (col.id === 'vat') label = 'VAT';
+            if (col.id === 'name') label = 'Description';
+            if (col.id === 'quantity') label = 'Qty';
+        } else if (isModeTTC) {
+            if (col.id === 'unitPrice' && (col.label === 'P.U. HT' || col.label === 'P.U.')) label = 'P.U. TTC';
+            if (col.id === 'total' && (col.label === 'Total HT' || col.label === 'Total')) label = 'Total TTC';
+        }
+        return { ...col, label };
+    });
 
     let extraDateLabel = '';
     let extraDateValue = '';
     if (docType === 'Bon de Commande' && doc.expectedDate) {
-        extraDateLabel = 'Livraison prévue';
-        extraDateValue = new Date(doc.expectedDate).toLocaleDateString('fr-FR');
+        extraDateLabel = lang === 'es' ? 'Entrega prevista' : (lang === 'en' ? 'Expected delivery' : 'Livraison prévue');
+        extraDateValue = new Date(doc.expectedDate).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
     }
 
     const logoHtml = settings.logo 
@@ -201,14 +238,14 @@ const generateDocumentHTML = (
     const recipientEmail = recipient.email ? `<div>${recipient.email}</div>` : '';
     const recipientPhone = recipient.phone ? `<div>${recipient.phone}</div>` : '';
     const recipientAddress = recipient.address ? `<div style="margin-bottom:4px;">${recipient.address.replace(/\n/g, '<br/>')}</div>` : '';
-    const recipientIce = recipient.ice ? `<div>ICE: ${recipient.ice}</div>` : '';
+    const recipientIce = recipient.ice ? `<div>${taxIdLabel}: ${recipient.ice}</div>` : '';
 
     const companyAddress = settings.address ? settings.address.replace(/\n/g, '<br/>') : '';
     const companyContact = [settings.phone, settings.email, settings.website].filter(Boolean).join(' | ');
 
     const capitalDisplay = settings.capital ? `Capital: ${settings.capital}` : '';
     const legalIds = [
-        settings.ice ? `ICE: ${settings.ice}` : '',
+        settings.ice ? `${taxIdLabel}: ${settings.ice}` : '',
         settings.rc ? `RC: ${settings.rc}` : '',
         settings.fiscalId ? `IF: ${settings.fiscalId}` : '',
         settings.patente ? `TP: ${settings.patente}` : '',
@@ -241,31 +278,34 @@ const generateDocumentHTML = (
                 case 'reference':
                     content = item.productCode || '-';
                     align = 'left';
-                    style = 'font-size: 11px; color: #4b5563;';
+                    style = 'font-size: 12.3px; color: #4b5563;';
                     break;
                 case 'name':
+                    // MICRO AJUSTEMENT (+0,3px) POUR TOUTE LA TABLE (12px -> 12.3px)
                     content = `
-                        <div style="font-weight: 600; color: #111827;">${item.name}</div>
-                        ${item.description ? `<div style="font-size: 10px; color: #6b7280;">${item.description}</div>` : ''}
+                        <div style="font-weight: 700; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
+                        ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 1px; line-height: 1.1;">${item.description}</div>` : ''}
                     `;
                     break;
                 case 'quantity':
                     content = item.quantity.toString();
                     align = 'center';
-                    style = 'font-weight: 600; font-size: 12px;';
+                    style = 'font-weight: 700; font-size: 12.3px;';
                     break;
                 case 'unitPrice':
                     content = (isModeTTC ? unitPriceTTC : item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
                     align = 'right';
+                    style = 'font-size: 12.3px;';
                     break;
                 case 'vat':
                     content = `${item.vat}%`;
                     align = 'center';
+                    style = 'font-size: 12.3px;';
                     break;
                 case 'total':
                     content = (isModeTTC ? totalTTC : (item.quantity * item.unitPrice)).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
                     align = 'right';
-                    style = 'font-weight: 600;';
+                    style = 'font-weight: 700; font-size: 12.3px;';
                     break;
             }
 
@@ -282,8 +322,8 @@ const generateDocumentHTML = (
         if (paid > 0) {
             paymentInfoHtml = `
                 <div style="margin-top: 10px; font-size: 12px; color: #059669;">
-                    Déjà réglé : <b>${paid.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</b>
-                    ${remaining > 0 ? `<br/><span style="color: #d97706;">Reste à payer : <b>${remaining.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</b></span>` : '<br/><span style="color: #059669; font-weight: bold;">Soldé</span>'}
+                    ${lang === 'es' ? 'Ya pagado' : (lang === 'en' ? 'Already paid' : 'Déjà réglé')} : <b>${paid.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</b>
+                    ${remaining > 0 ? `<br/><span style="color: #d97706;">${lang === 'es' ? 'Importe pendiente' : (lang === 'en' ? 'Balance due' : 'Reste à payer')} : <b>${remaining.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</b></span>` : `<br/><span style="color: #059669; font-weight: bold;">${lang === 'es' ? 'Liquidado' : (lang === 'en' ? 'Settled' : 'Soldé')}</span>`}
                 </div>
             `;
         }
@@ -303,10 +343,10 @@ const generateDocumentHTML = (
                 <div style="font-size: 26px; font-weight: bold; text-transform: uppercase; color: ${primaryColor}; margin-bottom: 10px;">${titleDisplay}</div>
                 <div style="font-size: 16px; font-weight: 600; color: #111827;">N° ${displayId}</div>
                 <div style="margin-top: 10px; font-size: 12px;">
-                    <div>Date : <b>${dateStr}</b></div>
+                    <div>${dict.date || 'Date'} : <b>${dateStr}</b></div>
                     ${extraDateLabel ? `<div>${extraDateLabel} : <b>${extraDateValue}</b></div>` : ''}
-                    ${doc.reference ? `<div>Réf : <b>${doc.reference}</b></div>` : ''}
-                    ${doc.invoiceId ? `<div>Réf. Facture : <b>${doc.invoiceId}</b></div>` : ''}
+                    ${doc.reference ? `<div>${dict.reference || 'Réf'} : <b>${doc.reference}</b></div>` : ''}
+                    ${doc.invoiceId ? `<div>${lang === 'es' ? 'Ref. Factura' : (lang === 'en' ? 'Invoice Ref' : 'Réf. Facture')} : <b>${doc.invoiceId}</b></div>` : ''}
                 </div>
             </div>
         </div>
@@ -315,7 +355,7 @@ const generateDocumentHTML = (
     const clientInfoHtml = `
         <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
             <div style="width: 45%; background-color: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
-                <div style="font-size: 10px; text-transform: uppercase; font-weight: 700; color: #9ca3af; margin-bottom: 8px;">Adressé à</div>
+                <div style="font-size: 10px; text-transform: uppercase; font-weight: 700; color: #9ca3af; margin-bottom: 8px;">${dict.pdfAddressedTo || 'Adressé à'}</div>
                 <div style="font-size: 14px; color: #111827;">
                     ${recipientCompany}
                     <div>${recipientName}</div>
@@ -330,7 +370,7 @@ const generateDocumentHTML = (
         </div>
     `;
 
-    const subjectHtml = doc.subject ? `<div style="margin-bottom: 15px; font-weight: 600;">Objet : <span style="font-weight: normal;">${doc.subject}</span></div>` : '';
+    const subjectHtml = doc.subject ? `<div style="margin-bottom: 15px; font-weight: 600;">${dict.pdfSubject || 'Objet'} : <span style="font-weight: normal;">${doc.subject}</span></div>` : '';
 
     const itemsTableHtml = `
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
@@ -359,7 +399,7 @@ const generateDocumentHTML = (
                 ` : ''}
                 ${doc.notes ? `
                     <div style="margin-top: 15px; font-size: 11px; color: #6b7280;">
-                        <span style="font-weight: 600;">Notes:</span> ${doc.notes}
+                        <span style="font-weight: 600;">${dict.notes || 'Notes'}:</span> ${doc.notes}
                     </div>
                 ` : ''}
             </div>
@@ -383,7 +423,7 @@ const generateDocumentHTML = (
 
     const notesOnlyHtml = doc.notes ? `
         <div style="margin-bottom: 20px; font-size: 11px; color: #6b7280;">
-            <span style="font-weight: 600;">Notes:</span> ${doc.notes}
+            <span style="font-weight: 600;">${dict.notes || 'Notes'}:</span> ${doc.notes}
         </div>
     ` : '';
 
@@ -517,6 +557,8 @@ export const printDocument = (
     recipient: Client | Supplier | undefined,
     options?: PDFOptions
 ): void => {
+    const lang = localStorage.getItem('app_language') || 'fr';
+    const dict = (translations as any)[lang] || translations['fr'];
     const htmlContent = generateDocumentHTML(docType, doc, settings, recipient, options);
     const displayId = doc.documentId || doc.id;
 

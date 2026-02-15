@@ -12,7 +12,7 @@ interface AddClientModalProps {
 }
 
 const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave, clientToEdit }) => {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const [type, setType] = useState<'Entreprise' | 'Particulier'>('Entreprise');
     const [name, setName] = useState('');
     const [company, setCompany] = useState('');
@@ -59,11 +59,11 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
         e.preventDefault();
         
         if (type === 'Entreprise' && !company) {
-            alert(t('company'));
+            alert(language === 'es' ? 'El nombre de la empresa es obligatorio.' : 'Le nom de la société est obligatoire.');
             return;
         }
         if (type === 'Particulier' && !name) {
-            alert(t('name'));
+            alert(language === 'es' ? 'El nombre es obligatorio.' : 'Le nom est obligatoire.');
             return;
         }
 
@@ -110,14 +110,14 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                                     onClick={() => setType('Entreprise')}
                                     className={`flex items-center justify-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-all ${type === 'Entreprise' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-neutral-300 text-neutral-600 hover:bg-neutral-50'}`}
                                 >
-                                    <Building2 size={18} /> Entreprise
+                                    <Building2 size={18} /> {t('enterprise')}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setType('Particulier')}
                                     className={`flex items-center justify-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-all ${type === 'Particulier' ? 'bg-emerald-50 border-emerald-500 text-emerald-700' : 'bg-white border-neutral-300 text-neutral-600 hover:bg-neutral-50'}`}
                                 >
-                                    <User size={18} /> Particulier
+                                    <User size={18} /> {t('individual')}
                                 </button>
                             </div>
                         </div>
@@ -132,7 +132,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                                         id="company" 
                                         value={company} 
                                         onChange={(e) => setCompany(e.target.value)} 
-                                        placeholder="Ex: Mon Entreprise SARL"
+                                        placeholder={language === 'es' ? "Ej: Mi Empresa S.L." : "Ex: Mon Entreprise SARL"}
                                         className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
                                     />
                                 </div>
@@ -143,7 +143,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                                         id="ice" 
                                         value={ice} 
                                         onChange={(e) => setIce(e.target.value)} 
-                                        placeholder="Ex: 001588888000025"
+                                        placeholder={language === 'es' ? "NIF / Identificador" : "Ex: 001588888000025"}
                                         className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
                                     />
                                 </div>
@@ -153,14 +153,14 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                         {/* Common Fields */}
                         <div>
                             <label htmlFor="name" className="block text-sm font-medium text-neutral-700">
-                                {t('name')} {type === 'Particulier' && <span className="text-red-500">*</span>}
+                                {type === 'Entreprise' ? t('contact') : t('name')} {type === 'Particulier' && <span className="text-red-500">*</span>}
                             </label>
                             <input 
                                 type="text" 
                                 id="name" 
                                 value={name} 
                                 onChange={(e) => setName(e.target.value)} 
-                                placeholder={type === 'Entreprise' ? "Ex: M. Responsable" : "Ex: Ahmed Alami"}
+                                placeholder={type === 'Entreprise' ? (language === 'es' ? "Ej: Responsable de contacto" : "Ex: M. Responsable") : (language === 'es' ? "Ej: Juan Pérez" : "Ex: Ahmed Alami")}
                                 className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
                                 required={type === 'Particulier'}
                             />

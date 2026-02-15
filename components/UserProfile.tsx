@@ -7,9 +7,11 @@ import { User } from '@supabase/supabase-js';
 import { CompanySettings } from '../types';
 import { dbService } from '../db';
 import { Building, Mail, ShieldCheck, UserCircle, Lock, User as UserIcon, Settings, ChevronRight, Key } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const UserProfile: React.FC = () => {
     const navigate = useNavigate();
+    const { t, language } = useLanguage();
     const [user, setUser] = useState<User | null>(null);
     const [settings, setSettings] = useState<CompanySettings | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -44,12 +46,16 @@ const UserProfile: React.FC = () => {
         e.preventDefault();
         setPasswordMsg(null);
 
+        const minLen = language === 'es' ? 'La contraseña debe tener al menos 6 caracteres.' : 'Le mot de passe doit contenir au moins 6 caractères.';
+        const matchError = language === 'es' ? 'Las contraseñas no coinciden.' : 'Les mots de passe ne correspondent pas.';
+        const successMsg = language === 'es' ? 'Contraseña actualizada con éxito.' : 'Votre mot de passe a été mis à jour avec succès.';
+
         if (newPassword.length < 6) {
-            setPasswordMsg({ type: 'error', text: 'Le mot de passe doit contenir au moins 6 caractères.' });
+            setPasswordMsg({ type: 'error', text: minLen });
             return;
         }
         if (newPassword !== confirmPassword) {
-            setPasswordMsg({ type: 'error', text: 'Les mots de passe ne correspondent pas.' });
+            setPasswordMsg({ type: 'error', text: matchError });
             return;
         }
 
@@ -58,11 +64,11 @@ const UserProfile: React.FC = () => {
             const { error } = await supabase.auth.updateUser({ password: newPassword });
             if (error) throw error;
             
-            setPasswordMsg({ type: 'success', text: 'Votre mot de passe a été mis à jour avec succès.' });
+            setPasswordMsg({ type: 'success', text: successMsg });
             setNewPassword('');
             setConfirmPassword('');
         } catch (error: any) {
-            setPasswordMsg({ type: 'error', text: error.message || 'Erreur lors de la mise à jour.' });
+            setPasswordMsg({ type: 'error', text: error.message || 'Error.' });
         } finally {
             setPasswordLoading(false);
         }
@@ -78,7 +84,7 @@ const UserProfile: React.FC = () => {
 
     return (
         <div className="max-w-5xl">
-            <Header title="Mon Profil" />
+            <Header title={t('profile')} />
 
             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 overflow-hidden mb-8">
                 {/* Banner Header */}
@@ -91,7 +97,7 @@ const UserProfile: React.FC = () => {
                             <UserCircle size={64} />
                         </div>
                         <div className="flex-1">
-                            <h2 className="text-3xl font-bold">{settings?.companyName || "Utilisateur Facturago"}</h2>
+                            <h2 className="text-3xl font-bold">{settings?.companyName || (language === 'es' ? "Usuario" : "Utilisateur")} Facturago</h2>
                             <p className="text-emerald-100 font-medium opacity-90 flex items-center gap-2 mt-1">
                                 {user?.email}
                             </p>
@@ -100,7 +106,7 @@ const UserProfile: React.FC = () => {
                             onClick={() => navigate('/settings')}
                             className="hidden md:flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-colors border border-white/20 text-sm font-medium"
                         >
-                            <Settings size={16} /> Modifier
+                            <Settings size={16} /> {t('edit')}
                         </button>
                     </div>
                 </div>
@@ -112,13 +118,13 @@ const UserProfile: React.FC = () => {
                         <div className="space-y-8">
                             <div className="flex items-center gap-2 border-b border-neutral-100 pb-3 mb-6">
                                 <UserIcon className="text-emerald-600" size={24}/> 
-                                <h3 className="text-xl font-bold text-neutral-800">Informations du Compte</h3>
+                                <h3 className="text-xl font-bold text-neutral-800">{language === 'es' ? 'Datos de la cuenta' : 'Informations du Compte'}</h3>
                             </div>
 
                             <div className="space-y-6">
                                 {/* Nom de l'entreprise */}
                                 <div>
-                                    <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 ml-1">Nom de l'entreprise</label>
+                                    <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 ml-1">{language === 'es' ? 'Empresa' : "Nom de l'entreprise"}</label>
                                     <div 
                                         onClick={() => navigate('/settings')}
                                         className="group cursor-pointer flex items-center justify-between gap-4 text-neutral-900 bg-neutral-50 p-4 rounded-xl border border-neutral-200 shadow-sm transition-all hover:border-emerald-300 hover:bg-white"
@@ -128,7 +134,7 @@ const UserProfile: React.FC = () => {
                                                 <Building size={20}/>
                                             </div>
                                             <span className={`font-semibold text-lg ${!settings?.companyName ? 'text-neutral-400 italic' : ''}`}>
-                                                {settings?.companyName || "Non configuré"}
+                                                {settings?.companyName || (language === 'es' ? "No configurado" : "Non configuré")}
                                             </span>
                                         </div>
                                         <ChevronRight size={20} className="text-neutral-300 group-hover:text-emerald-500 transition-colors"/>
@@ -137,7 +143,7 @@ const UserProfile: React.FC = () => {
 
                                 {/* Email */}
                                 <div>
-                                    <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 ml-1">Email de connexion</label>
+                                    <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2 ml-1">{language === 'es' ? 'Correo electrónico' : 'Email de connexion'}</label>
                                     <div className="flex items-center gap-4 text-neutral-900 bg-neutral-50 p-4 rounded-xl border border-neutral-200 shadow-sm">
                                         <div className="p-2 bg-white rounded-lg shadow-sm text-emerald-600">
                                             <Mail size={20}/>
@@ -152,17 +158,17 @@ const UserProfile: React.FC = () => {
                         <div>
                             <div className="flex items-center gap-2 border-b border-neutral-100 pb-3 mb-6">
                                 <ShieldCheck className="text-emerald-600" size={24}/> 
-                                <h3 className="text-xl font-bold text-neutral-800">Sécurité & Mot de passe</h3>
+                                <h3 className="text-xl font-bold text-neutral-800">{language === 'es' ? 'Seguridad' : 'Sécurité & Mot de passe'}</h3>
                             </div>
 
                             <div className="bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm">
                                 <h4 className="font-semibold text-neutral-900 flex items-center gap-2 mb-4">
-                                    <Key size={18} className="text-emerald-600"/> Changer le mot de passe
+                                    <Key size={18} className="text-emerald-600"/> {language === 'es' ? 'Cambiar contraseña' : 'Changer le mot de passe'}
                                 </h4>
                                 
                                 <form onSubmit={handlePasswordChange} className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-neutral-700 mb-1">Nouveau mot de passe</label>
+                                        <label className="block text-sm font-medium text-neutral-700 mb-1">{language === 'es' ? 'Nueva contraseña' : 'Nouveau mot de passe'}</label>
                                         <input 
                                             type="password" 
                                             value={newPassword}
@@ -172,7 +178,7 @@ const UserProfile: React.FC = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-neutral-700 mb-1">Confirmer le mot de passe</label>
+                                        <label className="block text-sm font-medium text-neutral-700 mb-1">{language === 'es' ? 'Confirmar contraseña' : 'Confirmer le mot de passe'}</label>
                                         <input 
                                             type="password" 
                                             value={confirmPassword}
@@ -193,13 +199,13 @@ const UserProfile: React.FC = () => {
                                         disabled={passwordLoading}
                                         className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 transition-all"
                                     >
-                                        {passwordLoading ? 'Mise à jour...' : 'Mettre à jour'}
+                                        {passwordLoading ? (language === 'es' ? 'Actualizando...' : 'Mise à jour...') : (language === 'es' ? 'Actualizar' : 'Mettre à jour')}
                                     </button>
                                 </form>
                             </div>
                             
                             <div className="mt-4 flex items-center gap-2 text-xs text-neutral-500 bg-neutral-50 p-3 rounded-lg">
-                                <Lock size={14} /> Votre compte est sécurisé via Supabase Auth.
+                                <Lock size={14} /> {language === 'es' ? 'Su cuenta es segura.' : 'Votre compte est sécurisé via Supabase Auth.'}
                             </div>
                         </div>
 
