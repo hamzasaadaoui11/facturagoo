@@ -479,37 +479,37 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                         label={t('labelTotalHt')} 
                                         value={currentLabels.totalHt || ''} 
                                         onChange={(e: any) => handleLabelChange('totalHt', e.target.value)} 
-                                        placeholder="Ex: Base imponible" 
+                                        placeholder="Ex: Total HT" 
                                     />
                                     <InputField 
                                         label={t('labelTotalTax')} 
                                         value={currentLabels.totalTax || ''} 
                                         onChange={(e: any) => handleLabelChange('totalTax', e.target.value)} 
-                                        placeholder="Ex: IVA Total" 
+                                        placeholder="Ex: Total TVA" 
                                     />
                                     <InputField 
                                         label={t('labelTotalNet')} 
                                         value={currentLabels.totalNet || ''} 
                                         onChange={(e: any) => handleLabelChange('totalNet', e.target.value)} 
-                                        placeholder="Ex: Total a pagar" 
+                                        placeholder="Ex: Net à Payer" 
                                     />
                                     <InputField 
                                         label={t('labelSignatureSender')} 
                                         value={currentLabels.signatureSender || ''} 
                                         onChange={(e: any) => handleLabelChange('signatureSender', e.target.value)} 
-                                        placeholder="Ex: Firma del emisor" 
+                                        placeholder="Ex: Signature Expéditeur" 
                                     />
                                     <InputField 
                                         label={t('labelSignatureRecipient')} 
                                         value={currentLabels.signatureRecipient || ''} 
                                         onChange={(e: any) => handleLabelChange('signatureRecipient', e.target.value)} 
-                                        placeholder="Ex: Firma del receptor" 
+                                        placeholder="Ex: Signature Destinataire" 
                                     />
                                     <InputField 
                                         label={t('labelAmountWordsPrefix')} 
                                         value={currentLabels.amountInWordsPrefix || ''} 
                                         onChange={(e: any) => handleLabelChange('amountInWordsPrefix', e.target.value)} 
-                                        placeholder="Importe en letras..." 
+                                        placeholder="Ex: Arrêté le présent document à la somme de :" 
                                     />
                                 </div>
                             </div>
@@ -519,7 +519,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><LayoutTemplate size={20}/></div>
                                     <div>
                                         <h3 className="text-xl font-bold text-neutral-900">{language === 'es' ? 'Opciones de visualización' : 'Affichage & Options'}</h3>
-                                        <p className="text-sm text-neutral-500 font-normal">{language === 'es' ? 'Controle la información en sus PDFs.' : 'Contrôlez les informations affichées sur vos PDF.'}</p>
+                                        <p className="text-sm text-neutral-500 font-normal">{language === 'es' ? 'Controle la information en sus PDFs.' : 'Contrôlez les informations affichées sur vos PDF.'}</p>
                                     </div>
                                 </div>
                                 <div className="mt-6 flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
@@ -571,15 +571,15 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-200 p-8">
+                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><FileText size={20}/></div>
                                     <h3 className="text-xl font-bold text-neutral-900">{language === 'es' ? 'Pie de página y Condiciones' : 'Pied de page & Conditions'}</h3>
                                 </div>
                                 <div className="grid grid-cols-1 gap-6">
-                                    <InputField icon={CreditCard} label={language === 'es' ? 'Condiciones de pago por defecto' : "Conditions de paiement par défaut"} name="defaultPaymentTerms" value={localSettings.defaultPaymentTerms || ''} onChange={handleInputChange} placeholder="Ex: Pago a 30 días, Al contado..." />
+                                    <InputField icon={CreditCard} label={language === 'es' ? 'Condiciones de pago por defecto' : "Conditions de paiement par défaut"} name="defaultPaymentTerms" value={localSettings.defaultPaymentTerms || ''} onChange={handleInputChange} placeholder="Ex: Paiement à 30 jours, Au comptant..." />
                                     <div>
-                                        <TextAreaField label={language === 'es' ? 'Notas al pie por defecto' : "Pied de page par défaut"} name="footerNotes" value={localSettings.footerNotes || ''} onChange={handleInputChange} rows={3} placeholder="Gracias, datos bancarios..." />
+                                        <TextAreaField label={language === 'es' ? 'Notas al pie por defecto' : "Pied de page par défaut"} name="footerNotes" value={localSettings.footerNotes || ''} onChange={handleInputChange} rows={3} placeholder="Merci de votre confiance..." />
                                         <p className="mt-2 text-xs text-neutral-500 flex items-center gap-1"><LayoutTemplate size={12}/> {language === 'es' ? 'Este texto aparecerá en todos sus documentos.' : 'Ce texte apparaîtra en bas de tous vos documents.'}</p>
                                     </div>
                                 </div>
