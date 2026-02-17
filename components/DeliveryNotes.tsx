@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import Header from './Header';
-import { Truck, FileText, Plus, Pencil, Download, Trash2, CheckCircle, AlertCircle, Clock, Loader2, FileCheck, MoreVertical, Printer } from 'lucide-react';
+import { Truck, FileText, Plus, Pencil, Download, Trash2, CheckCircle, AlertCircle, Clock, Loader2, FileCheck, MoreVertical, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DeliveryNote, Invoice, Client, Product, CompanySettings } from '../types';
 import CreateDeliveryNoteModal from './CreateDeliveryNoteModal';
 import ConfirmationModal from './ConfirmationModal';
@@ -40,6 +40,17 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [convertingId, setConvertingId] = useState<string | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 6;
+    const totalPages = Math.ceil(deliveryNotes.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedNotes = deliveryNotes.slice().reverse().slice(startIndex, startIndex + itemsPerPage);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [deliveryNotes.length]);
     
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [menuPosition, setMenuPosition] = useState<{top: number, left: number} | null>(null);
@@ -69,7 +80,6 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     const handleCreateFromInvoice = (invoiceId: string) => {
         const invoice = invoices.find(i => i.id === invoiceId);
         if(invoice) {
-            // FIX: Store the professional documentId instead of technical UUID
             onCreateDeliveryNote({
                 invoiceId: invoice.documentId || invoice.id,
                 clientId: invoice.clientId,
@@ -185,7 +195,6 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     const getStatusDisplay = (note: DeliveryNote) => {
         const total = note.totalAmount || 0;
         const paid = note.paymentAmount || 0;
-        // Check if invoiceId is linked (pro or technical)
         if (note.invoiceId && note.invoiceId.length > 0) {
             return { label: t('statusBilled'), color: 'bg-purple-100 text-purple-800', icon: FileText };
         }
@@ -262,9 +271,6 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                                     <span className="text-xs bg-gray-100 px-2 py-1 rounded">{new Date(invoice.date).toLocaleDateString()}</span>
                                 </button>
                             ))}
-                            {invoices.filter(inv => !deliveryNotes.some(dn => dn.invoiceId === inv.id || dn.invoiceId === inv.documentId)).length === 0 && (
-                                <p className="text-center text-gray-500 italic">{language === 'es' ? 'No hay facturas disponibles para entrega.' : 'Aucune facture disponible pour livraison.'}</p>
-                            )}
                         </div>
                          <div className="flex justify-end gap-2 mt-4">
                             <button type="button" onClick={() => setIsInvoiceModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">{t('close')}</button>
@@ -288,12 +294,10 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-200 bg-white">
-                            {deliveryNotes.length > 0 ? (
-                                deliveryNotes.slice().reverse().map((note) => {
+                            {paginatedNotes.length > 0 ? (
+                                paginatedNotes.map((note) => {
                                     const statusInfo = getStatusDisplay(note);
                                     const StatusIcon = statusInfo.icon;
-                                    
-                                    // Clean Reference Display: If it looks like a UUID (long with dashes), show '-' or try to find pro ID
                                     const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
                                     const displayReference = note.invoiceId && !isUUID(note.invoiceId) ? `#${note.invoiceId}` : (note.invoiceId ? t('statusBilled') : t('statusManual'));
 
@@ -329,7 +333,6 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                                         <div className="flex flex-col items-center justify-center">
                                             <Truck className="h-12 w-12 text-slate-300 mb-4" />
                                             <h3 className="text-lg font-bold text-slate-800">{t('noDeliveryNotesFound')}</h3>
-                                            <p className="text-sm text-slate-500 mt-1">{t('firstDeliveryNotePrompt')}</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -337,6 +340,62 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination UI */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-neutral-200">
+                        <div className="flex-1 flex justify-between sm:hidden">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+                            >
+                                {t('periodWeek')}
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                                className="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+                            >
+                                Suivant
+                            </button>
+                        </div>
+                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-sm text-neutral-700">
+                                    Affichage de <span className="font-bold">{startIndex + 1}</span> à <span className="font-bold">{Math.min(startIndex + itemsPerPage, deliveryNotes.length)}</span> sur <span className="font-bold">{deliveryNotes.length}</span> bons
+                                </p>
+                            </div>
+                            <div>
+                                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+                                    >
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    {[...Array(totalPages)].map((_, i) => (
+                                        <button
+                                            key={i + 1}
+                                            onClick={() => setCurrentPage(i + 1)}
+                                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors ${currentPage === i + 1 ? 'z-10 bg-emerald-50 border-emerald-500 text-emerald-600 font-bold' : 'bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50'}`}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    ))}
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {activeMenuId && activeNote && menuPosition && createPortal(

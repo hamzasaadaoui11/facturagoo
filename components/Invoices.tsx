@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Header from './Header';
-import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical, Trash2, ArrowLeftRight } from 'lucide-react';
+import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical, Trash2, ArrowLeftRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Invoice, InvoiceStatus, Payment, Client, Product, CompanySettings } from '../types';
 import CreateInvoiceModal from './CreateInvoiceModal';
 import ConfirmationModal from './ConfirmationModal';
@@ -30,13 +31,25 @@ interface InvoicesProps {
 }
 
 const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, onAddPayment, onCreateInvoice, onUpdateInvoice, onDeleteInvoice, onCreateCreditNote, clients = [], products = [], companySettings }) => {
-    const { t, isRTL } = useLanguage();
+    const { t, isRTL, language } = useLanguage();
     const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
     const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState<'Virement' | 'Chèque' | 'Espèces' | 'Carte Bancaire'>('Virement');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 6;
+    const totalPages = Math.ceil(invoices.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedInvoices = invoices.slice(startIndex, startIndex + itemsPerPage);
+
+    // Reset page if search results or data change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [invoices.length]);
 
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -46,7 +59,6 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [menuPosition, setMenuPosition] = useState<{top: number, left: number} | null>(null);
 
-    // Close menu when clicking outside
     useEffect(() => {
         const handleClickOutside = () => setActiveMenuId(null);
         if(activeMenuId) {
@@ -169,7 +181,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                  <button
                     type="button"
                     onClick={handleCreateClick}
-                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
                 >
                     <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
                     {t('newInvoice')}
@@ -183,6 +195,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                 clients={clients}
                 products={products}
                 invoiceToEdit={invoiceToEdit}
+                companySettings={companySettings}
             />
 
             <ConfirmationModal 
@@ -191,7 +204,6 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                 onConfirm={confirmDelete}
             />
 
-            {/* Payment Modal */}
             {selectedInvoiceForPayment && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
@@ -246,8 +258,8 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-200 bg-white">
-                            {invoices.length > 0 ? (
-                                invoices.map((invoice) => {
+                            {paginatedInvoices.length > 0 ? (
+                                paginatedInvoices.map((invoice) => {
                                     const remaining = invoice.amount - (invoice.amountPaid || 0);
                                     return (
                                     <tr key={invoice.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
@@ -276,7 +288,6 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                         <div className="flex flex-col items-center justify-center">
                                             <FileText className="h-12 w-12 text-slate-300 mb-4" />
                                             <h3 className="text-lg font-bold text-slate-800">Aucune facture trouvée</h3>
-                                            <p className="text-sm text-slate-500 mt-1">Créez votre première facture en cliquant sur le bouton en haut.</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -284,6 +295,62 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination UI */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-neutral-200">
+                        <div className="flex-1 flex justify-between sm:hidden">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+                            >
+                                {t('periodWeek')}
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                                className="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+                            >
+                                Suivant
+                            </button>
+                        </div>
+                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-sm text-neutral-700">
+                                    Affichage de <span className="font-bold">{startIndex + 1}</span> à <span className="font-bold">{Math.min(startIndex + itemsPerPage, invoices.length)}</span> sur <span className="font-bold">{invoices.length}</span> factures
+                                </p>
+                            </div>
+                            <div>
+                                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+                                    >
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    {[...Array(totalPages)].map((_, i) => (
+                                        <button
+                                            key={i + 1}
+                                            onClick={() => setCurrentPage(i + 1)}
+                                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors ${currentPage === i + 1 ? 'z-10 bg-emerald-50 border-emerald-500 text-emerald-600 font-bold' : 'bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50'}`}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    ))}
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Menu Dropdown via Portal */}

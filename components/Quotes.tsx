@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -5,7 +6,7 @@ import Header from './Header';
 import ChangeStatusModal from './ChangeStatusModal';
 import CreateQuoteModal from './CreateQuoteModal';
 import ConfirmationModal from './ConfirmationModal';
-import { Plus, Search, Pencil, RefreshCw, Download, FileText, MoreVertical, CheckCircle, Loader2, Printer, Trash2 } from 'lucide-react';
+import { Plus, Search, Pencil, RefreshCw, Download, FileText, MoreVertical, CheckCircle, Loader2, Printer, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Quote, QuoteStatus, Client, Product, CompanySettings } from '../types';
 import { generatePDF, printDocument } from '../services/pdfService';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -51,6 +52,17 @@ const Quotes: React.FC<QuotesProps> = ({
     const [convertingId, setConvertingId] = useState<string | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 6;
+    const totalPages = Math.ceil(quotes.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedQuotes = quotes.slice(startIndex, startIndex + itemsPerPage);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [quotes.length]);
+
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [quoteIdToDelete, setQuoteIdToDelete] = useState<string | null>(null);
@@ -59,7 +71,6 @@ const Quotes: React.FC<QuotesProps> = ({
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [menuPosition, setMenuPosition] = useState<{top: number, left: number} | null>(null);
 
-    // Close menu when clicking outside
     useEffect(() => {
         const handleClickOutside = () => setActiveMenuId(null);
         if(activeMenuId) {
@@ -84,7 +95,7 @@ const Quotes: React.FC<QuotesProps> = ({
             setActiveMenuId(id);
             setMenuPosition({
                 top: rect.bottom + window.scrollY + 5,
-                left: isRTL ? rect.left + window.scrollX : rect.right + window.scrollX - 192 // 192px width
+                left: isRTL ? rect.left + window.scrollX : rect.right + window.scrollX - 192 
             });
         }
     };
@@ -191,7 +202,7 @@ const Quotes: React.FC<QuotesProps> = ({
                 <button
                     type="button"
                     onClick={handleCreateClick}
-                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
                 >
                     <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
                     {t('newQuote')}
@@ -212,6 +223,7 @@ const Quotes: React.FC<QuotesProps> = ({
                 clients={clients}
                 products={products}
                 quoteToEdit={quoteToEdit}
+                companySettings={companySettings}
             />
 
             <ConfirmationModal 
@@ -246,8 +258,8 @@ const Quotes: React.FC<QuotesProps> = ({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-200 bg-white">
-                            {quotes.length > 0 ? (
-                                quotes.map((quote) => (
+                            {paginatedQuotes.length > 0 ? (
+                                paginatedQuotes.map((quote) => (
                                     <tr key={quote.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
                                         <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-emerald-600 rtl:text-right">{quote.documentId || quote.id}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 rtl:text-right">{new Date(quote.date).toLocaleDateString('fr-FR')}</td>
@@ -274,7 +286,6 @@ const Quotes: React.FC<QuotesProps> = ({
                                        <div className="flex flex-col items-center justify-center">
                                             <FileText className="h-12 w-12 text-slate-300 mb-4" />
                                             <h3 className="text-lg font-bold text-slate-800">Aucun devis trouvé</h3>
-                                            <p className="text-sm text-slate-500 mt-1">Créez votre premier devis en cliquant sur le bouton en haut.</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -282,6 +293,62 @@ const Quotes: React.FC<QuotesProps> = ({
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination UI */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-neutral-200">
+                        <div className="flex-1 flex justify-between sm:hidden">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+                            >
+                                {t('periodWeek')}
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                                className="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+                            >
+                                Suivant
+                            </button>
+                        </div>
+                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-sm text-neutral-700">
+                                    Affichage de <span className="font-bold">{startIndex + 1}</span> à <span className="font-bold">{Math.min(startIndex + itemsPerPage, quotes.length)}</span> sur <span className="font-bold">{quotes.length}</span> devis
+                                </p>
+                            </div>
+                            <div>
+                                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+                                    >
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    {[...Array(totalPages)].map((_, i) => (
+                                        <button
+                                            key={i + 1}
+                                            onClick={() => setCurrentPage(i + 1)}
+                                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors ${currentPage === i + 1 ? 'z-10 bg-emerald-50 border-emerald-500 text-emerald-600 font-bold' : 'bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50'}`}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    ))}
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Menu Dropdown via Portal */}

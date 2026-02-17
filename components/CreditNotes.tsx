@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Header from './Header';
-// Fix: Added missing Loader2 import
-import { FileText, Download, Plus, Pencil, Printer, MoreVertical, Trash2, CheckCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { FileText, Download, Plus, Pencil, Printer, MoreVertical, Trash2, CheckCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CreditNote, CreditNoteStatus, Client, Product, CompanySettings } from '../types';
 import CreateCreditNoteModal from './CreateCreditNoteModal';
 import ConfirmationModal from './ConfirmationModal';
@@ -42,6 +41,17 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
     const [creditNoteToEdit, setCreditNoteToEdit] = useState<CreditNote | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 6;
+    const totalPages = Math.ceil(creditNotes.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedNotes = creditNotes.slice(startIndex, startIndex + itemsPerPage);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [creditNotes.length]);
+
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [idToDelete, setIdToDelete] = useState<string | null>(null);
@@ -50,7 +60,6 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [menuPosition, setMenuPosition] = useState<{top: number, left: number} | null>(null);
 
-    // Close menu when clicking outside
     useEffect(() => {
         const handleClickOutside = () => setActiveMenuId(null);
         if(activeMenuId) {
@@ -75,7 +84,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
             setActiveMenuId(id);
             setMenuPosition({
                 top: rect.bottom + window.scrollY + 5,
-                left: isRTL ? rect.left + window.scrollX : Math.max(10, rect.right + window.scrollX - 192) // Prevent overflow
+                left: isRTL ? rect.left + window.scrollX : Math.max(10, rect.right + window.scrollX - 192)
             });
         }
     };
@@ -167,14 +176,13 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                 clients={clients}
                 products={products}
                 creditNoteToEdit={creditNoteToEdit}
+                companySettings={companySettings}
             />
 
             <ConfirmationModal 
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={confirmDelete}
-                title={t('confirmDelete')}
-                message={t('confirmDeleteMessage')}
             />
 
             <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
@@ -192,8 +200,8 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-200 bg-white">
-                            {creditNotes.length > 0 ? (
-                                creditNotes.map((note) => (
+                            {paginatedNotes.length > 0 ? (
+                                paginatedNotes.map((note) => (
                                     <tr key={note.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600 ${isRTL ? 'text-right' : 'text-left'}`}>{note.documentId || note.id}</td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-600 ${isRTL ? 'text-right' : 'text-left'}`}>{new Date(note.date).toLocaleDateString()}</td>
@@ -220,8 +228,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                                     <td colSpan={7} className="text-center py-20 px-6">
                                         <div className="flex flex-col items-center justify-center">
                                             <FileText className="h-12 w-12 text-slate-300 mb-4" />
-                                            <h3 className="text-lg font-bold text-slate-800">{t('noCreditNotesFound')}</h3>
-                                            <p className="text-sm text-slate-500 mt-1">{t('firstCreditNotePrompt')}</p>
+                                            <h3 className="text-lg font-bold text-slate-800">Aucun avoir trouvé</h3>
                                         </div>
                                     </td>
                                 </tr>
@@ -229,6 +236,62 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination UI */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-neutral-200">
+                        <div className="flex-1 flex justify-between sm:hidden">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+                            >
+                                {t('periodWeek')}
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                                className="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+                            >
+                                Suivant
+                            </button>
+                        </div>
+                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-sm text-neutral-700">
+                                    Affichage de <span className="font-bold">{startIndex + 1}</span> à <span className="font-bold">{Math.min(startIndex + itemsPerPage, creditNotes.length)}</span> sur <span className="font-bold">{creditNotes.length}</span> avoirs
+                                </p>
+                            </div>
+                            <div>
+                                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+                                    >
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    {[...Array(totalPages)].map((_, i) => (
+                                        <button
+                                            key={i + 1}
+                                            onClick={() => setCurrentPage(i + 1)}
+                                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors ${currentPage === i + 1 ? 'z-10 bg-emerald-50 border-emerald-500 text-emerald-600 font-bold' : 'bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50'}`}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    ))}
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Menu Dropdown via Portal */}
