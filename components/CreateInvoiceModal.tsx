@@ -127,8 +127,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
         return { subTotal, vatAmount, totalTTC };
     }, [lineItems]);
 
-    useEffect(() => { if (!invoiceToEdit) setNewPaymentAmount(totals.totalTTC); }, [totals.totalTTC, invoiceToEdit]);
-
     const handleSave = async () => {
         if (!clientId || lineItems.length === 0) return;
         const client = clients.find(c => c.id === clientId);

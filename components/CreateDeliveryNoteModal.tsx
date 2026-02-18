@@ -126,8 +126,6 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         return { subTotal, vatAmount, totalTTC };
     }, [lineItems]);
 
-    useEffect(() => { if (!noteToEdit) setPaymentAmount(totals.totalTTC); }, [totals.totalTTC, noteToEdit]);
-
     const handleSave = async () => {
         if (!clientId || lineItems.length === 0) return;
         const client = clients.find(c => c.id === clientId);
