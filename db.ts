@@ -228,14 +228,12 @@ export const dbService = {
 
             if (fetchError) throw fetchError;
 
-            // Gérer showAmountInWords séparément (local storage)
             const { showAmountInWords, id, ...settingsData } = settings;
             
             if (showAmountInWords !== undefined) {
                 localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS, String(showAmountInWords));
             }
 
-            // Supprimer created_at de settingsData pour éviter des erreurs lors de l'update
             const cleanData = { ...settingsData };
             delete (cleanData as any).created_at;
 
@@ -263,7 +261,7 @@ export const dbService = {
 
             if (resultError) {
                 console.error("Supabase Save Error:", resultError);
-                throw new Error(resultError.message || "Erreur lors de la sauvegarde sur Supabase. Vérifiez que les colonnes SQL ont été ajoutées.");
+                throw new Error(resultError.message || "Erreur lors de la sauvegarde sur Supabase.");
             }
 
             const finalResult = resultData as CompanySettings;
