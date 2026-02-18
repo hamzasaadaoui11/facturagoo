@@ -25,6 +25,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
 
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [subject, setSubject] = useState('');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
     const [selectedProductId, setSelectedProductId] = useState('');
@@ -44,12 +45,14 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
             if (noteToEdit) {
                 setClientId(noteToEdit.clientId);
                 setDate(noteToEdit.date);
+                setSubject(noteToEdit.subject || '');
                 setLineItems(JSON.parse(JSON.stringify(noteToEdit.lineItems)));
                 setPaymentAmount(noteToEdit.paymentAmount || 0);
                 setPaymentMethod(noteToEdit.paymentMethod || 'Espèces');
             } else {
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
+                setSubject('');
                 setLineItems([]);
                 setPaymentAmount(0);
                 setTempVat(language === 'es' ? 21 : 20);
@@ -132,7 +135,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         setIsSubmitting(true);
         try {
             await onSave({
-                clientId, clientName: clientNameDisplay, date, lineItems, status: 'Livré',
+                clientId, clientName: clientNameDisplay, date, subject, lineItems, status: 'Livré',
                 subTotal: totals.subTotal, vatAmount: totals.vatAmount, totalAmount: totals.totalTTC,
                 paymentAmount, paymentMethod, invoiceId: noteToEdit?.invoiceId
             }, noteToEdit?.id);
@@ -168,6 +171,10 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('date')} *</label>
                             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
+                        </div>
+                        <div className="md:col-span-2 space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
+                            <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
                     </div>
 

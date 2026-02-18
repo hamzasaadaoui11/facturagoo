@@ -258,6 +258,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                         <thead className="bg-neutral-50">
                             <tr>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">#</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('date')}</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('client')}</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('amount')}</th>
                                 <th scope="col" className="hidden md:table-cell px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('remaining')}</th>
@@ -272,6 +273,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                     return (
                                     <tr key={invoice.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600 rtl:text-right">{invoice.documentId || invoice.id}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500 rtl:text-right">{new Date(invoice.date).toLocaleDateString('fr-FR')}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-600 max-w-[120px] truncate rtl:text-right">{invoice.clientName}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-medium rtl:text-right">{invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
                                         <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-sm font-medium text-red-600 rtl:text-right">{remaining > 0 ? remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}</td>

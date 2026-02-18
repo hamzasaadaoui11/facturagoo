@@ -176,6 +176,7 @@ export interface DeliveryNote {
     clientId: string;
     clientName: string;
     date: string;
+    subject?: string; // Champ ajouté
     lineItems: LineItem[];
     status: string; // Changed from fixed union to string to support computed statuses like 'Payé'
     // Financials for standalone BL

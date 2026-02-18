@@ -176,6 +176,10 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('date')} *</label>
                             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
+                        <div className="md:col-span-2 space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
+                            <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
+                        </div>
                     </div>
 
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 shadow-inner space-y-4">
