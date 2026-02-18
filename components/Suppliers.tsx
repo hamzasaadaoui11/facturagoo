@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import Header from './Header';
 import AddSupplierModal from './AddSupplierModal';
 import ConfirmationModal from './ConfirmationModal';
-import { Plus, Pencil, Trash2, Building2, User, Search, Building } from 'lucide-react';
+import { Plus, Pencil, Trash2, Building2, User, Search } from 'lucide-react';
 import { Supplier } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -179,12 +179,17 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier, onUpdat
                                 )})
                             ) : (
                                 <tr>
-                                     <td colSpan={6} className="text-center py-16 px-6 text-sm text-neutral-500">
-                                        <div className="flex flex-col items-center">
-                                            <Building className="h-10 w-10 text-neutral-400 mb-2" />
-                                            <h3 className="font-semibold text-neutral-800">
-                                                {searchTerm ? t('noFinancialData') : t('suppliers')}
+                                     <td colSpan={6} className="text-center py-20 px-6">
+                                        <div className="flex flex-col items-center justify-center">
+                                            <Building2 className="h-16 w-16 text-slate-200 mb-4" strokeWidth={1.5} />
+                                            <h3 className="text-lg font-bold text-slate-800">
+                                                {searchTerm ? t('noFinancialData') : t('noSuppliers')}
                                             </h3>
+                                            {!searchTerm && (
+                                                <p className="text-sm text-slate-500 mt-1">
+                                                    {t('firstSupplierPrompt')}
+                                                </p>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import Header from './Header';
 import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical, Trash2, ArrowLeftRight, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -39,9 +39,17 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
+    // Responsive items per page
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 6;
+    const itemsPerPage = isMobile ? 4 : 6;
     const totalPages = Math.ceil(invoices.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedInvoices = invoices.slice(startIndex, startIndex + itemsPerPage);
@@ -49,7 +57,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
     // Reset page if search results or data change
     useEffect(() => {
         setCurrentPage(1);
-    }, [invoices.length]);
+    }, [invoices.length, itemsPerPage]);
 
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -305,14 +313,14 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                 disabled={currentPage === 1}
                                 className="relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
                             >
-                                {t('periodWeek')}
+                                {isRTL ? 'التالي' : 'Précédent'}
                             </button>
                             <button
                                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                 disabled={currentPage === totalPages}
                                 className="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
                             >
-                                Suivant
+                                {isRTL ? 'السابق' : 'Suivant'}
                             </button>
                         </div>
                         <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">

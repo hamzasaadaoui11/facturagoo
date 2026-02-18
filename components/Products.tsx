@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import Header from './Header';
 import ConfirmationModal from './ConfirmationModal';
-import { Plus, Pencil, Trash2, ArrowLeft, Package, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, Package, AlertTriangle, Search } from 'lucide-react';
 import { Product, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatCurrency, parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
@@ -274,10 +274,19 @@ interface ProductListProps {
 }
 
 const ProductList = ({ products, onDeleteProduct, companySettings }: ProductListProps) => {
-    const { t, language } = useLanguage();
+    const { t, language, isRTL } = useLanguage();
     const navigate = useNavigate();
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [productIdToDelete, setProductIdToDelete] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredProducts = products.filter(product => {
+        const term = searchTerm.toLowerCase();
+        return (
+            product.name.toLowerCase().includes(term) ||
+            product.productCode.toLowerCase().includes(term)
+        );
+    });
 
     const handleDeleteClick = (productId: string) => {
         setProductIdToDelete(productId);
@@ -313,31 +322,38 @@ const ProductList = ({ products, onDeleteProduct, companySettings }: ProductList
 
             <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
                 <div className="p-4 border-b border-neutral-200">
-                    <input
-                        type="search"
-                        placeholder={t('search')}
-                        className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
-                    />
+                    <div className="relative">
+                        <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'right-0 pr-3' : 'left-0 pl-3'}`}>
+                           <Search className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                        </div>
+                        <input
+                            type="search"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder={t('search')}
+                            className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
+                        />
+                    </div>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>
-                                <th scope="col" className="px-6 py-3 text-left rtl:text-right text-xs font-semibold uppercase tracking-wider text-neutral-500">{t('reference')}</th>
-                                <th scope="col" className="px-6 py-3 text-left rtl:text-right text-xs font-semibold uppercase tracking-wider text-neutral-500">{t('name')}</th>
-                                <th scope="col" className="px-6 py-3 text-left rtl:text-right text-xs font-semibold uppercase tracking-wider text-neutral-500">{t('stock')}</th>
-                                <th scope="col" className="px-6 py-3 text-left rtl:text-right text-xs font-semibold uppercase tracking-wider text-neutral-500">{t('totalHT')}</th>
-                                <th scope="col" className="px-6 py-3 text-left rtl:text-right text-xs font-semibold uppercase tracking-wider text-neutral-500">{t('vat')}</th>
-                                <th scope="col" className="relative px-6 py-3 text-right rtl:text-left"><span className="sr-only">{t('actions')}</span></th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('reference')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('name')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('stock')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{t('totalHT')}</th>
+                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('vat')}</th>
+                                <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">{t('actions')}</span></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-200 bg-white">
-                            {products.length > 0 ? (
-                                products.map((product: Product) => (
+                            {filteredProducts.length > 0 ? (
+                                filteredProducts.map((product: Product) => (
                                     <tr key={product.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 font-mono">{product.productCode}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-neutral-900">{product.name}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base">
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 font-mono ${isRTL ? 'text-right' : 'text-left'}`}>{product.productCode}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-neutral-900 ${isRTL ? 'text-right' : 'text-left'}`}>{product.name}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base ${isRTL ? 'text-right' : 'text-left'}`}>
                                             {product.productType === 'Service' ? (
                                                 <span className="text-neutral-400 italic">{t('pService')}</span>
                                             ) : (
@@ -347,10 +363,10 @@ const ProductList = ({ products, onDeleteProduct, companySettings }: ProductList
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{formatCurrency(product.salePrice, companySettings)}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500">{product.vat}%</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-right rtl:text-left text-sm font-medium">
-                                            <div className="flex items-center justify-end rtl:justify-start space-x-2 rtl:space-x-reverse">
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{formatCurrency(product.salePrice, companySettings)}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{product.vat}%</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                                            <div className={`flex items-center justify-end space-x-2 ${isRTL ? 'space-x-reverse' : ''}`}>
                                                 <button 
                                                     onClick={() => navigate(`/products/edit/${product.id}`)} 
                                                     className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors"
@@ -371,11 +387,17 @@ const ProductList = ({ products, onDeleteProduct, companySettings }: ProductList
                                 ))
                              ) : (
                                 <tr>
-                                    <td colSpan={6} className="text-center py-16 px-6 text-sm text-neutral-500">
-                                        <div className="flex flex-col items-center">
-                                            <Package className="h-10 w-10 text-neutral-400 mb-2" />
-                                            <h3 className="font-semibold text-neutral-800">{t('noProducts')}</h3>
-                                            <p>{t('firstProductPrompt')}</p>
+                                     <td colSpan={6} className="text-center py-20 px-6">
+                                        <div className="flex flex-col items-center justify-center">
+                                            <Package className="h-16 w-16 text-slate-200 mb-4" strokeWidth={1.5} />
+                                            <h3 className="text-lg font-bold text-slate-800">
+                                                {searchTerm ? t('noFinancialData') : t('noProducts')}
+                                            </h3>
+                                            {!searchTerm && (
+                                                <p className="text-sm text-slate-500 mt-1">
+                                                    {t('firstProductPrompt')}
+                                                </p>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

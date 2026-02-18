@@ -179,12 +179,17 @@ const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, onUpdateClient,
                                 )})
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="text-center py-16 px-6 text-sm text-neutral-500">
-                                        <div className="flex flex-col items-center">
-                                            <Users className="h-10 w-10 text-neutral-400 mb-2" />
-                                            <h3 className="font-semibold text-neutral-800">
+                                    <td colSpan={6} className="text-center py-20 px-6">
+                                        <div className="flex flex-col items-center justify-center">
+                                            <Users className="h-16 w-16 text-slate-200 mb-4" strokeWidth={1.5} />
+                                            <h3 className="text-lg font-bold text-slate-800">
                                                 {searchTerm ? t('noFinancialData') : t('noClients')}
                                             </h3>
+                                            {!searchTerm && (
+                                                <p className="text-sm text-slate-500 mt-1">
+                                                    {language === 'es' ? 'Comience añadiendo su primer cliente.' : 'Commencez par ajouter votre premier client.'}
+                                                </p>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
