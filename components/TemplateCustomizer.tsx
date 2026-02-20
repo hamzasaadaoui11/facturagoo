@@ -350,7 +350,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                     {activeTab === 'documents' && (
                         <div className="space-y-6 animate-fadeIn">
                              {/* Pricing Mode Section */}
-                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
+                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-4 md:p-8">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Eye size={20}/></div>
                                     <div>
@@ -377,96 +377,150 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                             </div>
 
                              {/* Numbering Section */}
-                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
+                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-5 md:p-8">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><Settings2 size={20}/></div>
                                     <div>
-                                        <h3 className="text-xl font-bold text-neutral-900">{language === 'es' ? 'Numeración de documentos' : 'Configuration de numérotation'}</h3>
+                                        <h3 className="text-lg md:text-xl font-bold text-neutral-900">{language === 'es' ? 'Numeración de documentos' : 'Configuration de numérotation'}</h3>
                                         <p className="text-sm text-neutral-500">{language === 'es' ? 'Personalice el formato de sus números.' : 'Personnalisez le format de vos numéros par document.'}</p>
                                     </div>
                                 </div>
                                 
-                                <div className="flex flex-wrap gap-2 mb-8 bg-neutral-100 p-1 rounded-xl">
-                                    {docTypes.map(type => (
-                                        <button
-                                            key={type.id}
-                                            onClick={() => setActiveDocType(type.id)}
-                                            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${activeDocType === type.id ? 'bg-white text-emerald-600 shadow-sm' : 'text-neutral-500 hover:bg-white/50'}`}
-                                        >
-                                            <type.icon size={14} />
-                                            {type.label}
-                                        </button>
-                                    ))}
+                                <div className="mb-8">
+                                    <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3 ml-1">
+                                        {language === 'es' ? 'Tipo de documento' : 'Type de document'}
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                                        {docTypes.map((type, index) => (
+                                            <button
+                                                key={type.id}
+                                                onClick={() => setActiveDocType(type.id)}
+                                                className={`
+                                                    relative flex items-center justify-center gap-2 px-2 py-3 rounded-xl border-2 transition-all duration-200 w-full sm:w-auto sm:justify-start
+                                                    ${index === 4 ? 'col-span-2 sm:col-span-auto' : ''}
+                                                    ${activeDocType === type.id 
+                                                        ? 'border-emerald-500 bg-emerald-50/50 text-emerald-700 shadow-sm' 
+                                                        : 'border-transparent bg-neutral-50 text-neutral-600 hover:bg-neutral-100 hover:border-neutral-200'}
+                                                `}
+                                            >
+                                                <type.icon size={18} className={`shrink-0 ${activeDocType === type.id ? 'text-emerald-600' : 'text-neutral-400'}`} />
+                                                <span className="font-semibold text-xs sm:text-sm truncate">{type.label}</span>
+                                                {activeDocType === type.id && (
+                                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></div>
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
 
                                 {currentDocConfig && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Prefijo' : 'Préfixe'}</label>
-                                            <input 
-                                                type="text" 
-                                                value={currentDocConfig.prefix} 
-                                                onChange={(e) => handleNumberingChange(activeDocType, 'prefix', e.target.value)}
-                                                className="block w-full rounded-xl border-neutral-200 bg-neutral-50 focus:ring-emerald-500 py-2.5 text-sm"
-                                            />
+                                    <div className="space-y-6 animate-fadeIn">
+                                        {/* Format Group */}
+                                        <div className="bg-neutral-50/50 rounded-xl p-4 md:p-5 border border-neutral-100">
+                                            <h4 className="text-sm font-bold text-neutral-900 mb-4 flex items-center gap-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                {language === 'es' ? 'Formato' : 'Format'}
+                                            </h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-neutral-500 mb-1.5 uppercase tracking-wide">{language === 'es' ? 'Prefijo' : 'Préfixe'}</label>
+                                                    <div className="relative">
+                                                        <input 
+                                                            type="text" 
+                                                            value={currentDocConfig.prefix} 
+                                                            onChange={(e) => handleNumberingChange(activeDocType, 'prefix', e.target.value)}
+                                                            className="block w-full rounded-lg border-neutral-200 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 py-2.5 px-3 text-sm font-medium transition-shadow"
+                                                            placeholder="EX: FAC"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-neutral-500 mb-1.5 uppercase tracking-wide">{language === 'es' ? 'Separador' : 'Séparateur'}</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={currentDocConfig.separator} 
+                                                        onChange={(e) => handleNumberingChange(activeDocType, 'separator', e.target.value)}
+                                                        className="block w-full rounded-lg border-neutral-200 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 py-2.5 px-3 text-sm font-medium text-center transition-shadow"
+                                                        placeholder="/"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-neutral-500 mb-1.5 uppercase tracking-wide">{language === 'es' ? 'Formato Año' : 'Format Année'}</label>
+                                                    <select 
+                                                        value={currentDocConfig.yearFormat} 
+                                                        onChange={(e) => handleNumberingChange(activeDocType, 'yearFormat', e.target.value as any)}
+                                                        className="block w-full rounded-lg border-neutral-200 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 py-2.5 px-3 text-sm font-medium transition-shadow"
+                                                    >
+                                                        <option value="YYYY">{language === 'es' ? '2026 (YYYY)' : '2026 (YYYY)'}</option>
+                                                        <option value="YY">{language === 'es' ? '26 (YY)' : '26 (YY)'}</option>
+                                                        <option value="NONE">{language === 'es' ? 'Ninguno' : 'Aucun'}</option>
+                                                    </select>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Separador' : 'Séparateur'}</label>
-                                            <input 
-                                                type="text" 
-                                                value={currentDocConfig.separator} 
-                                                onChange={(e) => handleNumberingChange(activeDocType, 'separator', e.target.value)}
-                                                className="block w-full rounded-xl border-neutral-200 bg-neutral-50 focus:ring-emerald-500 py-2.5 text-sm text-center"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Formato Año' : 'Format Année'}</label>
-                                            <select 
-                                                value={currentDocConfig.yearFormat} 
-                                                onChange={(e) => handleNumberingChange(activeDocType, 'yearFormat', e.target.value as any)}
-                                                className="block w-full rounded-xl border-neutral-200 bg-neutral-50 focus:ring-emerald-500 py-2.5 text-sm"
-                                            >
-                                                <option value="YYYY">{language === 'es' ? 'Año (2026)' : 'Année (2026)'}</option>
-                                                <option value="YY">{language === 'es' ? 'Año corto (26)' : 'Année courte (26)'}</option>
-                                                <option value="NONE">{language === 'es' ? 'Ninguno' : 'Aucun'}</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Empezar en' : 'Départ à'}</label>
-                                            <input 
-                                                type="number" 
-                                                value={currentDocConfig.startNumber} 
-                                                onChange={(e) => handleNumberingChange(activeDocType, 'startNumber', parseInt(e.target.value) || 1)}
-                                                className="block w-full rounded-xl border-neutral-200 bg-neutral-50 focus:ring-emerald-500 py-2.5 text-sm"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Relleno (Ceros)' : 'Remplissage (Zéros)'}</label>
-                                            <input 
-                                                type="number" 
-                                                min="1" 
-                                                max="10" 
-                                                value={currentDocConfig.padding} 
-                                                onChange={(e) => handleNumberingChange(activeDocType, 'padding', parseInt(e.target.value) || 5)}
-                                                className="block w-full rounded-xl border-neutral-200 bg-neutral-50 focus:ring-emerald-500 py-2.5 text-sm"
-                                            />
+
+                                        {/* Sequence Group */}
+                                        <div className="bg-neutral-50/50 rounded-xl p-4 md:p-5 border border-neutral-100">
+                                            <h4 className="text-sm font-bold text-neutral-900 mb-4 flex items-center gap-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                {language === 'es' ? 'Secuencia' : 'Séquence'}
+                                            </h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-neutral-500 mb-1.5 uppercase tracking-wide">{language === 'es' ? 'Empezar en' : 'Départ à'}</label>
+                                                    <input 
+                                                        type="number" 
+                                                        value={currentDocConfig.startNumber} 
+                                                        onChange={(e) => handleNumberingChange(activeDocType, 'startNumber', parseInt(e.target.value) || 1)}
+                                                        className="block w-full rounded-lg border-neutral-200 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 py-2.5 px-3 text-sm font-medium transition-shadow"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-neutral-500 mb-1.5 uppercase tracking-wide">{language === 'es' ? 'Relleno (Ceros)' : 'Remplissage (Zéros)'}</label>
+                                                    <div className="flex items-center gap-3">
+                                                        <input 
+                                                            type="range" 
+                                                            min="1" 
+                                                            max="10" 
+                                                            value={currentDocConfig.padding} 
+                                                            onChange={(e) => handleNumberingChange(activeDocType, 'padding', parseInt(e.target.value) || 5)}
+                                                            className="flex-1 h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                                                        />
+                                                        <span className="w-12 text-center py-1 bg-white border border-neutral-200 rounded-md text-sm font-bold text-neutral-700">
+                                                            {currentDocConfig.padding}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
 
-                                <div className="mt-8 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-between">
-                                    <div>
-                                        <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-1">{language === 'es' ? 'Vista previa' : 'Aperçu'} pour {docTypes.find(d => d.id === activeDocType)?.label}</p>
-                                        <p className="text-2xl font-mono font-bold text-emerald-900 tracking-tight">{getPreviewNumber(activeDocType)}</p>
-                                    </div>
-                                    <div className="p-3 bg-white rounded-xl shadow-sm text-emerald-600">
-                                        {React.createElement(docTypes.find(d => d.id === activeDocType)?.icon || FileText, { size: 24 })}
+                                <div className="mt-6 md:mt-8">
+                                    <div className="relative overflow-hidden bg-gradient-to-br from-emerald-900 to-emerald-800 rounded-2xl shadow-lg p-6 text-white">
+                                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                                            <FileText size={120} />
+                                        </div>
+                                        <div className="relative z-10">
+                                            <p className="text-emerald-200 text-xs font-bold uppercase tracking-widest mb-2">
+                                                {language === 'es' ? 'Vista previa' : 'Aperçu'} • {docTypes.find(d => d.id === activeDocType)?.label}
+                                            </p>
+                                            <div className="flex items-end gap-3">
+                                                <p className="text-3xl md:text-4xl font-mono font-bold tracking-tight text-white break-all">
+                                                    {getPreviewNumber(activeDocType)}
+                                                </p>
+                                            </div>
+                                            <div className="mt-4 flex items-center gap-2 text-emerald-300 text-xs bg-white/10 w-fit px-3 py-1.5 rounded-full backdrop-blur-sm">
+                                                <CheckCircle size={12} />
+                                                {language === 'es' ? 'Formato válido' : 'Format valide'}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Custom Labels Section */}
-                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
+                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-4 md:p-8">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><PencilLine size={20}/></div>
                                     <div>
@@ -514,7 +568,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
+                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-4 md:p-8">
                                 <div className="flex items-center gap-3 mb-2 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><LayoutTemplate size={20}/></div>
                                     <div>
@@ -541,7 +595,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
+                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-4 md:p-8">
                                 <div className="flex items-center gap-3 mb-2 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-orange-50 text-orange-600 rounded-lg"><LayoutTemplate size={20}/></div>
                                     <div>
@@ -571,7 +625,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
+                            <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-4 md:p-8">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><FileText size={20}/></div>
                                     <h3 className="text-xl font-bold text-neutral-900">{language === 'es' ? 'Pie de página y Condiciones' : 'Pied de page & Conditions'}</h3>
