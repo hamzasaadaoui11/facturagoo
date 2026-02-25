@@ -56,7 +56,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
     const [activeDocType, setActiveDocType] = useState<DocConfigType>('invoice');
 
     useEffect(() => {
-        const mergedSettings = { ...settings } || { primaryColor: '#10b981', showAmountInWords: true, priceDisplayMode: 'HT' };
+        const mergedSettings = settings ? { ...settings } : { primaryColor: '#10b981', showAmountInWords: true, priceDisplayMode: 'HT' };
         
         // Ensure all configs exist
         if (!mergedSettings.invoiceNumbering) mergedSettings.invoiceNumbering = createDefaultConfig('FAC');

@@ -168,6 +168,7 @@ export const translations = {
     pdfInvoiced: 'Facturé',
     pdfRemaining: 'Reste à payer',
     pdfSettled: 'Soldé',
+    pdfPaymentTerms: 'Conditions de règlement',
     
     // Documents Customization
     priceDisplayMode: 'Mode d\'affichage des prix',
@@ -462,6 +463,7 @@ export const translations = {
     pdfInvoiced: 'Facturado',
     pdfRemaining: 'Importe pendiente',
     pdfSettled: 'Liquidado',
+    pdfPaymentTerms: 'Condiciones de pago',
 
     // Documents Customization
     priceDisplayMode: 'Modo de visualización de precios',
@@ -756,6 +758,7 @@ export const translations = {
     pdfInvoiced: 'Invoiced',
     pdfRemaining: 'Remaining balance',
     pdfSettled: 'Settled',
+    pdfPaymentTerms: 'Payment Terms',
 
     // Documents Customization
     priceDisplayMode: 'Price Display Mode',
@@ -1050,6 +1053,7 @@ export const translations = {
     pdfInvoiced: 'مفوتر',
     pdfRemaining: 'المبلغ المتبقي',
     pdfSettled: 'تمت تصفيتها',
+    pdfPaymentTerms: 'شروط الدفع',
     
     // Documents Customization
     priceDisplayMode: 'وضع عرض الأسعار',

@@ -588,17 +588,38 @@ const App: React.FC = () => {
             try {
                 const { data: { session }, error } = await supabase.auth.getSession();
                 if (error) {
-                    console.error("Session error:", error);
-                    await supabase.auth.signOut().catch(console.error);
+                    console.error("Session initialization error:", error.message);
+                    // If it's a refresh token error, we must clear the session
+                    if (error.message.includes('Refresh Token Not Found') || error.message.includes('invalid_grant')) {
+                        await supabase.auth.signOut({ scope: 'local' }).catch(console.error);
+                    }
                     setSession(null);
-                } else { setSession(session); }
+                } else {
+                    setSession(session);
+                }
             } catch (err) {
-                console.error("Auth error:", err);
+                console.error("Auth initialization exception:", err);
                 setSession(null);
-            } finally { setLoading(false); }
+            } finally {
+                setLoading(false);
+            }
         };
+
         initSession();
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => { setSession(session); });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("Auth event:", event);
+            if (event === 'SIGNED_OUT') {
+                setSession(null);
+            } else if ((event as any) === 'TOKEN_REFRESH_FAILED') {
+                console.error('Token refresh failed, clearing local session...');
+                await supabase.auth.signOut({ scope: 'local' }).catch(console.error);
+                setSession(null);
+            } else {
+                setSession(session);
+            }
+        });
+
         return () => subscription.unsubscribe();
     }, []);
     if (loading) { return <LoadingScreen />; }

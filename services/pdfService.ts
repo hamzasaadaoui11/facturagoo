@@ -397,6 +397,11 @@ const generateDocumentHTML = (
                         </div>
                     </div>
                 ` : ''}
+                ${settings.defaultPaymentTerms ? `
+                    <div style="margin-top: 10px; font-size: 11px; color: #4b5563;">
+                        ${settings.defaultPaymentTerms}
+                    </div>
+                ` : ''}
                 ${doc.notes ? `
                     <div style="margin-top: 15px; font-size: 11px; color: #6b7280;">
                         <span style="font-weight: 600;">${dict.notes || 'Notes'}:</span> ${doc.notes}
