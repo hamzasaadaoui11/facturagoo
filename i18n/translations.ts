@@ -146,6 +146,7 @@ export const translations = {
     mRetour: 'Retour',
 
     // PDF & Form Field Labels
+    globalDiscount: 'Remise exceptionnelle',
     refLabel: 'Réf.',
     productAutoLabel: 'Produit (Auto)',
     designationLabel: 'Désignation',
@@ -441,6 +442,7 @@ export const translations = {
     mRetour: 'Devolución',
 
     // PDF & Form Field Labels
+    globalDiscount: 'Descuento excepcional',
     refLabel: 'Ref.',
     productAutoLabel: 'Producto (Auto)',
     designationLabel: 'Descripción',
@@ -736,6 +738,7 @@ export const translations = {
     mRetour: 'Return',
 
     // PDF & Form Field Labels
+    globalDiscount: 'Exceptional discount',
     refLabel: 'Ref.',
     productAutoLabel: 'Product (Auto)',
     designationLabel: 'Description',
@@ -1031,6 +1034,7 @@ export const translations = {
     mRetour: 'إرجاع',
 
     // PDF & Form Field Labels
+    globalDiscount: 'خصم استثنائي',
     refLabel: 'المرجع',
     productAutoLabel: 'منتج (تلقائي)',
     designationLabel: 'الوصف',

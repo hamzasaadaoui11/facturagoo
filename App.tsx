@@ -110,8 +110,8 @@ const MainContent: React.FC = () => {
             const updatedSettings = await dbService.settings.update(settings);
             setCompanySettings(updatedSettings);
         } catch (err: any) { 
-            console.error(err); 
-            alert("Erreur: " + (err.message || "Erreur inconnue"));
+            console.error("Save failed:", err);
+            alert("Save failed\n" + (err.message || "Unknown error"));
             throw err;
         }
     };

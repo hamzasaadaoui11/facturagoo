@@ -47,6 +47,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
     const { t, isRTL, language } = useLanguage();
     const [localSettings, setLocalSettings] = useState<Partial<CompanySettings>>({ 
         showAmountInWords: true,
+        showSignatureRecipient: false,
         priceDisplayMode: 'HT'
     });
     const [columns, setColumns] = useState<DocumentColumn[]>(DEFAULT_COLUMNS);
@@ -66,6 +67,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
         if (!mergedSettings.creditNoteNumbering) mergedSettings.creditNoteNumbering = createDefaultConfig('AVO');
         
         if (!mergedSettings.documentLabels) mergedSettings.documentLabels = DEFAULT_LABELS;
+        if (mergedSettings.showSignatureRecipient === undefined) mergedSettings.showSignatureRecipient = false;
         if (!mergedSettings.priceDisplayMode) mergedSettings.priceDisplayMode = 'HT';
 
         setLocalSettings(mergedSettings); 
@@ -118,6 +120,20 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
             reader.onloadend = () => {
                 const newLogo = reader.result as string;
                 setLocalSettings(prev => ({ ...prev, logo: newLogo }));
+            };
+            reader.readAsDataURL(file);
+        } else {
+            alert("Veuillez sélectionner un fichier image valide.");
+        }
+    };
+
+    const handleStampChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const newStamp = reader.result as string;
+                setLocalSettings(prev => ({ ...prev, stamp: newStamp }));
             };
             reader.readAsDataURL(file);
         } else {
@@ -321,6 +337,28 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                                     </div>
                                                     <p className="text-sm font-medium text-neutral-700">{language === 'es' ? 'Subir logo' : 'Cliquez pour importer'}</p>
                                                     <p className="text-xs text-neutral-400 mt-1">PNG, JPG (Max 500x500px)</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-neutral-700 mb-3">Cachet de l'entreprise</label>
+                                        <div className="group relative w-full h-48 border-2 border-dashed border-neutral-300 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden">
+                                            <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/png, image/jpeg, image/svg+xml" onChange={handleStampChange} />
+                                            {localSettings.stamp ? (
+                                                <div className="relative w-full h-full p-4 flex items-center justify-center">
+                                                    <img src={localSettings.stamp} alt="Cachet" className="max-w-full max-h-full object-contain" />
+                                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span className="text-white font-medium flex items-center gap-2"><Upload size={18}/> {language === 'es' ? 'Cambiar' : 'Changer'}</span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center p-6">
+                                                    <div className="w-12 h-12 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-3 text-neutral-400 group-hover:bg-emerald-100 group-hover:text-emerald-600 transition-colors">
+                                                        <Upload size={24} />
+                                                    </div>
+                                                    <p className="text-sm font-medium text-neutral-700">Cliquez pour importer</p>
+                                                    <p className="text-xs text-neutral-400 mt-1">PNG, JPG (Transparent)</p>
                                                 </div>
                                             )}
                                         </div>
@@ -589,6 +627,23 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                     <button 
                                         onClick={handleToggleAmountInWords}
                                         className={`w-12 h-7 rounded-full flex items-center transition-colors duration-300 px-1 ${localSettings.showAmountInWords ? 'bg-emerald-500 justify-end' : 'bg-neutral-300 justify-start'}`}
+                                    >
+                                        <div className="w-5 h-5 rounded-full bg-white shadow-md" />
+                                    </button>
+                                </div>
+                                <div className="mt-4 flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-white rounded-lg shadow-sm text-slate-600">
+                                            <PencilLine size={20}/>
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-slate-900">{t('labelSignatureRecipient')}</div>
+                                            <div className="text-xs text-slate-500">{language === 'es' ? 'Muestra la sección de firma para el cliente.' : 'Affiche la section signature pour le client.'}</div>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => setLocalSettings(prev => ({ ...prev, showSignatureRecipient: !prev.showSignatureRecipient }))}
+                                        className={`w-12 h-7 rounded-full flex items-center transition-colors duration-300 px-1 ${localSettings.showSignatureRecipient ? 'bg-emerald-500 justify-end' : 'bg-neutral-300 justify-start'}`}
                                     >
                                         <div className="w-5 h-5 rounded-full bg-white shadow-md" />
                                     </button>

@@ -37,6 +37,10 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const [itemQuantity, setItemQuantity] = useState<string>('1');
     const [tempProductCode, setTempProductCode] = useState('');
 
+    const [isDiscountEnabled, setIsDiscountEnabled] = useState(false);
+    const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+    const [discountValue, setDiscountValue] = useState<string>('0');
+
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => setIsVisible(true), 10);
@@ -46,6 +50,9 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setExpectedDate(orderToEdit.expectedDate || '');
                 setNotes(orderToEdit.notes || '');
                 setLineItems(JSON.parse(JSON.stringify(orderToEdit.lineItems)));
+                setIsDiscountEnabled(!!orderToEdit.discountValue && orderToEdit.discountValue > 0);
+                setDiscountType(orderToEdit.discountType || 'percentage');
+                setDiscountValue(formatDecimalForInput(orderToEdit.discountValue || 0, language));
             } else {
                 setSupplierId('');
                 setDate(new Date().toISOString().split('T')[0]);
@@ -55,6 +62,9 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setNotes('');
                 setLineItems([]);
                 setTempVat(language === 'es' ? 21 : 20);
+                setIsDiscountEnabled(false);
+                setDiscountType('percentage');
+                setDiscountValue('0');
             }
             resetItemForm();
         } else {
@@ -119,10 +129,29 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
 
     const totals = useMemo(() => {
         const subTotal = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
-        const vatAmount = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * (item.vat / 100)), 0);
-        const totalAmount = subTotal + vatAmount;
-        return { subTotal, vatAmount, totalAmount };
-    }, [lineItems]);
+        
+        let discountAmount = 0;
+        const parsedDiscountValue = parseDecimalInput(discountValue, language);
+        if (isDiscountEnabled && parsedDiscountValue > 0) {
+            if (discountType === 'percentage') {
+                discountAmount = subTotal * (parsedDiscountValue / 100);
+            } else { // fixed
+                discountAmount = parsedDiscountValue;
+            }
+        }
+
+        const subTotalAfterDiscount = subTotal - discountAmount;
+
+        const vatAmountAfterDiscount = lineItems.reduce((acc, item) => {
+            const itemTotalHT = item.unitPrice * item.quantity;
+            const itemDiscount = subTotal > 0 ? (itemTotalHT / subTotal) * discountAmount : 0;
+            const itemBaseForVat = itemTotalHT - itemDiscount;
+            return acc + (itemBaseForVat * (item.vat / 100));
+        }, 0);
+
+        const totalAmount = subTotalAfterDiscount + vatAmountAfterDiscount;
+        return { subTotal, vatAmount: vatAmountAfterDiscount, totalAmount, discountAmount };
+    }, [lineItems, isDiscountEnabled, discountType, discountValue, language]);
 
     const handleSave = async () => {
         if (!supplierId || lineItems.length === 0) return;
@@ -131,13 +160,21 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
         const fallbackName = language === 'es' ? 'Proveedor desconocido' : 'Fournisseur inconnu';
         const supplierNameDisplay = supplier ? (supplier.company || supplier.name) : fallbackName;
         
+        const orderData = {
+            supplierId, supplierName: supplierNameDisplay, date, expectedDate, notes, lineItems,
+            status: orderToEdit ? orderToEdit.status : PurchaseOrderStatus.Draft,
+            subTotal: totals.subTotal, vatAmount: totals.vatAmount, totalAmount: totals.totalAmount,
+            discountType: isDiscountEnabled ? discountType : undefined,
+            discountValue: isDiscountEnabled ? parseDecimalInput(discountValue, language) : undefined,
+        };
+
         setIsSubmitting(true);
         try {
-            await onSave({
-                supplierId, supplierName: supplierNameDisplay, date, expectedDate, notes, lineItems,
-                status: orderToEdit ? orderToEdit.status : PurchaseOrderStatus.Draft,
-                subTotal: totals.subTotal, vatAmount: totals.vatAmount, totalAmount: totals.totalAmount,
-            }, orderToEdit?.id);
+            if (orderToEdit?.id) {
+                await onSave(orderData, orderToEdit.id);
+            } else {
+                await onSave(orderData);
+            }
             handleClose();
         } catch (error) { console.error(error); } finally { setIsSubmitting(false); }
     };
@@ -285,6 +322,50 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                     <div className="flex justify-end border-t border-slate-100 pt-6">
                         <div className="w-full max-w-sm space-y-3">
                             <div className="flex justify-between text-sm text-slate-500"><span>{t('totalHT')}</span><span>{totals.subTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}</span></div>
+                            
+                            <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                    <label htmlFor="discount-toggle" className="text-slate-500 font-medium">{t('globalDiscount')}</label>
+                                    <input 
+                                        type="checkbox" 
+                                        id="discount-toggle"
+                                        checked={isDiscountEnabled}
+                                        onChange={(e) => setIsDiscountEnabled(e.target.checked)}
+                                        className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                </div>
+                                {isDiscountEnabled && (
+                                    <span className="font-bold text-red-500">
+                                        - {totals.discountAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}
+                                    </span>
+                                )}
+                            </div>
+
+                            {isDiscountEnabled && (
+                                <div className="pl-4 pb-2">
+                                    <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+                                        <div className="relative flex w-full">
+                                            <input 
+                                                type="text" 
+                                                value={discountValue}
+                                                onChange={e => setDiscountValue(e.target.value)}
+                                                className={`w-full h-9 rounded-md border-transparent bg-transparent text-sm font-bold text-right pr-16 focus:ring-0`}
+                                            />
+                                            <div className="absolute inset-y-0 right-0 flex items-center">
+                                                <select 
+                                                    value={discountType}
+                                                    onChange={e => setDiscountType(e.target.value as 'percentage' | 'fixed')}
+                                                    className="h-full rounded-md border-transparent bg-transparent py-0 pl-2 pr-7 text-slate-500 focus:ring-0 sm:text-sm font-bold"
+                                                >
+                                                    <option value="percentage">%</option>
+                                                    <option value="fixed">MAD</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex justify-between text-sm text-slate-500"><span>{t('vat')}</span><span>{totals.vatAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}</span></div>
                             <div className="h-px bg-slate-200 my-1"></div>
                             <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100"><span className="text-base font-bold text-slate-900">{t('totalTTC')}</span><span className="text-xl font-black text-emerald-700">{totals.totalAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}</span></div>

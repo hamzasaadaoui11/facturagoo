@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, ScanLine, Calculator, FileText, Loader2, AlertCircle } from 'lucide-react';
-import { Client, Product, CreditNote, LineItem, CreditNoteStatus } from '../types';
+import { Client, Product, CreditNote, LineItem, CreditNoteStatus, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
 
 interface CreateCreditNoteModalProps {
     isOpen: boolean;
@@ -11,9 +12,10 @@ interface CreateCreditNoteModalProps {
     clients: Client[];
     products: Product[];
     creditNoteToEdit?: CreditNote | null;
+    companySettings?: CompanySettings | null;
 }
 
-const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, onClose, onSave, clients, products, creditNoteToEdit }) => {
+const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, onClose, onSave, clients, products, creditNoteToEdit, companySettings }) => {
     const { t, isRTL, language } = useLanguage();
     const [isVisible, setIsVisible] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,8 +33,12 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const [tempDesc, setTempDesc] = useState('');
     const [tempPrice, setTempPrice] = useState(0);
     const [tempVat, setTempVat] = useState(20);
-    const [itemQuantity, setItemQuantity] = useState(1);
+    const [itemQuantity, setItemQuantity] = useState<string>('1');
     const [tempProductCode, setTempProductCode] = useState('');
+
+    const [isDiscountEnabled, setIsDiscountEnabled] = useState(false);
+    const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+    const [discountValue, setDiscountValue] = useState<string>('0');
 
     useEffect(() => {
         if (isOpen) {
@@ -43,12 +49,18 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 setDate(creditNoteToEdit.date);
                 setReason(creditNoteToEdit.subject || '');
                 setLineItems(JSON.parse(JSON.stringify(creditNoteToEdit.lineItems)));
+                setIsDiscountEnabled(!!creditNoteToEdit.discountValue && creditNoteToEdit.discountValue > 0);
+                setDiscountType(creditNoteToEdit.discountType || 'percentage');
+                setDiscountValue(formatDecimalForInput(creditNoteToEdit.discountValue || 0, language));
             } else {
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
                 setReason('');
                 setLineItems([]);
                 setTempVat(language === 'es' ? 21 : 20);
+                setIsDiscountEnabled(false);
+                setDiscountType('percentage');
+                setDiscountValue('0');
             }
             resetItemForm();
         } else {
@@ -110,10 +122,29 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
 
     const totals = useMemo(() => {
         const subTotal = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
-        const vatAmount = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * (item.vat / 100)), 0);
-        const totalTTC = subTotal + vatAmount;
-        return { subTotal, vatAmount, totalTTC };
-    }, [lineItems]);
+        
+        let discountAmount = 0;
+        const parsedDiscountValue = parseDecimalInput(discountValue, language);
+        if (isDiscountEnabled && parsedDiscountValue > 0) {
+            if (discountType === 'percentage') {
+                discountAmount = subTotal * (parsedDiscountValue / 100);
+            } else { // fixed
+                discountAmount = parsedDiscountValue;
+            }
+        }
+
+        const subTotalAfterDiscount = subTotal - discountAmount;
+
+        const vatAmountAfterDiscount = lineItems.reduce((acc, item) => {
+            const itemTotalHT = item.unitPrice * item.quantity;
+            const itemDiscount = subTotal > 0 ? (itemTotalHT / subTotal) * discountAmount : 0;
+            const itemBaseForVat = itemTotalHT - itemDiscount;
+            return acc + (itemBaseForVat * (item.vat / 100));
+        }, 0);
+
+        const totalTTC = subTotalAfterDiscount + vatAmountAfterDiscount;
+        return { subTotal, vatAmount: vatAmountAfterDiscount, totalTTC, discountAmount };
+    }, [lineItems, isDiscountEnabled, discountType, discountValue, language]);
 
     const handleSave = async () => {
         if (!clientId || lineItems.length === 0) return;
@@ -122,11 +153,20 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
         const creditNoteData: Omit<CreditNote, 'id'> = {
             clientId, clientName: clientNameDisplay, date, subject: reason, lineItems,
             status: creditNoteToEdit ? creditNoteToEdit.status : CreditNoteStatus.Draft,
-            subTotal: totals.subTotal, vatAmount: totals.vatAmount, amount: totals.totalTTC, invoiceId: creditNoteToEdit?.invoiceId
+            subTotal: totals.subTotal, vatAmount: totals.vatAmount, amount: totals.totalTTC, invoiceId: creditNoteToEdit?.invoiceId,
+            discountType: isDiscountEnabled ? discountType : undefined,
+            discountValue: isDiscountEnabled ? parseDecimalInput(discountValue, language) : undefined,
         };
         setIsSubmitting(true);
         setError(null);
-        try { await onSave(creditNoteData, creditNoteToEdit?.id); handleClose(); } catch (err: any) { setError(err.message || "Error."); } finally { setIsSubmitting(false); }
+        try { 
+            if (creditNoteToEdit?.id) {
+                await onSave(creditNoteData, creditNoteToEdit.id);
+            } else {
+                await onSave(creditNoteData);
+            }
+            handleClose(); 
+        } catch (err: any) { setError(err.message || "Error."); } finally { setIsSubmitting(false); }
     };
 
     if (!isOpen) return null;
@@ -244,6 +284,50 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                     <div className="flex justify-end border-t border-slate-100 pt-6">
                         <div className="w-full max-w-sm space-y-3">
                             <div className="flex justify-between text-sm text-slate-500"><span>{t('totalHT')}</span><span>{totals.subTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}</span></div>
+                            
+                            <div className="flex items-center justify-between text-sm">
+                                <div className="flex items-center gap-2">
+                                    <label htmlFor="discount-toggle" className="text-slate-500 font-medium">{t('globalDiscount')}</label>
+                                    <input 
+                                        type="checkbox" 
+                                        id="discount-toggle"
+                                        checked={isDiscountEnabled}
+                                        onChange={(e) => setIsDiscountEnabled(e.target.checked)}
+                                        className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                    />
+                                </div>
+                                {isDiscountEnabled && (
+                                    <span className="font-bold text-red-500">
+                                        - {totals.discountAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}
+                                    </span>
+                                )}
+                            </div>
+
+                            {isDiscountEnabled && (
+                                <div className="pl-4 pb-2">
+                                    <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+                                        <div className="relative flex w-full">
+                                            <input 
+                                                type="text" 
+                                                value={discountValue}
+                                                onChange={e => setDiscountValue(e.target.value)}
+                                                className={`w-full h-9 rounded-md border-transparent bg-transparent text-sm font-bold text-right pr-16 focus:ring-0`}
+                                            />
+                                            <div className="absolute inset-y-0 right-0 flex items-center">
+                                                <select 
+                                                    value={discountType}
+                                                    onChange={e => setDiscountType(e.target.value as 'percentage' | 'fixed')}
+                                                    className="h-full rounded-md border-transparent bg-transparent py-0 pl-2 pr-7 text-slate-500 focus:ring-0 sm:text-sm font-bold"
+                                                >
+                                                    <option value="percentage">%</option>
+                                                    <option value="fixed">MAD</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex justify-between text-sm text-slate-500"><span>{t('vat')}</span><span>{totals.vatAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}</span></div>
                             <div className="h-px bg-slate-200 my-1"></div>
                             <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100"><span className="text-base font-bold text-slate-900">{t('totalTTC')}</span><span className="text-xl font-black text-emerald-700">{totals.totalTTC.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}</span></div>

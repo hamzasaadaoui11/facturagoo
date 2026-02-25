@@ -94,6 +94,8 @@ export interface Quote {
     lineItems: LineItem[];
     subTotal: number;
     vatAmount: number;
+    discountType?: 'percentage' | 'fixed';
+    discountValue?: number;
 }
 
 export interface PurchaseOrder {
@@ -108,6 +110,8 @@ export interface PurchaseOrder {
     subTotal: number;
     vatAmount: number;
     totalAmount: number;
+    discountType?: 'percentage' | 'fixed';
+    discountValue?: number;
     notes?: string;
 }
 
@@ -128,6 +132,8 @@ export interface Invoice {
     lineItems: LineItem[];
     subTotal: number;
     vatAmount: number;
+    discountType?: 'percentage' | 'fixed';
+    discountValue?: number;
 }
 
 export interface CreditNote {
@@ -144,6 +150,8 @@ export interface CreditNote {
     lineItems: LineItem[];
     subTotal: number;
     vatAmount: number;
+    discountType?: 'percentage' | 'fixed';
+    discountValue?: number;
 }
 
 export interface Payment {
@@ -226,12 +234,14 @@ export interface CompanySettings {
     cnss?: string;     
     capital?: string;  
     logo?: string;
+    stamp?: string;
     primaryColor?: string;
     footerNotes?: string;
     defaultPaymentTerms?: string; 
     documentColumns?: DocumentColumn[]; 
     documentLabels?: DocumentLabels;
     showAmountInWords?: boolean; 
+    showSignatureRecipient?: boolean;
     priceDisplayMode?: 'HT' | 'TTC'; // Nouveau mode d'affichage
     // Fix: added defaultCurrencyCode property to match usage in currencyService.ts
     defaultCurrencyCode?: string;

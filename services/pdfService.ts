@@ -20,6 +20,8 @@ interface DocumentData {
     expiryDate?: string; 
     expectedDate?: string; 
     invoiceId?: string; // For Credit Notes
+    discountType?: 'percentage' | 'fixed';
+    discountValue?: number;
 }
 
 interface PDFOptions {
@@ -149,6 +151,27 @@ const generateDocumentHTML = (
     const showAmountInWords = settings.showAmountInWords !== false;
     const isModeTTC = settings.priceDisplayMode === 'TTC';
 
+    const subTotal = doc.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
+    let discountAmount = 0;
+    if (doc.discountType && doc.discountValue && doc.discountValue > 0) {
+        if (doc.discountType === 'percentage') {
+            discountAmount = subTotal * (doc.discountValue / 100);
+        } else {
+            discountAmount = doc.discountValue;
+        }
+    }
+
+    const subTotalAfterDiscount = subTotal - discountAmount;
+
+    const vatAmount = doc.lineItems.reduce((acc, item) => {
+        const itemTotalHT = item.unitPrice * item.quantity;
+        const itemDiscount = subTotal > 0 ? (itemTotalHT / subTotal) * discountAmount : 0;
+        const itemBaseForVat = itemTotalHT - itemDiscount;
+        return acc + (itemBaseForVat * (item.vat / 100));
+    }, 0);
+
+    const totalAmount = subTotalAfterDiscount + vatAmount;
+
     // Extract custom labels with defaults from translations
     const labels = settings.documentLabels || {};
     
@@ -158,6 +181,11 @@ const generateDocumentHTML = (
     let txtTotalNet = labels.totalNet || dict.pdfTotalNet || 'Net à Payer';
     
     let txtAmountInWords = labels.amountInWordsPrefix || dict.pdfAmountPrefix || 'Arrêté le présent document à la somme de :';
+    if (docType === 'Facture') {
+        txtAmountInWords = txtAmountInWords.replace('le présent document', 'la présente facture');
+    } else {
+        txtAmountInWords = txtAmountInWords.replace('document', docType.toLowerCase());
+    }
     let txtSigSender = labels.signatureSender || dict.pdfSigSender || 'Signature Expéditeur';
     let txtSigRecipient = labels.signatureRecipient || dict.pdfSigRecipient || 'Signature & Cachet Client';
 
@@ -165,9 +193,6 @@ const generateDocumentHTML = (
     const taxIdLabel = lang === 'es' ? 'NIF' : (lang === 'en' ? 'Tax ID' : 'ICE');
 
     const primaryColor = settings.primaryColor || '#10b981';
-    const totalAmount = doc.amount !== undefined ? doc.amount : (doc.totalAmount || 0);
-    const subTotal = doc.subTotal || 0;
-    const vatAmount = doc.vatAmount || 0;
     const dateStr = new Date(doc.date).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
     const amountInLetters = lang === 'es' ? `${totalAmount.toFixed(2)} MAD` : (lang === 'en' ? `${totalAmount.toFixed(2)} MAD` : numberToWordsFr(totalAmount));
     
@@ -413,6 +438,12 @@ const generateDocumentHTML = (
                     <span>${txtTotalHt}</span>
                     <span style="font-weight: 600;">${subTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                 </div>
+                ${discountAmount > 0 ? `
+                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span>${dict.exceptionalDiscount || 'Remise exceptionnelle'} ${doc.discountType === 'percentage' ? `(-${doc.discountValue}%)` : ''}</span>
+                    <span style="font-weight: 600; color: #dc2626;">- ${discountAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                </div>
+                ` : ''}
                 <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #e5e7eb;">
                     <span>${txtTotalTax}</span>
                     <span>${vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
@@ -433,23 +464,19 @@ const generateDocumentHTML = (
     ` : '';
 
     const signaturesHtml = `
-        <div class="totals-section" style="display: flex; justify-content: space-between; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-            <div style="width: 45%;">
-                <div style="font-weight: bold; margin-bottom: 40px;">${txtSigSender}</div>
-            </div>
+        <div class="totals-section" style="display: flex; justify-content: flex-end; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
             <div style="width: 45%; text-align: right;">
-                <div style="font-weight: bold; margin-bottom: 40px;">${txtSigRecipient}</div>
+                <div style="font-weight: bold; margin-bottom: 5px;">${txtSigRecipient}</div>
+                ${settings.showSignatureRecipient && settings.stamp ? `<img src="${settings.stamp}" style="max-height: 80px; max-width: 200px; object-fit: contain; margin-left: auto;" />` : settings.showSignatureRecipient ? '<div style="height: 80px;"></div>' : ''}
             </div>
         </div>
     `;
 
     let totalsHtml = '';
-    if (isDeliveryNote) {
-        if (!showPrices) {
-            totalsHtml = notesOnlyHtml + signaturesHtml;
-        } else {
-            totalsHtml = financialsHtml + signaturesHtml;
-        }
+    if (isDeliveryNote && !showPrices) {
+        totalsHtml = notesOnlyHtml + (settings?.showSignatureRecipient ? signaturesHtml : '');
+    } else if (docType === 'Facture' || docType === 'Devis' || docType === 'Avoir' || isDeliveryNote) {
+        totalsHtml = financialsHtml + (settings?.showSignatureRecipient ? signaturesHtml : '');
     } else {
         totalsHtml = financialsHtml;
     }
