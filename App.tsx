@@ -97,6 +97,11 @@ const MainContent: React.FC = () => {
                 setCompanySettings(settingsData);
             } catch (err: any) {
                 console.error("Failed to load data:", err);
+                if (err.message?.includes('Refresh Token Not Found') || err.message?.includes('invalid_grant') || err.status === 401) {
+                    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+                    window.location.href = '/'; // Force reload to clear state
+                    return;
+                }
                 setError(`Impossible de charger les données. Erreur: ${err.message || err}.`);
             } finally {
                 setIsLoading(false);
@@ -588,10 +593,11 @@ const App: React.FC = () => {
             try {
                 const { data: { session }, error } = await supabase.auth.getSession();
                 if (error) {
-                    console.error("Session initialization error:", error.message);
-                    // If it's a refresh token error, we must clear the session
+                    // If it's a refresh token error, we must clear the session silently
                     if (error.message.includes('Refresh Token Not Found') || error.message.includes('invalid_grant')) {
-                        await supabase.auth.signOut({ scope: 'local' }).catch(console.error);
+                        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+                    } else {
+                        console.error("Session initialization error:", error.message);
                     }
                     setSession(null);
                 } else {
@@ -612,8 +618,8 @@ const App: React.FC = () => {
             if (event === 'SIGNED_OUT') {
                 setSession(null);
             } else if ((event as any) === 'TOKEN_REFRESH_FAILED') {
-                console.error('Token refresh failed, clearing local session...');
-                await supabase.auth.signOut({ scope: 'local' }).catch(console.error);
+                console.warn('Token refresh failed, clearing local session...');
+                await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
                 setSession(null);
             } else {
                 setSession(session);

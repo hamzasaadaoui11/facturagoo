@@ -135,7 +135,9 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
             await onSave({
                 clientId, clientName: clientNameDisplay, date, subject, lineItems, status: 'Livré',
                 subTotal: totals.subTotal, vatAmount: totals.vatAmount, totalAmount: totals.totalTTC,
-                paymentAmount, paymentMethod, invoiceId: noteToEdit?.invoiceId
+                paymentAmount: typeof paymentAmount === 'number' ? paymentAmount : 0, 
+                paymentMethod, 
+                invoiceId: noteToEdit?.invoiceId
             }, noteToEdit?.id);
             handleClose();
         } catch (error) { console.error(error); } finally { setIsSubmitting(false); }

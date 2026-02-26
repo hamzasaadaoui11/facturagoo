@@ -173,7 +173,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             amountPaid: totalPaid,
             discountType: isDiscountEnabled ? discountType : undefined,
             discountValue: isDiscountEnabled ? parseDecimalInput(discountValue, language) : undefined,
-            initialPayment: newPaymentAmount > 0 ? { amount: newPaymentAmount, method: paymentMethod, date: new Date().toISOString().split('T')[0] } : undefined
+            initialPayment: (typeof newPaymentAmount === 'number' && newPaymentAmount > 0) ? { amount: newPaymentAmount, method: paymentMethod, date: new Date().toISOString().split('T')[0] } : undefined
         };
         setIsSubmitting(true);
         try { 
