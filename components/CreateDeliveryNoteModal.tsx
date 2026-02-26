@@ -36,7 +36,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     const [itemQuantity, setItemQuantity] = useState<string>('1');
     const [tempProductCode, setTempProductCode] = useState('');
     
-    const [paymentAmount, setPaymentAmount] = useState<number>(0);
+    const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
     const [paymentMethod, setPaymentMethod] = useState('Espèces');
 
     useEffect(() => {
@@ -47,14 +47,14 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setDate(noteToEdit.date);
                 setSubject(noteToEdit.subject || '');
                 setLineItems(JSON.parse(JSON.stringify(noteToEdit.lineItems)));
-                setPaymentAmount(noteToEdit.paymentAmount || 0);
+                setPaymentAmount(noteToEdit.paymentAmount && noteToEdit.paymentAmount > 0 ? noteToEdit.paymentAmount : '');
                 setPaymentMethod(noteToEdit.paymentMethod || 'Espèces');
             } else {
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
                 setSubject('');
                 setLineItems([]);
-                setPaymentAmount(0);
+                setPaymentAmount('');
                 setTempVat(language === 'es' ? 21 : 20);
                 setPaymentMethod(language === 'es' ? 'Efectivo' : 'Espèces');
             }
