@@ -316,7 +316,6 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                             </>
                                         )}
                                         <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</th>
-                                        <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('vat')}</th>
                                         <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('totalTTCLabel') : t('totalHTLabel')}</th>
                                         <th className="px-4 py-3 w-10"></th>
                                     </tr>
@@ -370,9 +369,6 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                                     }}
                                                     className="w-24 p-1 text-right border-none focus:ring-0 text-xs font-medium bg-transparent"
                                                 />
-                                            </td>
-                                            <td className="px-4 py-3 text-center text-xs text-slate-600">
-                                                {item.vat}%
                                             </td>
                                             <td className="px-4 py-3 text-right text-xs font-bold text-slate-900">
                                                 {displayLineTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })}

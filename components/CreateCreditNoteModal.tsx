@@ -302,8 +302,6 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                                 <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('height')}</th>
                                             </>
                                         )}
-                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{t('puHTLabel')}</th>
-                                        <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('vat')}</th>
                                         <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{t('totalHTLabel')}</th>
                                         <th className="px-4 py-3 w-10"></th>
                                     </tr>
@@ -322,8 +320,6 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                                     <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">{item.height}</td>
                                                 </>
                                             )}
-                                            <td className="px-4 py-3 text-right text-xs text-slate-600 font-bold">{item.unitPrice.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })}</td>
-                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">{item.vat}%</td>
                                             <td className="px-4 py-3 text-right text-xs font-bold text-slate-900">{(item.quantity * item.unitPrice).toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })}</td>
                                             <td className="px-4 py-3 text-center"><button onClick={() => handleRemoveItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1"><Trash2 size={16}/></button></td>
                                         </tr>
