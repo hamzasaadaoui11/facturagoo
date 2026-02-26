@@ -76,6 +76,8 @@ export interface LineItem {
   name: string;
   description: string;
   quantity: number;
+  length?: number; // NOUVEAU
+  height?: number; // NOUVEAU
   unitPrice: number;
   vat: number;
 }
@@ -96,6 +98,7 @@ export interface Quote {
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
+    useDimensions?: boolean; // NOUVEAU
 }
 
 export interface PurchaseOrder {
@@ -113,6 +116,7 @@ export interface PurchaseOrder {
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
     notes?: string;
+    useDimensions?: boolean; // NOUVEAU
 }
 
 export interface Invoice {
@@ -134,6 +138,7 @@ export interface Invoice {
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
+    useDimensions?: boolean; // NOUVEAU
 }
 
 export interface CreditNote {
@@ -152,6 +157,7 @@ export interface CreditNote {
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
+    useDimensions?: boolean; // NOUVEAU
 }
 
 export interface Payment {
@@ -193,6 +199,7 @@ export interface DeliveryNote {
     totalAmount?: number;
     paymentAmount?: number;
     paymentMethod?: string;
+    useDimensions?: boolean; // NOUVEAU
 }
 
 export interface DocumentColumn {

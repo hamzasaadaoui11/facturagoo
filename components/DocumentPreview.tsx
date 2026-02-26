@@ -144,7 +144,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                         <>
                                             <td className="p-3 text-right align-top text-[12px]">{item.unitPrice.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
                                             <td className="p-3 text-center align-top text-[11px] text-neutral-500">{item.vat}%</td>
-                                            <td className="p-3 text-right align-top font-medium text-neutral-900 text-[12px]">{(item.quantity * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
+                                            <td className="p-3 text-right align-top font-medium text-neutral-900 text-[12px]">{(item.quantity * item.unitPrice * (document.useDimensions ? (item.length || 1) : 1) * (document.useDimensions ? (item.height || 1) : 1)).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                 </tr>

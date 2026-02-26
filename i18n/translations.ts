@@ -147,6 +147,9 @@ export const translations = {
 
     // PDF & Form Field Labels
     globalDiscount: 'Remise exceptionnelle',
+    length: 'Long.',
+    height: 'Haut.',
+    activateDimensions: 'Activer les dimensions',
     refLabel: 'Réf.',
     productAutoLabel: 'Produit (Auto)',
     designationLabel: 'Désignation',

@@ -22,6 +22,7 @@ interface DocumentData {
     invoiceId?: string; // For Credit Notes
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
+    useDimensions?: boolean; // NOUVEAU
 }
 
 interface PDFOptions {
@@ -151,7 +152,16 @@ const generateDocumentHTML = (
     const showAmountInWords = settings.showAmountInWords !== false;
     const isModeTTC = settings.priceDisplayMode === 'TTC';
 
-    const subTotal = doc.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
+    const lineItemsWithTotals = doc.lineItems.map(item => {
+        const qte = Number(item.quantity) || 0;
+        const pu = Number(item.unitPrice) || 0;
+        const L = doc.useDimensions ? (Number(item.length) || 1) : 1;
+        const H = doc.useDimensions ? (Number(item.height) || 1) : 1;
+        const totalHT = qte * pu * L * H;
+        return { ...item, totalHT };
+    });
+
+    const subTotal = lineItemsWithTotals.reduce((acc, item) => acc + item.totalHT, 0);
     let discountAmount = 0;
     if (doc.discountType && doc.discountValue && doc.discountValue > 0) {
         if (doc.discountType === 'percentage') {
@@ -163,11 +173,10 @@ const generateDocumentHTML = (
 
     const subTotalAfterDiscount = subTotal - discountAmount;
 
-    const vatAmount = doc.lineItems.reduce((acc, item) => {
-        const itemTotalHT = item.unitPrice * item.quantity;
-        const itemDiscount = subTotal > 0 ? (itemTotalHT / subTotal) * discountAmount : 0;
-        const itemBaseForVat = itemTotalHT - itemDiscount;
-        return acc + (itemBaseForVat * (item.vat / 100));
+    const vatAmount = lineItemsWithTotals.reduce((acc, item) => {
+        const itemDiscount = subTotal > 0 ? (item.totalHT / subTotal) * discountAmount : 0;
+        const itemNetHT = item.totalHT - itemDiscount;
+        return acc + (itemNetHT * (Number(item.vat) / 100));
     }, 0);
 
     const totalAmount = subTotalAfterDiscount + vatAmount;
@@ -223,6 +232,17 @@ const generateDocumentHTML = (
 
     if (isDeliveryNote && !showPrices) {
         activeColumns = activeColumns.filter(c => c.id === 'name' || c.id === 'quantity' || c.id === 'reference');
+    }
+
+    if (doc.useDimensions) {
+        const quantityColumn = activeColumns.find(c => c.id === 'quantity');
+        const quantityOrder = quantityColumn ? quantityColumn.order : 2;
+
+        const lengthCol = { id: 'length', label: dict.length || 'Long.', visible: true, order: quantityOrder + 0.1 };
+        const heightCol = { id: 'height', label: dict.height || 'Haut.', visible: true, order: quantityOrder + 0.2 };
+        
+        activeColumns.push(lengthCol, heightCol);
+        activeColumns.sort((a, b) => a.order - b.order);
     }
 
     // --- Override labels for Language context ---
@@ -282,7 +302,9 @@ const generateDocumentHTML = (
         let align = 'left';
         let width = '';
         if (col.id === 'reference') { align = 'left'; width = 'width: 12%;'; }
-        else if (col.id === 'quantity') { align = 'center'; width = 'width: 11%;'; }
+        else if (col.id === 'quantity') { align = 'center'; width = 'width: 8%;'; }
+        else if (col.id === 'length') { align = 'center'; width = 'width: 8%;'; }
+        else if (col.id === 'height') { align = 'center'; width = 'width: 8%;'; }
         else if (col.id === 'vat') { align = 'center'; width = 'width: 11%;'; }
         else if (col.id === 'unitPrice') { align = 'right'; width = 'width: 18%;'; }
         else if (col.id === 'total') { align = 'right'; width = 'width: 18%;'; }
@@ -290,14 +312,14 @@ const generateDocumentHTML = (
         return `<th style="padding: 10px 12px; text-align: ${align}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${width}">${col.label}</th>`;
     }).join('');
 
-    const rowsHtml = doc.lineItems.map((item, index) => {
+    const rowsHtml = lineItemsWithTotals.map((item, index) => {
         const cellsHtml = activeColumns.map(col => {
             let content = '';
             let align = 'left';
             let style = '';
 
             const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
-            const totalTTC = (item.quantity * item.unitPrice) * (1 + item.vat / 100);
+            const totalTTC = item.totalHT * (1 + (Number(item.vat) / 100));
 
             switch (col.id) {
                 case 'reference':
@@ -317,6 +339,16 @@ const generateDocumentHTML = (
                     align = 'center';
                     style = 'font-weight: 700; font-size: 12.3px;';
                     break;
+                case 'length':
+                    content = (item.length || 1).toString();
+                    align = 'center';
+                    style = 'font-weight: 700; font-size: 12.3px;';
+                    break;
+                case 'height':
+                    content = (item.height || 1).toString();
+                    align = 'center';
+                    style = 'font-weight: 700; font-size: 12.3px;';
+                    break;
                 case 'unitPrice':
                     content = (isModeTTC ? unitPriceTTC : item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
                     align = 'right';
@@ -328,7 +360,7 @@ const generateDocumentHTML = (
                     style = 'font-size: 12.3px;';
                     break;
                 case 'total':
-                    content = (isModeTTC ? totalTTC : (item.quantity * item.unitPrice)).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
+                    content = (isModeTTC ? totalTTC : item.totalHT).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
                     align = 'right';
                     style = 'font-weight: 700; font-size: 12.3px;';
                     break;
