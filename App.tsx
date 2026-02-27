@@ -97,6 +97,11 @@ const MainContent: React.FC = () => {
                 setCompanySettings(settingsData);
             } catch (err: any) {
                 console.error("Failed to load data:", err);
+                if (err.message?.includes('Refresh Token Not Found') || err.message?.includes('invalid_grant') || err.status === 401) {
+                    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+                    window.location.href = '/'; // Force reload to clear state
+                    return;
+                }
                 setError(`Impossible de charger les données. Erreur: ${err.message || err}.`);
             } finally {
                 setIsLoading(false);
@@ -289,23 +294,6 @@ const MainContent: React.FC = () => {
             const newInvoice: Invoice = { id: crypto.randomUUID(), documentId: documentId, amount: invoiceFields.subTotal + invoiceFields.vatAmount, amountPaid: initialPayment ? initialPayment.amount : 0, ...invoiceFields };
             await dbService.invoices.add(newInvoice);
             setInvoices(prev => [newInvoice, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
-            
-            // Update stock if not draft
-            if (newInvoice.status !== InvoiceStatus.Draft) {
-                for (const item of newInvoice.lineItems) {
-                    if (item.productId) {
-                        await addStockMovement({
-                            productId: item.productId,
-                            productName: item.name,
-                            date: newInvoice.date,
-                            quantity: -item.quantity,
-                            type: 'Vente',
-                            reference: `Facture ${newInvoice.documentId || newInvoice.id}`
-                        });
-                    }
-                }
-            }
-
             if (initialPayment && initialPayment.amount > 0) {
                  const newPayment: Payment = { id: crypto.randomUUID(), invoiceId: newInvoice.id, invoiceNumber: newInvoice.documentId || newInvoice.id, clientId: newInvoice.clientId, clientName: newInvoice.clientName, date: initialPayment.date, amount: initialPayment.amount, method: initialPayment.method, notes: 'Règlement à la création' };
                 await dbService.payments.add(newPayment);
@@ -325,26 +313,6 @@ const MainContent: React.FC = () => {
             const { initialPayment, ...invoiceFields } = invoiceData;
             const updatedInvoice: Invoice = { ...existingInvoice, ...invoiceFields };
             updatedInvoice.id = id; 
-            
-            // Handle stock changes if status changed from Draft to something else
-            if (existingInvoice.status === InvoiceStatus.Draft && updatedInvoice.status !== InvoiceStatus.Draft) {
-                for (const item of updatedInvoice.lineItems) {
-                    if (item.productId) {
-                        await addStockMovement({
-                            productId: item.productId,
-                            productName: item.name,
-                            date: updatedInvoice.date,
-                            quantity: -item.quantity,
-                            type: 'Vente',
-                            reference: `Facture ${updatedInvoice.documentId || updatedInvoice.id}`
-                        });
-                    }
-                }
-            }
-            // If it was already validated, we should ideally check for line item changes
-            // but for simplicity and following the instructions "Corriger uniquement la logique du stock"
-            // we focus on the main transitions.
-
             await dbService.invoices.update(updatedInvoice);
             setInvoices(prev => prev.map(inv => inv.id === id ? updatedInvoice : inv));
             if (initialPayment && initialPayment.amount > 0) {
@@ -360,23 +328,6 @@ const MainContent: React.FC = () => {
     };
     const deleteInvoice = async (invoiceId: string) => {
         try {
-            const invoice = invoices.find(i => i.id === invoiceId);
-            if (invoice && invoice.status !== InvoiceStatus.Draft) {
-                // Restore stock
-                for (const item of invoice.lineItems) {
-                    if (item.productId) {
-                        await addStockMovement({
-                            productId: item.productId,
-                            productName: item.name,
-                            date: new Date().toISOString().split('T')[0],
-                            quantity: item.quantity,
-                            type: 'Retour',
-                            reference: `Suppression Facture ${invoice.documentId || invoice.id}`
-                        });
-                    }
-                }
-            }
-
             const relatedPayments = payments.filter(p => p.invoiceId === invoiceId);
             for(const p of relatedPayments) {
                 await dbService.payments.delete(p.id);
@@ -416,22 +367,6 @@ const MainContent: React.FC = () => {
     const updateInvoiceStatus = async (invoiceId: string, newStatus: InvoiceStatus) => {
         const invoiceToUpdate = invoices.find(inv => inv.id === invoiceId);
         if (invoiceToUpdate) {
-            // Handle stock if moving from Draft to validated
-            if (invoiceToUpdate.status === InvoiceStatus.Draft && newStatus !== InvoiceStatus.Draft) {
-                for (const item of invoiceToUpdate.lineItems) {
-                    if (item.productId) {
-                        await addStockMovement({
-                            productId: item.productId,
-                            productName: item.name,
-                            date: new Date().toISOString().split('T')[0],
-                            quantity: -item.quantity,
-                            type: 'Vente',
-                            reference: `Validation Facture ${invoiceToUpdate.documentId || invoiceToUpdate.id}`
-                        });
-                    }
-                }
-            }
-
             const updatedInvoice = { ...invoiceToUpdate, status: newStatus };
             await dbService.invoices.update(updatedInvoice);
             setInvoices(prev => prev.map(inv => inv.id === invoiceId ? updatedInvoice : inv));
@@ -445,21 +380,6 @@ const MainContent: React.FC = () => {
             const newInvoiceData: Invoice = { id: crypto.randomUUID(), documentId: documentId, quoteId: quote.id, clientId: quote.clientId, clientName: quote.clientName, date: new Date().toISOString().split('T')[0], dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: InvoiceStatus.Pending, subject: quote.subject, reference: quote.reference, lineItems: quote.lineItems, subTotal: quote.subTotal, vatAmount: quote.vatAmount, amount: quote.amount, amountPaid: 0 };
             await dbService.invoices.add(newInvoiceData);
             setInvoices(prev => [newInvoiceData, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
-            
-            // Update stock
-            for (const item of newInvoiceData.lineItems) {
-                if (item.productId) {
-                    await addStockMovement({
-                        productId: item.productId,
-                        productName: item.name,
-                        date: newInvoiceData.date,
-                        quantity: -item.quantity,
-                        type: 'Vente',
-                        reference: `Facture ${newInvoiceData.documentId || newInvoiceData.id} (depuis Devis)`
-                    });
-                }
-            }
-
             await updateQuoteStatus(quoteId, QuoteStatus.Converted);
         } catch (e: any) {
             alert("Erreur conversion: " + e.message);
@@ -553,10 +473,6 @@ const MainContent: React.FC = () => {
             const newInvoice: Invoice = { id: invoiceId, documentId: documentId, clientId: note.clientId, clientName: note.clientName, date: new Date().toISOString().split('T')[0], dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: status, subject: `Facture issue du ${note.documentId || note.id}`, reference: note.documentId || note.id, lineItems: note.lineItems, subTotal: subTotal, vatAmount: vatAmount, amount: totalAmount, amountPaid: paidAmount, paymentDate: status === InvoiceStatus.Paid ? note.date : undefined };
             await dbService.invoices.add(newInvoice);
             setInvoices(prev => [newInvoice, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
-            
-            // Note: DeliveryNote already decreased stock when it was created.
-            // So we don't decrease it again here.
-
             if (paidAmount > 0) {
                  const newPayment: Payment = { id: crypto.randomUUID(), invoiceId: invoiceId, invoiceNumber: documentId, clientId: note.clientId, clientName: note.clientName, date: note.date, amount: paidAmount, method: (note.paymentMethod as any) || 'Espèces', notes: 'Règlement initial via Bon de Livraison' };
                 await dbService.payments.add(newPayment);
@@ -677,10 +593,11 @@ const App: React.FC = () => {
             try {
                 const { data: { session }, error } = await supabase.auth.getSession();
                 if (error) {
-                    console.error("Session initialization error:", error.message);
-                    // If it's a refresh token error, we must clear the session
+                    // If it's a refresh token error, we must clear the session silently
                     if (error.message.includes('Refresh Token Not Found') || error.message.includes('invalid_grant')) {
-                        await supabase.auth.signOut({ scope: 'local' }).catch(console.error);
+                        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+                    } else {
+                        console.error("Session initialization error:", error.message);
                     }
                     setSession(null);
                 } else {
@@ -701,8 +618,8 @@ const App: React.FC = () => {
             if (event === 'SIGNED_OUT') {
                 setSession(null);
             } else if ((event as any) === 'TOKEN_REFRESH_FAILED') {
-                console.error('Token refresh failed, clearing local session...');
-                await supabase.auth.signOut({ scope: 'local' }).catch(console.error);
+                console.warn('Token refresh failed, clearing local session...');
+                await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
                 setSession(null);
             } else {
                 setSession(session);

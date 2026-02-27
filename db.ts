@@ -29,23 +29,6 @@ const getCurrentUserId = async () => {
     return session?.user?.id;
 };
 
-const getById = async <T>(storeName: string, id: string): Promise<T | null> => {
-    const tableName = TABLE_MAP[storeName];
-    if (!tableName) throw new Error(`Table ${storeName} not mapped`);
-
-    const { data, error } = await supabase
-        .from(tableName)
-        .select('*')
-        .eq('id', id)
-        .single();
-
-    if (error) {
-        console.error(`Error fetching ${storeName} by id:`, error);
-        return null;
-    }
-    return data as T;
-};
-
 const getAll = async <T>(storeName: string): Promise<T[]> => {
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
@@ -152,7 +135,6 @@ export const dbService = {
     },
     products: {
         getAll: () => getAll<Product>('products'),
-        getById: (id: string) => getById<Product>('products', id),
         add: (item: Product) => add<Product>('products', item),
         update: (item: Product) => update<Product>('products', item),
         delete: (id: string) => remove('products', id),

@@ -76,8 +76,6 @@ export interface LineItem {
   name: string;
   description: string;
   quantity: number;
-  length?: number;
-  height?: number;
   unitPrice: number;
   vat: number;
 }
@@ -94,7 +92,6 @@ export interface Quote {
     subject?: string;
     reference?: string;
     lineItems: LineItem[];
-    useDimensions?: boolean;
     subTotal: number;
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
@@ -110,7 +107,6 @@ export interface PurchaseOrder {
     expectedDate?: string;
     status: PurchaseOrderStatus;
     lineItems: LineItem[];
-    useDimensions?: boolean;
     subTotal: number;
     vatAmount: number;
     totalAmount: number;
@@ -134,7 +130,6 @@ export interface Invoice {
     subject?: string;
     reference?: string;
     lineItems: LineItem[];
-    useDimensions?: boolean;
     subTotal: number;
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
@@ -153,7 +148,6 @@ export interface CreditNote {
     subject?: string; // Reason
     reference?: string;
     lineItems: LineItem[];
-    useDimensions?: boolean;
     subTotal: number;
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
@@ -192,7 +186,6 @@ export interface DeliveryNote {
     date: string;
     subject?: string; // Champ ajouté
     lineItems: LineItem[];
-    useDimensions?: boolean;
     status: string; // Changed from fixed union to string to support computed statuses like 'Payé'
     // Financials for standalone BL
     subTotal?: number;
@@ -203,7 +196,7 @@ export interface DeliveryNote {
 }
 
 export interface DocumentColumn {
-    id: 'reference' | 'name' | 'quantity' | 'unitPrice' | 'vat' | 'total' | 'length' | 'height';
+    id: 'reference' | 'name' | 'quantity' | 'unitPrice' | 'vat' | 'total';
     label: string;
     visible: boolean;
     order: number;

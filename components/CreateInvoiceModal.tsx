@@ -26,7 +26,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [subject, setSubject] = useState('');
-    const [useDimensions, setUseDimensions] = useState(false);
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
     const [existingAmountPaid, setExistingAmountPaid] = useState<number>(0); 
@@ -39,8 +38,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     const [tempPrice, setTempPrice] = useState<string>('0'); 
     const [tempVat, setTempVat] = useState(20);
     const [itemQuantity, setItemQuantity] = useState<string>('1');
-    const [tempLength, setTempLength] = useState<string>('1');
-    const [tempHeight, setTempHeight] = useState<string>('1');
     const [tempProductCode, setTempProductCode] = useState('');
 
     const [isDiscountEnabled, setIsDiscountEnabled] = useState(false);
@@ -54,7 +51,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setClientId(invoiceToEdit.clientId);
                 setDate(invoiceToEdit.date);
                 setSubject(invoiceToEdit.subject || '');
-                setUseDimensions(!!invoiceToEdit.useDimensions);
                 setLineItems(JSON.parse(JSON.stringify(invoiceToEdit.lineItems)));
                 setExistingAmountPaid(invoiceToEdit.amountPaid || 0);
                 setNewPaymentAmount(0);
@@ -65,7 +61,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
                 setSubject('');
-                setUseDimensions(false);
                 setLineItems([]);
                 setExistingAmountPaid(0);
                 setNewPaymentAmount(0);
@@ -87,8 +82,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
         setTempPrice('0');
         setTempVat(language === 'es' ? 21 : 20);
         setItemQuantity('1');
-        setTempLength('1');
-        setTempHeight('1');
         setTempProductCode('');
     };
 
@@ -103,36 +96,18 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             if (product) {
                 setTempName(product.name);
                 setTempDesc(product.description || '');
-                const priceToDisplay = isModeTTC ? (product.salePrice * (1 + product.vat / 100)) : product.salePrice;
-                setTempPrice(formatDecimalForInput(priceToDisplay, language));
+                setTempPrice(formatDecimalForInput(product.salePrice, language));
                 setTempVat(product.vat);
                 setTempProductCode(product.productCode);
             }
         }
-    }, [selectedProductId, products, language, isModeTTC]);
+    }, [selectedProductId, products, language]);
 
     const handleAddItem = () => {
         if (!tempName) return;
         const qty = parseDecimalInput(itemQuantity);
-        const length = useDimensions ? parseDecimalInput(tempLength) || 1 : 1;
-        const height = useDimensions ? parseDecimalInput(tempHeight) || 1 : 1;
         const price = parseDecimalInput(tempPrice);
         
-        // Stock validation
-        if (selectedProductId) {
-            const product = products.find(p => p.id === selectedProductId);
-            if (product && product.productType === 'Produit') {
-                const existingQty = lineItems
-                    .filter(item => item.productId === selectedProductId)
-                    .reduce((acc, item) => acc + item.quantity, 0);
-                
-                if (existingQty + qty > product.stockQuantity) {
-                    alert(`${t('stockInsufficient')} (${product.stockQuantity} ${t('available')})`);
-                    return;
-                }
-            }
-        }
-
         const newItem: LineItem = {
             id: `temp-${Date.now()}`,
             productId: selectedProductId || null,
@@ -140,9 +115,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             name: tempName,
             description: tempDesc,
             quantity: qty,
-            length: useDimensions ? length : undefined,
-            height: useDimensions ? height : undefined,
-            unitPrice: isModeTTC ? (price / (1 + tempVat / 100)) : price,
+            unitPrice: price,
             vat: tempVat
         };
         setLineItems(prev => [...prev, newItem]);
@@ -154,35 +127,14 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     };
 
     const updateLineItem = (id: string, updatedField: Partial<LineItem>) => {
-        if (updatedField.quantity !== undefined) {
-            const item = lineItems.find(i => i.id === id);
-            if (item && item.productId) {
-                const product = products.find(p => p.id === item.productId);
-                if (product && product.productType === 'Produit') {
-                    const otherItemsQty = lineItems
-                        .filter(i => i.id !== id && i.productId === item.productId)
-                        .reduce((acc, i) => acc + i.quantity, 0);
-                    
-                    if (otherItemsQty + updatedField.quantity > product.stockQuantity) {
-                        alert(`${t('stockInsufficient')} (${product.stockQuantity} ${t('available')})`);
-                        return;
-                    }
-                }
-            }
-        }
         setLineItems(prev => prev.map(item => item.id === id ? { ...item, ...updatedField } : item));
     };
 
     const totals = useMemo(() => {
-        const subTotal = lineItems.reduce((acc, item) => {
-            const itemQty = item.quantity;
-            const itemLength = item.length || 1;
-            const itemHeight = item.height || 1;
-            return acc + (item.unitPrice * itemQty * itemLength * itemHeight);
-        }, 0);
+        const subTotal = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
         
         let discountAmount = 0;
-        const parsedDiscountValue = parseDecimalInput(discountValue);
+        const parsedDiscountValue = parseDecimalInput(discountValue, language);
         if (isDiscountEnabled && parsedDiscountValue > 0) {
             if (discountType === 'percentage') {
                 discountAmount = subTotal * (parsedDiscountValue / 100);
@@ -194,10 +146,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
         const subTotalAfterDiscount = subTotal - discountAmount;
 
         const vatAmountAfterDiscount = lineItems.reduce((acc, item) => {
-            const itemQty = item.quantity;
-            const itemLength = item.length || 1;
-            const itemHeight = item.height || 1;
-            const itemTotalHT = item.unitPrice * itemQty * itemLength * itemHeight;
+            const itemTotalHT = item.unitPrice * item.quantity;
             const itemDiscount = subTotal > 0 ? (itemTotalHT / subTotal) * discountAmount : 0;
             const itemBaseForVat = itemTotalHT - itemDiscount;
             return acc + (itemBaseForVat * (item.vat / 100));
@@ -218,14 +167,13 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
 
         const invoiceData = {
             clientId, clientName: clientNameDisplay, date, dueDate: date, subject, lineItems, status,
-            useDimensions,
             subTotal: totals.subTotal, 
             vatAmount: totals.vatAmount, 
             amount: totals.totalTTC, 
             amountPaid: totalPaid,
             discountType: isDiscountEnabled ? discountType : undefined,
-            discountValue: isDiscountEnabled ? parseDecimalInput(discountValue) : undefined,
-            initialPayment: newPaymentAmount > 0 ? { amount: newPaymentAmount, method: paymentMethod, date: new Date().toISOString().split('T')[0] } : undefined
+            discountValue: isDiscountEnabled ? parseDecimalInput(discountValue, language) : undefined,
+            initialPayment: (typeof newPaymentAmount === 'number' && newPaymentAmount > 0) ? { amount: newPaymentAmount, method: paymentMethod, date: new Date().toISOString().split('T')[0] } : undefined
         };
         setIsSubmitting(true);
         try { 
@@ -271,18 +219,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
                             <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
-                        <div className="md:col-span-2 flex items-center gap-2 px-1">
-                            <input 
-                                type="checkbox" 
-                                id="use-dimensions" 
-                                checked={useDimensions} 
-                                onChange={(e) => setUseDimensions(e.target.checked)}
-                                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                            />
-                            <label htmlFor="use-dimensions" className="text-sm font-bold text-slate-700 cursor-pointer">
-                                {t('enableDimensions')}
-                            </label>
-                        </div>
                     </div>
 
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 shadow-inner space-y-4">
@@ -320,18 +256,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('quantity')}</label>
                                 <input type="text" value={itemQuantity} onChange={(e) => setItemQuantity(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                             </div>
-                            {useDimensions && (
-                                <>
-                                    <div className="col-span-12 lg:col-span-3">
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('lengthShort')}</label>
-                                        <input type="text" value={tempLength} onChange={(e) => setTempLength(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
-                                    </div>
-                                    <div className="col-span-12 lg:col-span-3">
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('heightShort')}</label>
-                                        <input type="text" value={tempHeight} onChange={(e) => setTempHeight(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
-                                    </div>
-                                </>
-                            )}
                             <div className="col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('vat')}</label>
                                 <select value={tempVat} onChange={(e) => setTempVat(parseInt(e.target.value))} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11">
@@ -353,12 +277,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                     <tr>
                                         <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('description')}</th>
                                         <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
-                                        {useDimensions && (
-                                            <>
-                                                <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('lengthShort')}</th>
-                                                <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('heightShort')}</th>
-                                            </>
-                                        )}
                                         <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</th>
                                         <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('totalTTCLabel') : t('totalHTLabel')}</th>
                                         <th className="px-4 py-3 w-10"></th>
@@ -367,10 +285,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                 <tbody className="bg-white divide-y divide-slate-100">
                                     {lineItems.map(item => {
                                         const displayPrice = isModeTTC ? (item.unitPrice * (1 + item.vat/100)) : item.unitPrice;
-                                        const itemQty = item.quantity;
-                                        const itemLength = item.length || 1;
-                                        const itemHeight = item.height || 1;
-                                        const displayLineTotal = itemQty * itemLength * itemHeight * displayPrice;
+                                        const displayLineTotal = item.quantity * displayPrice;
                                         
                                         return (
                                         <tr key={item.id} className="hover:bg-slate-50 transition-colors">
@@ -386,26 +301,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                                     className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
                                                 />
                                             </td>
-                                            {useDimensions && (
-                                                <>
-                                                    <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                        <input 
-                                                            type="text" 
-                                                            value={formatDecimalForInput(item.length || 1, language)} 
-                                                            onChange={(e) => updateLineItem(item.id, { length: parseDecimalInput(e.target.value) || 1 })}
-                                                            className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                        />
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                        <input 
-                                                            type="text" 
-                                                            value={formatDecimalForInput(item.height || 1, language)} 
-                                                            onChange={(e) => updateLineItem(item.id, { height: parseDecimalInput(e.target.value) || 1 })}
-                                                            className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                        />
-                                                    </td>
-                                                </>
-                                            )}
                                             <td className="px-4 py-3 text-right text-xs">
                                                 <input 
                                                     type="text" 
@@ -445,7 +340,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                 <div className="space-y-1">
                                     <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">{t('paymentAmount')}</label>
                                     <div className="relative">
-                                        <input type="number" step="any" value={newPaymentAmount} onChange={(e) => setNewPaymentAmount(parseFloat(e.target.value) || 0)} className={`block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm font-bold h-11 ${isRTL ? 'pl-12 pr-3' : 'pl-3 pr-12'}`} placeholder="0.00"/>
+                                        <input type="number" step="any" value={formatDecimalForInput(newPaymentAmount, language)} onChange={(e) => setNewPaymentAmount(e.target.value === '' ? '' : parseFloat(e.target.value) || 0)} className={`block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm font-bold h-11 ${isRTL ? 'pl-12 pr-3' : 'pl-3 pr-12'}`} placeholder="0.00"/>
                                         <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'left-0 pl-3' : 'right-0 pr-3'}`}><span className="text-slate-400 font-bold text-xs">MAD</span></div>
                                     </div>
                                 </div>
