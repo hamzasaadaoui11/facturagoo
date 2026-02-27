@@ -76,8 +76,8 @@ export interface LineItem {
   name: string;
   description: string;
   quantity: number;
-  length?: number; // NOUVEAU
-  height?: number; // NOUVEAU
+  length?: number;
+  height?: number;
   unitPrice: number;
   vat: number;
 }
@@ -94,11 +94,11 @@ export interface Quote {
     subject?: string;
     reference?: string;
     lineItems: LineItem[];
+    useDimensions?: boolean;
     subTotal: number;
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
-    useDimensions?: boolean; // NOUVEAU
 }
 
 export interface PurchaseOrder {
@@ -110,13 +110,13 @@ export interface PurchaseOrder {
     expectedDate?: string;
     status: PurchaseOrderStatus;
     lineItems: LineItem[];
+    useDimensions?: boolean;
     subTotal: number;
     vatAmount: number;
     totalAmount: number;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
     notes?: string;
-    useDimensions?: boolean; // NOUVEAU
 }
 
 export interface Invoice {
@@ -134,11 +134,11 @@ export interface Invoice {
     subject?: string;
     reference?: string;
     lineItems: LineItem[];
+    useDimensions?: boolean;
     subTotal: number;
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
-    useDimensions?: boolean; // NOUVEAU
 }
 
 export interface CreditNote {
@@ -153,11 +153,11 @@ export interface CreditNote {
     subject?: string; // Reason
     reference?: string;
     lineItems: LineItem[];
+    useDimensions?: boolean;
     subTotal: number;
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
-    useDimensions?: boolean; // NOUVEAU
 }
 
 export interface Payment {
@@ -192,6 +192,7 @@ export interface DeliveryNote {
     date: string;
     subject?: string; // Champ ajouté
     lineItems: LineItem[];
+    useDimensions?: boolean;
     status: string; // Changed from fixed union to string to support computed statuses like 'Payé'
     // Financials for standalone BL
     subTotal?: number;
@@ -199,11 +200,10 @@ export interface DeliveryNote {
     totalAmount?: number;
     paymentAmount?: number;
     paymentMethod?: string;
-    useDimensions?: boolean; // NOUVEAU
 }
 
 export interface DocumentColumn {
-    id: 'reference' | 'name' | 'quantity' | 'unitPrice' | 'vat' | 'total';
+    id: 'reference' | 'name' | 'quantity' | 'unitPrice' | 'vat' | 'total' | 'length' | 'height';
     label: string;
     visible: boolean;
     order: number;

@@ -147,9 +147,6 @@ export const translations = {
 
     // PDF & Form Field Labels
     globalDiscount: 'Remise exceptionnelle',
-    length: 'Long.',
-    height: 'Haut.',
-    activateDimensions: 'Activer les dimensions',
     refLabel: 'Réf.',
     productAutoLabel: 'Produit (Auto)',
     designationLabel: 'Désignation',
@@ -293,6 +290,13 @@ export const translations = {
     confirmDelete: 'Confirmation de suppression',
     confirmDeleteMessage: 'Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.',
     paymentRecorded: 'Paiement enregistré',
+    stockInsufficient: 'Stock insuffisant',
+    available: 'disponible',
+    enableDimensions: 'Activer les dimensions',
+    length: 'Longueur',
+    height: 'Hauteur',
+    lengthShort: 'Long.',
+    heightShort: 'Haut.',
     
     // Chart
     periodDay: 'Jour',
@@ -589,6 +593,13 @@ export const translations = {
     confirmDelete: 'Confirmar eliminación',
     confirmDeleteMessage: '¿Estás seguro de que deseas eliminar este elemento? Esta acción es irreversible.',
     paymentRecorded: 'Pago registrado',
+    stockInsufficient: 'Stock insuficiente',
+    available: 'disponible',
+    enableDimensions: 'Activar dimensiones',
+    length: 'Longitud',
+    height: 'Altura',
+    lengthShort: 'Long.',
+    heightShort: 'Alt.',
 
     // Chart
     periodDay: 'Día',
@@ -797,6 +808,11 @@ export const translations = {
     firstOrderPrompt: 'Create your first purchase order to start.',
     markSent: 'Mark as Sent',
     markReceived: 'Mark as Received',
+    enableDimensions: 'Enable dimensions',
+    length: 'Length',
+    height: 'Height',
+    lengthShort: 'Len.',
+    heightShort: 'Hei.',
     searchOrderPlaceholder: 'Search by number or supplier...',
 
     // Credit Notes Specific
@@ -885,6 +901,8 @@ export const translations = {
     confirmDelete: 'Delete Confirmation',
     confirmDeleteMessage: 'Are you sure you want to delete this item? This action cannot be undone.',
     paymentRecorded: 'Payment Recorded',
+    stockInsufficient: 'Insufficient stock',
+    available: 'available',
 
     // Chart
     periodDay: 'Day',
@@ -1172,6 +1190,13 @@ export const translations = {
     confirmDelete: 'تأكيد الحذف',
     confirmDeleteMessage: 'هل أنت متأكد من رغبتك في حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.',
     paymentRecorded: 'تم تسجيل الدفع',
+    stockInsufficient: 'المخزون غير كافٍ',
+    available: 'متوفر',
+    enableDimensions: 'تفعيل الأبعاد',
+    length: 'الطول',
+    height: 'الارتفاع',
+    lengthShort: 'طول',
+    heightShort: 'ارتفاع',
 
     // Chart
     periodDay: 'يوم',
