@@ -39,7 +39,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
 
     const [isDiscountEnabled, setIsDiscountEnabled] = useState(false);
     const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
-    const [discountValue, setDiscountValue] = useState<string>('');
+    const [discountValue, setDiscountValue] = useState<string>('0');
 
     useEffect(() => {
         if (isOpen) {
@@ -52,7 +52,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setLineItems(JSON.parse(JSON.stringify(orderToEdit.lineItems)));
                 setIsDiscountEnabled(!!orderToEdit.discountValue && orderToEdit.discountValue > 0);
                 setDiscountType(orderToEdit.discountType || 'percentage');
-                setDiscountValue(orderToEdit.discountValue && orderToEdit.discountValue > 0 ? formatDecimalForInput(orderToEdit.discountValue, language) : '');
+                setDiscountValue(formatDecimalForInput(orderToEdit.discountValue || 0, language));
             } else {
                 setSupplierId('');
                 setDate(new Date().toISOString().split('T')[0]);
@@ -64,7 +64,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setTempVat(language === 'es' ? 21 : 20);
                 setIsDiscountEnabled(false);
                 setDiscountType('percentage');
-                setDiscountValue('');
+                setDiscountValue('0');
             }
             resetItemForm();
         } else {

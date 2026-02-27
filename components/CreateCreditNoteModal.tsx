@@ -38,7 +38,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
 
     const [isDiscountEnabled, setIsDiscountEnabled] = useState(false);
     const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
-    const [discountValue, setDiscountValue] = useState<string>('');
+    const [discountValue, setDiscountValue] = useState<string>('0');
 
     useEffect(() => {
         if (isOpen) {
@@ -51,7 +51,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 setLineItems(JSON.parse(JSON.stringify(creditNoteToEdit.lineItems)));
                 setIsDiscountEnabled(!!creditNoteToEdit.discountValue && creditNoteToEdit.discountValue > 0);
                 setDiscountType(creditNoteToEdit.discountType || 'percentage');
-                setDiscountValue(creditNoteToEdit.discountValue && creditNoteToEdit.discountValue > 0 ? formatDecimalForInput(creditNoteToEdit.discountValue, language) : '');
+                setDiscountValue(formatDecimalForInput(creditNoteToEdit.discountValue || 0, language));
             } else {
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
@@ -60,7 +60,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 setTempVat(language === 'es' ? 21 : 20);
                 setIsDiscountEnabled(false);
                 setDiscountType('percentage');
-                setDiscountValue('');
+                setDiscountValue('0');
             }
             resetItemForm();
         } else {

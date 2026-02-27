@@ -29,7 +29,7 @@ const DEFAULT_LABELS: DocumentLabels = {
     totalNet: 'Net à Payer',
     amountInWordsPrefix: 'Arrêté le présent document à la somme de :',
     signatureSender: 'Signature Expéditeur',
-    signatureRecipient: 'Signature & Cachet'
+    signatureRecipient: 'Signature & Cachet Client'
 };
 
 const createDefaultConfig = (prefix: string): NumberingConfig => ({
@@ -66,11 +66,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
         if (!mergedSettings.purchaseOrderNumbering) mergedSettings.purchaseOrderNumbering = createDefaultConfig('BC');
         if (!mergedSettings.creditNoteNumbering) mergedSettings.creditNoteNumbering = createDefaultConfig('AVO');
         
-        if (!mergedSettings.documentLabels) {
-            mergedSettings.documentLabels = DEFAULT_LABELS;
-        } else if (mergedSettings.documentLabels.signatureRecipient === 'Signature & Cachet Client') {
-            mergedSettings.documentLabels.signatureRecipient = 'Signature & Cachet';
-        }
+        if (!mergedSettings.documentLabels) mergedSettings.documentLabels = DEFAULT_LABELS;
         if (mergedSettings.showSignatureRecipient === undefined) mergedSettings.showSignatureRecipient = false;
         if (!mergedSettings.priceDisplayMode) mergedSettings.priceDisplayMode = 'HT';
 

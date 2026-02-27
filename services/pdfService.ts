@@ -187,7 +187,7 @@ const generateDocumentHTML = (
         txtAmountInWords = txtAmountInWords.replace('document', docType.toLowerCase());
     }
     let txtSigSender = labels.signatureSender || dict.pdfSigSender || 'Signature Expéditeur';
-    let txtSigRecipient = labels.signatureRecipient || dict.pdfSigRecipient || 'Signature & Cachet';
+    let txtSigRecipient = labels.signatureRecipient || dict.pdfSigRecipient || 'Signature & Cachet Client';
 
     // Strict ICE -> NIF mapping for Spanish
     const taxIdLabel = lang === 'es' ? 'NIF' : (lang === 'en' ? 'Tax ID' : 'ICE');

@@ -38,7 +38,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
 
     const [isDiscountEnabled, setIsDiscountEnabled] = useState(false);
     const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
-    const [discountValue, setDiscountValue] = useState<string>('');
+    const [discountValue, setDiscountValue] = useState<string>('0');
 
     useEffect(() => {
         if (isOpen) {
@@ -51,7 +51,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setLineItems(JSON.parse(JSON.stringify(quoteToEdit.lineItems)));
                 setIsDiscountEnabled(!!quoteToEdit.discountValue && quoteToEdit.discountValue > 0);
                 setDiscountType(quoteToEdit.discountType || 'percentage');
-                setDiscountValue(quoteToEdit.discountValue && quoteToEdit.discountValue > 0 ? formatDecimalForInput(quoteToEdit.discountValue, language) : '');
+                setDiscountValue(formatDecimalForInput(quoteToEdit.discountValue || 0, language));
             } else {
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
@@ -61,7 +61,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setTempVat(language === 'es' ? 21 : 20);
                 setIsDiscountEnabled(false);
                 setDiscountType('percentage');
-                setDiscountValue('');
+                setDiscountValue('0');
             }
             resetItemForm();
         } else {

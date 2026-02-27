@@ -29,7 +29,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
     const [existingAmountPaid, setExistingAmountPaid] = useState<number>(0); 
-    const [newPaymentAmount, setNewPaymentAmount] = useState<number | ''>(''); 
+    const [newPaymentAmount, setNewPaymentAmount] = useState<number>(0); 
     const [paymentMethod, setPaymentMethod] = useState('Virement');
     
     const [selectedProductId, setSelectedProductId] = useState('');
@@ -42,7 +42,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
 
     const [isDiscountEnabled, setIsDiscountEnabled] = useState(false);
     const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
-    const [discountValue, setDiscountValue] = useState<string>('');
+    const [discountValue, setDiscountValue] = useState<string>('0');
 
     useEffect(() => {
         if (isOpen) {
@@ -56,7 +56,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setNewPaymentAmount(0);
                 setIsDiscountEnabled(!!invoiceToEdit.discountValue && invoiceToEdit.discountValue > 0);
                 setDiscountType(invoiceToEdit.discountType || 'percentage');
-                setDiscountValue(invoiceToEdit.discountValue && invoiceToEdit.discountValue > 0 ? formatDecimalForInput(invoiceToEdit.discountValue, language) : '');
+                setDiscountValue(formatDecimalForInput(invoiceToEdit.discountValue || 0, language));
             } else {
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
@@ -67,7 +67,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setTempVat(language === 'es' ? 21 : 20);
                 setIsDiscountEnabled(false);
                 setDiscountType('percentage');
-                setDiscountValue('');
+                setDiscountValue('0');
             }
             resetItemForm();
         } else {
