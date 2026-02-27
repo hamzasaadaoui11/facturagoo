@@ -173,7 +173,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             amountPaid: totalPaid,
             discountType: isDiscountEnabled ? discountType : undefined,
             discountValue: isDiscountEnabled ? parseDecimalInput(discountValue, language) : undefined,
-            initialPayment: (typeof newPaymentAmount === 'number' && newPaymentAmount > 0) ? { amount: newPaymentAmount, method: paymentMethod, date: new Date().toISOString().split('T')[0] } : undefined
+            initialPayment: newPaymentAmount > 0 ? { amount: newPaymentAmount, method: paymentMethod, date: new Date().toISOString().split('T')[0] } : undefined
         };
         setIsSubmitting(true);
         try { 
@@ -340,7 +340,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                 <div className="space-y-1">
                                     <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">{t('paymentAmount')}</label>
                                     <div className="relative">
-                                        <input type="number" step="any" value={formatDecimalForInput(newPaymentAmount, language)} onChange={(e) => setNewPaymentAmount(e.target.value === '' ? '' : parseFloat(e.target.value) || 0)} className={`block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm font-bold h-11 ${isRTL ? 'pl-12 pr-3' : 'pl-3 pr-12'}`} placeholder="0.00"/>
+                                        <input type="number" step="any" value={newPaymentAmount} onChange={(e) => setNewPaymentAmount(parseFloat(e.target.value) || 0)} className={`block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm font-bold h-11 ${isRTL ? 'pl-12 pr-3' : 'pl-3 pr-12'}`} placeholder="0.00"/>
                                         <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'left-0 pl-3' : 'right-0 pr-3'}`}><span className="text-slate-400 font-bold text-xs">MAD</span></div>
                                     </div>
                                 </div>

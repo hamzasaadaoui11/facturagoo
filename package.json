@@ -10,13 +10,13 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@google/genai": "^1.38.0",
-    "@supabase/supabase-js": "^2.98.0",
-    "lucide-react": "^0.563.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.0",
-    "recharts": "^3.7.0"
+    "lucide-react": "^0.563.0",
+    "recharts": "^3.7.0",
+    "@google/genai": "^1.38.0",
+    "@supabase/supabase-js": "2.39.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

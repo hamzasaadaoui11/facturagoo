@@ -74,7 +74,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
         setTempDesc('');
         setTempPrice(0);
         setTempVat(language === 'es' ? 21 : 20);
-        setItemQuantity('1'); // Keep as string for input control
+        setItemQuantity(1);
         setTempProductCode('');
     };
 
@@ -104,7 +104,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
             productCode: selectedProductId ? tempProductCode : undefined,
             name: tempName,
             description: tempDesc,
-            quantity: parseDecimalInput(itemQuantity, language),
+            quantity: itemQuantity,
             unitPrice: tempPrice,
             vat: tempVat
         };
@@ -233,7 +233,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                             </div>
                             <div className="col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('quantity')}</label>
-                                <input type="text" value={itemQuantity} onChange={(e) => setItemQuantity(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                <input type="number" min="1" value={itemQuantity} onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                             </div>
                             <div className="col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('vat')}</label>
