@@ -78,7 +78,7 @@ export const formatCurrency = (
 /**
  * Normalizes input string by replacing comma with dot and parsing to float.
  */
-export const parseDecimalInput = (value: string): number => {
+export const parseDecimalInput = (value: string, _language?: string): number => {
     if (!value) return 0;
     const normalized = value.replace(',', '.');
     const parsed = parseFloat(normalized);

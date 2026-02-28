@@ -15,19 +15,24 @@ interface DashboardProps {
 }
 
 const StatCard: React.FC<{
-    item: { name: string; stat: string | number; icon: React.ElementType; color: string; desc: string };
+    item: { name: string; stat: string | number; icon: React.ElementType; color: string; iconColor: string; desc: string };
 }> = ({ item }) => (
-    <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm ring-1 ring-slate-100 transition-all hover:shadow-md group">
-        <div className="flex justify-between items-start">
-            <div className={`p-3 rounded-xl ${item.color} bg-opacity-10 group-hover:bg-opacity-20 transition-all`}>
-                <item.icon className={`h-6 w-6 ${item.color.replace('bg-', 'text-')}`} />
+    <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-slate-200/60 transition-all hover:shadow-lg hover:ring-emerald-500/20 group relative overflow-hidden">
+        <div className="flex justify-between items-start relative z-10">
+            <div className={`p-3 rounded-xl ${item.color} bg-opacity-15 group-hover:scale-110 transition-transform duration-300`}>
+                <item.icon className={`h-6 w-6 ${item.iconColor}`} strokeWidth={2.5} />
             </div>
         </div>
-        <div className="mt-4">
-            <p className="text-sm font-medium text-slate-500">{item.name}</p>
-            <p className="text-2xl md:text-3xl font-bold text-slate-900 mt-1 truncate">{item.stat}</p>
-            <p className="text-sm text-slate-400 mt-1">{item.desc}</p>
+        <div className="mt-5 relative z-10">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{item.name}</p>
+            <p className="text-2xl md:text-3xl font-black text-slate-900 mt-1 truncate tracking-tight">{item.stat}</p>
+            <p className="text-sm font-medium text-slate-500 mt-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                {item.desc}
+            </p>
         </div>
+        {/* Subtle background decoration */}
+        <div className={`absolute -right-4 -bottom-4 w-24 h-24 rounded-full ${item.color} opacity-[0.03] group-hover:opacity-[0.06] transition-opacity`}></div>
     </div>
 );
 
@@ -95,28 +100,32 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
             name: t('totalRevenue'), 
             stat: totalRevenue.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }), 
             icon: DollarSign, 
-            color: 'bg-emerald-500 text-emerald-600',
+            color: 'bg-emerald-500',
+            iconColor: 'text-emerald-600',
             desc: t('totalRevenueDesc')
         },
         { 
             name: t('unpaidInvoices'), 
             stat: unpaidInvoicesCount, 
             icon: AlertCircle, 
-            color: 'bg-amber-500 text-amber-600',
+            color: 'bg-amber-500',
+            iconColor: 'text-amber-600',
             desc: `${t('remainingAmount')} : ${unpaidAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 })}`
         },
         { 
             name: t('activeClients'), 
             stat: clients.length, 
             icon: Users, 
-            color: 'bg-blue-500 text-blue-600',
+            color: 'bg-blue-500',
+            iconColor: 'text-blue-600',
             desc: t('clientsDatabase')
         },
         { 
             name: t('catalog'), 
             stat: products.length, 
             icon: Package, 
-            color: 'bg-purple-500 text-purple-600',
+            color: 'bg-purple-500',
+            iconColor: 'text-purple-600',
             desc: t('catalogDesc')
         },
     ];
@@ -257,24 +266,24 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
     return (
         <div className="space-y-6 md:space-y-8 animate-fadeIn pb-8">
             {/* Header Section */}
-            <div className="bg-gradient-to-r from-emerald-900 to-emerald-700 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-emerald-400 opacity-10 rounded-full blur-2xl"></div>
+            <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-emerald-500 opacity-10 rounded-full blur-[100px]"></div>
+                <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-blue-500 opacity-10 rounded-full blur-[80px]"></div>
                 
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold">{t('welcome')}, {welcomeName} !</h1>
-                        <p className="text-emerald-100 mt-2 text-base md:text-lg">{t('welcomeSubtitle')}</p>
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="text-center md:text-left">
+                        <h1 className="text-3xl md:text-4xl font-black tracking-tight">{t('welcome')}, <span className="text-emerald-400">{welcomeName}</span> !</h1>
+                        <p className="text-slate-400 mt-2 text-lg font-medium">{t('welcomeSubtitle')}</p>
                     </div>
                     
                     {/* Widget Date */}
-                    <div className="w-full md:w-auto bg-white/10 backdrop-blur-md rounded-2xl p-2 pr-5 border border-white/10 shadow-lg flex items-center gap-4">
-                        <div className="bg-white/20 p-3 rounded-xl text-white shadow-inner">
-                            <CalendarDays className="h-6 w-6" />
+                    <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-4 border border-white/10 shadow-2xl flex items-center gap-4 min-w-[240px]">
+                        <div className="bg-emerald-500/20 p-3 rounded-xl text-emerald-400 shadow-inner">
+                            <CalendarDays className="h-6 w-6" strokeWidth={2.5} />
                         </div>
-                        <div className="text-white">
-                            <p className="text-xs text-emerald-200 font-bold uppercase tracking-wider mb-0.5">{t('today')}</p>
-                            <p className="text-base md:text-lg font-bold capitalize leading-none">{todayDate}</p>
+                        <div>
+                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-0.5">{t('today')}</p>
+                            <p className="text-lg font-bold capitalize leading-none text-white">{todayDate}</p>
                         </div>
                     </div>
                 </div>

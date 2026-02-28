@@ -39,6 +39,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
     };
 
     const iceLabel = language === 'es' ? 'NIF' : (language === 'en' ? 'Tax ID' : 'ICE');
+    const enableDimensions = (document as any).enableDimensions || document.lineItems.some(item => (item as any).enableDimensions);
 
     const legalIds = [
         settings.ice ? `${iceLabel}: ${settings.ice}` : '',
@@ -123,6 +124,12 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                             <tr style={{ backgroundColor: primaryColor, color: 'white' }}>
                                 <th className="p-3 font-semibold uppercase text-xs rounded-tl-lg rounded-bl-lg">{t('description')}</th>
                                 <th className="p-3 text-center font-semibold uppercase text-xs w-16">{t('quantity')}</th>
+                                {enableDimensions && (
+                                    <>
+                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">{t('lengthShort')}</th>
+                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">{t('heightShort')}</th>
+                                    </>
+                                )}
                                 {!isDeliveryNote && (
                                     <>
                                         <th className="p-3 text-right font-semibold uppercase text-xs w-28">{t('unitPrice')}</th>
@@ -140,11 +147,17 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                         {item.description && <p className="text-[10px] text-neutral-500 mt-0.5">{item.description}</p>}
                                     </td>
                                     <td className="p-3 text-center align-top font-bold text-[12px]">{item.quantity}</td>
+                                    {enableDimensions && (
+                                        <>
+                                            <td className="p-3 text-center align-top text-[12px]">{item.length || 1}</td>
+                                            <td className="p-3 text-center align-top text-[12px]">{item.height || 1}</td>
+                                        </>
+                                    )}
                                     {!isDeliveryNote && (
                                         <>
                                             <td className="p-3 text-right align-top text-[12px]">{item.unitPrice.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
                                             <td className="p-3 text-center align-top text-[11px] text-neutral-500">{item.vat}%</td>
-                                            <td className="p-3 text-right align-top font-medium text-neutral-900 text-[12px]">{(item.quantity * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
+                                            <td className="p-3 text-right align-top font-medium text-neutral-900 text-[12px]">{(item.quantity * (item.length || 1) * (item.height || 1) * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                 </tr>
