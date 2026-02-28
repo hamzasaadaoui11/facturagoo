@@ -28,21 +28,21 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [reason, setReason] = useState('');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
+    const [useDimensions, setUseDimensions] = useState(false);
     
     const [selectedProductId, setSelectedProductId] = useState('');
     const [tempName, setTempName] = useState('');
     const [tempDesc, setTempDesc] = useState('');
     const [tempPrice, setTempPrice] = useState(0);
     const [tempVat, setTempVat] = useState(20);
+    const [tempLength, setTempLength] = useState<string>('1');
+    const [tempHeight, setTempHeight] = useState<string>('1');
     const [itemQuantity, setItemQuantity] = useState<string>('1');
     const [tempProductCode, setTempProductCode] = useState('');
 
     const [isDiscountEnabled, setIsDiscountEnabled] = useState(false);
     const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
     const [discountValue, setDiscountValue] = useState<string>('');
-    const [useDimensions, setUseDimensions] = useState(false);
-    const [tempLength, setTempLength] = useState<string>('1');
-    const [tempHeight, setTempHeight] = useState<string>('1');
 
     useEffect(() => {
         if (isOpen) {
@@ -53,20 +53,20 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 setDate(creditNoteToEdit.date);
                 setReason(creditNoteToEdit.subject || '');
                 setLineItems(JSON.parse(JSON.stringify(creditNoteToEdit.lineItems)));
+                setUseDimensions(!!creditNoteToEdit.useDimensions);
                 setIsDiscountEnabled(!!creditNoteToEdit.discountValue && creditNoteToEdit.discountValue > 0);
                 setDiscountType(creditNoteToEdit.discountType || 'percentage');
                 setDiscountValue(creditNoteToEdit.discountValue && creditNoteToEdit.discountValue > 0 ? formatDecimalForInput(creditNoteToEdit.discountValue, language) : '');
-                setUseDimensions(creditNoteToEdit.useDimensions || false);
             } else {
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
                 setReason('');
                 setLineItems([]);
+                setUseDimensions(false);
                 setTempVat(language === 'es' ? 21 : 20);
                 setIsDiscountEnabled(false);
                 setDiscountType('percentage');
                 setDiscountValue('');
-                setUseDimensions(false);
             }
             resetItemForm();
         } else {
@@ -80,10 +80,10 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
         setTempDesc('');
         setTempPrice(0);
         setTempVat(language === 'es' ? 21 : 20);
-        setItemQuantity('1');
-        setTempProductCode('');
         setTempLength('1');
         setTempHeight('1');
+        setItemQuantity('1');
+        setTempProductCode('');
     };
 
     const handleClose = () => {
@@ -97,8 +97,8 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
             if (product) {
                 setTempName(product.name);
                 setTempDesc(product.description || '');
-                const priceToInject = isModeTTC ? product.salePrice * (1 + product.vat / 100) : product.salePrice;
-                setTempPrice(priceToInject);
+                const injectedPrice = isModeTTC ? (product.salePrice * (1 + product.vat / 100)) : product.salePrice;
+                setTempPrice(injectedPrice);
                 setTempVat(product.vat);
                 setTempProductCode(product.productCode);
             }
@@ -108,8 +108,9 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const handleAddItem = () => {
         if (!tempName) return;
         const qty = parseDecimalInput(itemQuantity);
-        const length = parseDecimalInput(tempLength);
-        const height = parseDecimalInput(tempHeight);
+        const length = useDimensions ? parseDecimalInput(tempLength) : 1;
+        const height = useDimensions ? parseDecimalInput(tempHeight) : 1;
+        const unitPriceHT = isModeTTC ? (tempPrice / (1 + tempVat / 100)) : tempPrice;
 
         const newItem: LineItem = {
             id: `temp-${Date.now()}`,
@@ -118,10 +119,10 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
             name: tempName,
             description: tempDesc,
             quantity: qty,
-            unitPrice: tempPrice,
-            vat: tempVat,
             length: useDimensions ? (length || 1) : undefined,
-            height: useDimensions ? (height || 1) : undefined
+            height: useDimensions ? (height || 1) : undefined,
+            unitPrice: unitPriceHT,
+            vat: tempVat
         };
         setLineItems(prev => [...prev, newItem]);
         resetItemForm();
@@ -136,7 +137,12 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     };
 
     const totals = useMemo(() => {
-        const subTotal = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * (useDimensions ? (item.length || 1) * (item.height || 1) : 1)), 0);
+        const subTotal = lineItems.reduce((acc, item) => {
+            const itemQty = item.quantity || 0;
+            const itemLength = useDimensions ? (item.length || 1) : 1;
+            const itemHeight = useDimensions ? (item.height || 1) : 1;
+            return acc + (item.unitPrice * itemQty * itemLength * itemHeight);
+        }, 0);
         
         let discountAmount = 0;
         const parsedDiscountValue = parseDecimalInput(discountValue);
@@ -151,7 +157,10 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
         const subTotalAfterDiscount = subTotal - discountAmount;
 
         const vatAmountAfterDiscount = lineItems.reduce((acc, item) => {
-            const itemTotalHT = item.unitPrice * item.quantity * (useDimensions ? (item.length || 1) * (item.height || 1) : 1);
+            const itemQty = item.quantity || 0;
+            const itemLength = useDimensions ? (item.length || 1) : 1;
+            const itemHeight = useDimensions ? (item.height || 1) : 1;
+            const itemTotalHT = item.unitPrice * itemQty * itemLength * itemHeight;
             const itemDiscount = subTotal > 0 ? (itemTotalHT / subTotal) * discountAmount : 0;
             const itemBaseForVat = itemTotalHT - itemDiscount;
             return acc + (itemBaseForVat * (item.vat / 100));
@@ -159,7 +168,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
 
         const totalTTC = subTotalAfterDiscount + vatAmountAfterDiscount;
         return { subTotal, vatAmount: vatAmountAfterDiscount, totalTTC, discountAmount };
-    }, [lineItems, isDiscountEnabled, discountType, discountValue, language, useDimensions]);
+    }, [lineItems, isDiscountEnabled, discountType, discountValue, language]);
 
     const handleSave = async () => {
         if (!clientId || lineItems.length === 0) return;
@@ -222,13 +231,13 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                         <div className="sm:col-span-3 flex items-center gap-2 px-1">
                             <input 
                                 type="checkbox" 
-                                id="use-dimensions"
-                                checked={useDimensions}
+                                id="use-dimensions" 
+                                checked={useDimensions} 
                                 onChange={(e) => setUseDimensions(e.target.checked)}
                                 className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                             />
                             <label htmlFor="use-dimensions" className="text-sm font-bold text-slate-700 cursor-pointer">
-                                Activer les dimensions
+                                {t('enableDimensions')}
                             </label>
                         </div>
                     </div>
@@ -244,38 +253,38 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('refLabel')}</label>
                                 <input type="text" value={tempProductCode} onChange={(e) => setTempProductCode(e.target.value)} placeholder={t('reference')} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                             </div>
-                            <div className={`col-span-12 ${useDimensions ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
+                            <div className="col-span-12 lg:col-span-4">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('productAutoLabel')}</label>
                                 <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 bg-white">
                                     <option value="">-- {t('select')} --</option>
                                     {products.map(product => (<option key={product.id} value={product.id}>{product.name}</option>))}
                                 </select>
                             </div>
-                            <div className={`col-span-24 ${useDimensions ? 'lg:col-span-5' : 'lg:col-span-6'}`}>
+                            <div className="col-span-24 lg:col-span-6">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('designationLabel')} *</label>
                                 <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} placeholder={t('description')} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-[11px] h-11 font-medium"/>
+                            </div>
+                            <div className="col-span-12 lg:col-span-3">
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</label>
+                                <input type="number" value={tempPrice} onChange={(e) => setTempPrice(parseFloat(e.target.value) || 0)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                            </div>
+                            <div className="col-span-12 lg:col-span-3">
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('quantity')}</label>
+                                <input type="text" value={itemQuantity} onChange={(e) => setItemQuantity(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                             </div>
                             {useDimensions && (
                                 <>
                                     <div className="col-span-12 lg:col-span-2">
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Long.</label>
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('lengthLabel')}</label>
                                         <input type="text" value={tempLength} onChange={(e) => setTempLength(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                                     </div>
                                     <div className="col-span-12 lg:col-span-2">
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Haut.</label>
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('heightLabel')}</label>
                                         <input type="text" value={tempHeight} onChange={(e) => setTempHeight(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                                     </div>
                                 </>
                             )}
                             <div className="col-span-12 lg:col-span-3">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('puHTLabel')}</label>
-                                <input type="number" value={tempPrice} onChange={(e) => setTempPrice(parseFloat(e.target.value) || 0)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
-                            </div>
-                            <div className={`col-span-12 ${useDimensions ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('quantity')}</label>
-                                <input type="text" value={itemQuantity} onChange={(e) => setItemQuantity(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
-                            </div>
-                            <div className={`col-span-12 ${useDimensions ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('vat')}</label>
                                 <select value={tempVat} onChange={(e) => setTempVat(parseInt(e.target.value))} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11">
                                     {vatOptions.map(v => <option key={v} value={v}>{v}%</option>)}
@@ -298,18 +307,22 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                         <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
                                         {useDimensions && (
                                             <>
-                                                <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Long.</th>
-                                                <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Haut.</th>
+                                                <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('lengthLabel')}</th>
+                                                <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('heightLabel')}</th>
                                             </>
                                         )}
-                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{t('totalHTLabel')}</th>
+                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</th>
+                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('totalTTCLabel') : t('totalHTLabel')}</th>
                                         <th className="px-4 py-3 w-10"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-slate-100">
                                     {lineItems.map(item => {
-                                        const displayLineTotal = item.quantity * item.unitPrice * (useDimensions ? (item.length || 1) * (item.height || 1) : 1);
-                                        
+                                        const displayPrice = isModeTTC ? (item.unitPrice * (1 + item.vat/100)) : item.unitPrice;
+                                        const itemLength = useDimensions ? (item.length || 1) : 1;
+                                        const itemHeight = useDimensions ? (item.height || 1) : 1;
+                                        const displayLineTotal = item.quantity * itemLength * itemHeight * displayPrice;
+
                                         return (
                                         <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-4 py-3">
@@ -331,7 +344,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                                             type="text" 
                                                             value={formatDecimalForInput(item.length || 1, language)} 
                                                             onChange={(e) => updateLineItem(item.id, { length: parseDecimalInput(e.target.value) })}
-                                                            className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                            className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
                                                         />
                                                     </td>
                                                     <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
@@ -339,13 +352,24 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                                             type="text" 
                                                             value={formatDecimalForInput(item.height || 1, language)} 
                                                             onChange={(e) => updateLineItem(item.id, { height: parseDecimalInput(e.target.value) })}
-                                                            className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                            className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
                                                         />
                                                     </td>
                                                 </>
                                             )}
+                                            <td className="px-4 py-3 text-right text-xs">
+                                                <input 
+                                                    type="number" 
+                                                    value={displayPrice} 
+                                                    onChange={(e) => {
+                                                        const val = parseFloat(e.target.value) || 0;
+                                                        updateLineItem(item.id, { unitPrice: isModeTTC ? (val / (1 + item.vat/100)) : val });
+                                                    }}
+                                                    className="w-24 p-1 text-right border-none focus:ring-0 text-xs font-medium bg-transparent"
+                                                />
+                                            </td>
                                             <td className="px-4 py-3 text-right text-xs font-bold text-slate-900">
-                                                {displayLineTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })}
+                                                {new Intl.NumberFormat(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 }).format(displayLineTotal)}
                                             </td>
                                             <td className="px-4 py-3 text-center"><button onClick={() => handleRemoveItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1"><Trash2 size={16}/></button></td>
                                         </tr>

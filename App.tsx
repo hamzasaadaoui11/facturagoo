@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Menu, X, Files } from 'lucide-react';
-import { Client, Product, Supplier, Quote, QuoteStatus, Invoice, InvoiceStatus, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, PurchaseOrderStatus, CreditNote, CreditNoteStatus } from './types';
+import { Client, Product, Supplier, Quote, QuoteStatus, Invoice, InvoiceStatus, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, PurchaseOrderStatus, CreditNote, CreditNoteStatus, LineItem } from './types';
 import { dbService, initDB } from './db';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
@@ -198,11 +198,15 @@ const MainContent: React.FC = () => {
     };
 
     const updateProductStock = async (productId: string, quantityChange: number) => {
-        const product = products.find(p => p.id === productId);
-        if(product) {
-            const updatedProduct = { ...product, stockQuantity: (product.stockQuantity || 0) + quantityChange };
-            await dbService.products.update(updatedProduct);
-            setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
+        try {
+            const product = await dbService.products.getById(productId);
+            if (product) {
+                const updatedProduct = { ...product, stockQuantity: (product.stockQuantity || 0) + quantityChange };
+                await dbService.products.update(updatedProduct);
+                setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
+            }
+        } catch (error) {
+            console.error("Error updating stock:", error);
         }
     };
     const addStockMovement = async (movement: Omit<StockMovement, 'id'>) => {
@@ -249,6 +253,38 @@ const MainContent: React.FC = () => {
         setSuppliers(prev => prev.filter(s => s.id !== supplierId));
     };
 
+    const checkStockAvailability = (lineItems: LineItem[]) => {
+        for (const item of lineItems) {
+            if (item.productId) {
+                const product = products.find(p => p.id === item.productId);
+                if (product && product.productType === 'Produit') {
+                    if ((product.stockQuantity || 0) < item.quantity) {
+                        throw new Error(`Stock insuffisant pour le produit "${product.name}". Disponible: ${product.stockQuantity}, Demandé: ${item.quantity}`);
+                    }
+                }
+            }
+        }
+    };
+
+    const adjustStockForInvoice = async (invoice: Invoice, direction: 1 | -1) => {
+        for (const item of invoice.lineItems) {
+            if (item.productId) {
+                const product = products.find(p => p.id === item.productId);
+                if (product && product.productType === 'Produit') {
+                    const quantity = item.quantity * direction;
+                    await addStockMovement({
+                        productId: item.productId,
+                        productName: item.name,
+                        date: new Date().toISOString().split('T')[0],
+                        quantity: quantity,
+                        type: direction === -1 ? 'Vente' : 'Retour',
+                        reference: `Facture ${invoice.documentId || invoice.id}`
+                    });
+                }
+            }
+        }
+    };
+
     const addQuote = async (quoteData: Omit<Quote, 'id' | 'amount'>) => {
         try {
             const documentId = generateDocumentId('quote', quotes);
@@ -282,21 +318,12 @@ const MainContent: React.FC = () => {
         }
     };
 
-    const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'amount' | 'amountPaid'> & { initialPayment?: any, skipStockUpdate?: boolean }) => {
+    const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'amount' | 'amountPaid'> & { initialPayment?: any }) => {
         try {
-            const { initialPayment, skipStockUpdate, ...invoiceFields } = invoiceData;
+            const { initialPayment, ...invoiceFields } = invoiceData;
             
-            if (!skipStockUpdate && invoiceFields.status !== InvoiceStatus.Draft) {
-                for (const item of invoiceFields.lineItems) {
-                    if (item.productId) {
-                        const product = products.find(p => p.id === item.productId);
-                        if (product && product.productType === 'Produit') {
-                            if ((product.stockQuantity || 0) < item.quantity) {
-                                throw new Error(`Stock insuffisant pour le produit: ${product.name}. Stock disponible: ${product.stockQuantity || 0}`);
-                            }
-                        }
-                    }
-                }
+            if (invoiceFields.status !== InvoiceStatus.Draft) {
+                checkStockAvailability(invoiceFields.lineItems);
             }
 
             const documentId = generateDocumentId('invoice', invoices);
@@ -304,19 +331,8 @@ const MainContent: React.FC = () => {
             await dbService.invoices.add(newInvoice);
             setInvoices(prev => [newInvoice, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
             
-            if (!skipStockUpdate && newInvoice.status !== InvoiceStatus.Draft) {
-                for (const item of newInvoice.lineItems) {
-                    if (item.productId) {
-                        await addStockMovement({
-                            productId: item.productId,
-                            productName: item.name,
-                            date: newInvoice.date,
-                            quantity: -item.quantity,
-                            type: 'Vente',
-                            reference: `Facture ${newInvoice.documentId || newInvoice.id}`
-                        });
-                    }
-                }
+            if (newInvoice.status !== InvoiceStatus.Draft) {
+                await adjustStockForInvoice(newInvoice, -1);
             }
 
             if (initialPayment && initialPayment.amount > 0) {
@@ -327,9 +343,6 @@ const MainContent: React.FC = () => {
             return newInvoice;
         } catch (e: any) {
             console.error("Error creating invoice", e);
-            if (e.message.includes('Stock insuffisant')) {
-                throw e;
-            }
             alert("Erreur création facture: " + e.message);
             throw e;
         }
@@ -340,49 +353,24 @@ const MainContent: React.FC = () => {
             if (!existingInvoice) return;
             const { initialPayment, ...invoiceFields } = invoiceData;
 
-            // If it was not a draft, temporarily restore stock to check availability
-            if (existingInvoice.status !== InvoiceStatus.Draft) {
-                for (const item of existingInvoice.lineItems) {
-                    if (item.productId) {
-                        await updateProductStock(item.productId, item.quantity);
-                    }
-                }
+            const oldStatus = existingInvoice.status;
+            const newStatus = invoiceFields.status;
+
+            // Restore stock if it was previously deducted
+            if (oldStatus !== InvoiceStatus.Draft) {
+                await adjustStockForInvoice(existingInvoice, 1);
             }
 
-            // Check stock availability for the new data
-            if (invoiceFields.status !== InvoiceStatus.Draft) {
-                for (const item of invoiceFields.lineItems) {
-                    if (item.productId) {
-                        const product = products.find(p => p.id === item.productId);
-                        if (product && product.productType === 'Produit') {
-                            // Note: products state might be stale if we just called updateProductStock multiple times in a loop
-                            // but since we are in an async function and updateProductStock updates the state, 
-                            // we should ideally use the most recent product data.
-                            // However, for simplicity and since this is a local DB, we'll assume it's okay or we could refetch.
-                            if ((product.stockQuantity || 0) < item.quantity) {
-                                // Rollback restoration if check fails
-                                if (existingInvoice.status !== InvoiceStatus.Draft) {
-                                    for (const exItem of existingInvoice.lineItems) {
-                                        if (exItem.productId) {
-                                            await updateProductStock(exItem.productId, -exItem.quantity);
-                                        }
-                                    }
-                                }
-                                throw new Error(`Stock insuffisant pour le produit: ${product.name}.`);
-                            }
-                        }
+            // Check stock availability for new items if not draft
+            if (newStatus !== InvoiceStatus.Draft) {
+                try {
+                    checkStockAvailability(invoiceFields.lineItems);
+                } catch (e) {
+                    // Rollback stock restoration if check fails
+                    if (oldStatus !== InvoiceStatus.Draft) {
+                        await adjustStockForInvoice(existingInvoice, -1);
                     }
-                }
-            }
-
-            // If we reached here, stock is okay. 
-            // If it was not a draft, we already restored stock.
-            // If the new status is not a draft, we need to decrease stock again.
-            if (invoiceFields.status !== InvoiceStatus.Draft) {
-                for (const item of invoiceFields.lineItems) {
-                    if (item.productId) {
-                        await updateProductStock(item.productId, -item.quantity);
-                    }
+                    throw e;
                 }
             }
 
@@ -390,6 +378,12 @@ const MainContent: React.FC = () => {
             updatedInvoice.id = id; 
             await dbService.invoices.update(updatedInvoice);
             setInvoices(prev => prev.map(inv => inv.id === id ? updatedInvoice : inv));
+
+            // Deduct stock for new items if not draft
+            if (newStatus !== InvoiceStatus.Draft) {
+                await adjustStockForInvoice(updatedInvoice, -1);
+            }
+
             if (initialPayment && initialPayment.amount > 0) {
                  const newPayment: Payment = { id: crypto.randomUUID(), invoiceId: id, invoiceNumber: updatedInvoice.documentId || updatedInvoice.id, clientId: updatedInvoice.clientId, clientName: updatedInvoice.clientName, date: initialPayment.date, amount: initialPayment.amount, method: initialPayment.method, notes: 'Règlement ajouté lors de la modification' };
                 await dbService.payments.add(newPayment);
@@ -397,29 +391,15 @@ const MainContent: React.FC = () => {
             }
         } catch (e: any) {
             console.error("Error updating invoice", e);
-            if (e.message.includes('Stock insuffisant')) {
-                throw e;
-            }
             alert("Erreur mise à jour facture: " + e.message);
             throw e;
         }
     };
     const deleteInvoice = async (invoiceId: string) => {
         try {
-            const invoice = invoices.find(i => i.id === invoiceId);
+            const invoice = invoices.find(inv => inv.id === invoiceId);
             if (invoice && invoice.status !== InvoiceStatus.Draft) {
-                for (const item of invoice.lineItems) {
-                    if (item.productId) {
-                        await addStockMovement({
-                            productId: item.productId,
-                            productName: item.name,
-                            date: new Date().toISOString().split('T')[0],
-                            quantity: item.quantity,
-                            type: 'Retour',
-                            reference: `Suppression Facture ${invoice.documentId || invoice.id}`
-                        });
-                    }
-                }
+                await adjustStockForInvoice(invoice, 1);
             }
 
             const relatedPayments = payments.filter(p => p.invoiceId === invoiceId);
@@ -461,6 +441,20 @@ const MainContent: React.FC = () => {
     const updateInvoiceStatus = async (invoiceId: string, newStatus: InvoiceStatus) => {
         const invoiceToUpdate = invoices.find(inv => inv.id === invoiceId);
         if (invoiceToUpdate) {
+            const oldStatus = invoiceToUpdate.status;
+            
+            if (oldStatus === InvoiceStatus.Draft && newStatus !== InvoiceStatus.Draft) {
+                try {
+                    checkStockAvailability(invoiceToUpdate.lineItems);
+                    await adjustStockForInvoice(invoiceToUpdate, -1);
+                } catch (e: any) {
+                    alert(e.message);
+                    return;
+                }
+            } else if (oldStatus !== InvoiceStatus.Draft && newStatus === InvoiceStatus.Draft) {
+                await adjustStockForInvoice(invoiceToUpdate, 1);
+            }
+
             const updatedInvoice = { ...invoiceToUpdate, status: newStatus };
             await dbService.invoices.update(updatedInvoice);
             setInvoices(prev => prev.map(inv => inv.id === invoiceId ? updatedInvoice : inv));
@@ -470,10 +464,14 @@ const MainContent: React.FC = () => {
         const quote = quotes.find(q => q.id === quoteId);
         if (!quote) return;
         try {
+            checkStockAvailability(quote.lineItems);
+            
             const documentId = generateDocumentId('invoice', invoices);
             const newInvoiceData: Invoice = { id: crypto.randomUUID(), documentId: documentId, quoteId: quote.id, clientId: quote.clientId, clientName: quote.clientName, date: new Date().toISOString().split('T')[0], dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: InvoiceStatus.Pending, subject: quote.subject, reference: quote.reference, lineItems: quote.lineItems, subTotal: quote.subTotal, vatAmount: quote.vatAmount, amount: quote.amount, amountPaid: 0 };
             await dbService.invoices.add(newInvoiceData);
             setInvoices(prev => [newInvoiceData, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+            
+            await adjustStockForInvoice(newInvoiceData, -1);
             await updateQuoteStatus(quoteId, QuoteStatus.Converted);
         } catch (e: any) {
             alert("Erreur conversion: " + e.message);
@@ -564,7 +562,7 @@ const MainContent: React.FC = () => {
             const paidAmount = note.paymentAmount || 0;
             let status = InvoiceStatus.Pending;
             if (paidAmount >= totalAmount && totalAmount > 0) { status = InvoiceStatus.Paid; } else if (paidAmount > 0) { status = InvoiceStatus.Partial; }
-            const newInvoice: Invoice = { id: invoiceId, documentId: documentId, quoteId: quote.id, clientId: quote.clientId, clientName: quote.clientName, date: new Date().toISOString().split('T')[0], dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: status, subject: `Facture issue du ${note.documentId || note.id}`, reference: note.documentId || note.id, lineItems: note.lineItems, subTotal: subTotal, vatAmount: vatAmount, amount: totalAmount, amountPaid: paidAmount, paymentDate: status === InvoiceStatus.Paid ? note.date : undefined };
+            const newInvoice: Invoice = { id: invoiceId, documentId: documentId, clientId: note.clientId, clientName: note.clientName, date: new Date().toISOString().split('T')[0], dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: status, subject: `Facture issue du ${note.documentId || note.id}`, reference: note.documentId || note.id, lineItems: note.lineItems, subTotal: subTotal, vatAmount: vatAmount, amount: totalAmount, amountPaid: paidAmount, paymentDate: status === InvoiceStatus.Paid ? note.date : undefined };
             await dbService.invoices.add(newInvoice);
             setInvoices(prev => [newInvoice, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
             if (paidAmount > 0) {

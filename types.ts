@@ -76,10 +76,10 @@ export interface LineItem {
   name: string;
   description: string;
   quantity: number;
-  unitPrice: number;
-  vat: number;
   length?: number;
   height?: number;
+  unitPrice: number;
+  vat: number;
 }
 
 export interface Quote {
@@ -91,6 +91,7 @@ export interface Quote {
     expiryDate: string;
     amount: number;
     status: QuoteStatus;
+    useDimensions?: boolean;
     subject?: string;
     reference?: string;
     lineItems: LineItem[];
@@ -98,7 +99,6 @@ export interface Quote {
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
-    useDimensions?: boolean;
 }
 
 export interface PurchaseOrder {
@@ -109,6 +109,7 @@ export interface PurchaseOrder {
     date: string;
     expectedDate?: string;
     status: PurchaseOrderStatus;
+    useDimensions?: boolean;
     lineItems: LineItem[];
     subTotal: number;
     vatAmount: number;
@@ -116,7 +117,6 @@ export interface PurchaseOrder {
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
     notes?: string;
-    useDimensions?: boolean;
 }
 
 export interface Invoice {
@@ -131,6 +131,7 @@ export interface Invoice {
     amount: number;
     amountPaid: number; // Track received payments
     status: InvoiceStatus;
+    useDimensions?: boolean;
     subject?: string;
     reference?: string;
     lineItems: LineItem[];
@@ -138,7 +139,6 @@ export interface Invoice {
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
-    useDimensions?: boolean;
 }
 
 export interface CreditNote {
@@ -150,6 +150,7 @@ export interface CreditNote {
     date: string;
     amount: number;
     status: CreditNoteStatus;
+    useDimensions?: boolean;
     subject?: string; // Reason
     reference?: string;
     lineItems: LineItem[];
@@ -157,7 +158,6 @@ export interface CreditNote {
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
-    useDimensions?: boolean;
 }
 
 export interface Payment {
@@ -190,6 +190,7 @@ export interface DeliveryNote {
     clientId: string;
     clientName: string;
     date: string;
+    useDimensions?: boolean;
     subject?: string; // Champ ajouté
     lineItems: LineItem[];
     status: string; // Changed from fixed union to string to support computed statuses like 'Payé'
@@ -199,11 +200,10 @@ export interface DeliveryNote {
     totalAmount?: number;
     paymentAmount?: number;
     paymentMethod?: string;
-    useDimensions?: boolean;
 }
 
 export interface DocumentColumn {
-    id: 'reference' | 'name' | 'quantity' | 'unitPrice' | 'vat' | 'total' | 'length' | 'height';
+    id: 'reference' | 'name' | 'quantity' | 'length' | 'height' | 'unitPrice' | 'vat' | 'total';
     label: string;
     visible: boolean;
     order: number;

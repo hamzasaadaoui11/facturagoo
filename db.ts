@@ -135,6 +135,15 @@ export const dbService = {
     },
     products: {
         getAll: () => getAll<Product>('products'),
+        getById: async (id: string) => {
+            const { data, error } = await supabase
+                .from('products')
+                .select('*')
+                .eq('id', id)
+                .single();
+            if (error) throw error;
+            return data as Product;
+        },
         add: (item: Product) => add<Product>('products', item),
         update: (item: Product) => update<Product>('products', item),
         delete: (id: string) => remove('products', id),

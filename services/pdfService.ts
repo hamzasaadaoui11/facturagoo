@@ -20,9 +20,9 @@ interface DocumentData {
     expiryDate?: string; 
     expectedDate?: string; 
     invoiceId?: string; // For Credit Notes
+    useDimensions?: boolean;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
-    useDimensions?: boolean;
 }
 
 interface PDFOptions {
@@ -151,11 +151,15 @@ const generateDocumentHTML = (
     const showPrices = options?.showPrices !== false;
     const showAmountInWords = settings.showAmountInWords !== false;
     const isModeTTC = settings.priceDisplayMode === 'TTC';
+    const useDimensions = doc.useDimensions === true;
 
     const subTotal = doc.lineItems.reduce((acc, item) => {
-        const multiplier = doc.useDimensions ? (item.length || 1) * (item.height || 1) : 1;
-        return acc + (item.unitPrice * item.quantity * multiplier);
+        const itemQty = item.quantity || 0;
+        const itemLength = useDimensions ? (item.length || 1) : 1;
+        const itemHeight = useDimensions ? (item.height || 1) : 1;
+        return acc + (item.unitPrice * itemQty * itemLength * itemHeight);
     }, 0);
+    
     let discountAmount = 0;
     if (doc.discountType && doc.discountValue && doc.discountValue > 0) {
         if (doc.discountType === 'percentage') {
@@ -168,8 +172,10 @@ const generateDocumentHTML = (
     const subTotalAfterDiscount = subTotal - discountAmount;
 
     const vatAmount = doc.lineItems.reduce((acc, item) => {
-        const multiplier = doc.useDimensions ? (item.length || 1) * (item.height || 1) : 1;
-        const itemTotalHT = item.unitPrice * item.quantity * multiplier;
+        const itemQty = item.quantity || 0;
+        const itemLength = useDimensions ? (item.length || 1) : 1;
+        const itemHeight = useDimensions ? (item.height || 1) : 1;
+        const itemTotalHT = item.unitPrice * itemQty * itemLength * itemHeight;
         const itemDiscount = subTotal > 0 ? (itemTotalHT / subTotal) * discountAmount : 0;
         const itemBaseForVat = itemTotalHT - itemDiscount;
         return acc + (itemBaseForVat * (item.vat / 100));
@@ -226,18 +232,17 @@ const generateDocumentHTML = (
         ? settings.documentColumns.filter(c => c.visible).sort((a, b) => a.order - b.order)
         : DEFAULT_COLUMNS.filter(c => c.visible);
 
-    if (doc.useDimensions) {
-        const quantityIndex = activeColumns.findIndex(c => c.id === 'quantity');
-        if (quantityIndex !== -1) {
-            activeColumns.splice(quantityIndex + 1, 0, 
-                { id: 'length', label: 'Long.', visible: true, order: 2.1 },
-                { id: 'height', label: 'Haut.', visible: true, order: 2.2 }
-            );
-        }
-    }
-
     if (isDeliveryNote && !showPrices) {
         activeColumns = activeColumns.filter(c => c.id === 'name' || c.id === 'quantity' || c.id === 'reference');
+    }
+
+    if (useDimensions) {
+        const qtyIndex = activeColumns.findIndex(c => c.id === 'quantity');
+        if (qtyIndex !== -1) {
+            const lengthCol: DocumentColumn = { id: 'length', label: dict.lengthLabel || 'Long.', visible: true, order: activeColumns[qtyIndex].order + 0.1 };
+            const heightCol: DocumentColumn = { id: 'height', label: dict.heightLabel || 'Haut.', visible: true, order: activeColumns[qtyIndex].order + 0.2 };
+            activeColumns.splice(qtyIndex + 1, 0, lengthCol, heightCol);
+        }
     }
 
     // --- Override labels for Language context ---
@@ -298,8 +303,6 @@ const generateDocumentHTML = (
         let width = '';
         if (col.id === 'reference') { align = 'left'; width = 'width: 12%;'; }
         else if (col.id === 'quantity') { align = 'center'; width = 'width: 11%;'; }
-        else if (col.id === 'length') { align = 'center'; width = 'width: 8%;'; }
-        else if (col.id === 'height') { align = 'center'; width = 'width: 8%;'; }
         else if (col.id === 'vat') { align = 'center'; width = 'width: 11%;'; }
         else if (col.id === 'unitPrice') { align = 'right'; width = 'width: 18%;'; }
         else if (col.id === 'total') { align = 'right'; width = 'width: 18%;'; }
@@ -314,8 +317,9 @@ const generateDocumentHTML = (
             let style = '';
 
             const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
-            const multiplier = doc.useDimensions ? (item.length || 1) * (item.height || 1) : 1;
-            const totalHT = item.quantity * item.unitPrice * multiplier;
+            const itemLength = useDimensions ? (item.length || 1) : 1;
+            const itemHeight = useDimensions ? (item.height || 1) : 1;
+            const totalHT = (item.quantity * itemLength * itemHeight * item.unitPrice);
             const totalTTC = totalHT * (1 + item.vat / 100);
 
             switch (col.id) {

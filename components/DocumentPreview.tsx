@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { CompanySettings, Quote, Invoice, Client, DeliveryNote } from '../types';
+import { CompanySettings, Quote, Invoice, Client, DeliveryNote, PurchaseOrder, CreditNote } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface DocumentPreviewProps {
     settings: Partial<CompanySettings>;
-    document: Quote | Invoice | DeliveryNote;
+    document: Quote | Invoice | DeliveryNote | PurchaseOrder | CreditNote;
     client: Client;
 }
 
@@ -39,6 +39,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
     };
 
     const iceLabel = language === 'es' ? 'NIF' : (language === 'en' ? 'Tax ID' : 'ICE');
+    const useDimensions = (document as any).useDimensions === true;
 
     const legalIds = [
         settings.ice ? `${iceLabel}: ${settings.ice}` : '',
@@ -123,6 +124,12 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                             <tr style={{ backgroundColor: primaryColor, color: 'white' }}>
                                 <th className="p-3 font-semibold uppercase text-xs rounded-tl-lg rounded-bl-lg">{t('description')}</th>
                                 <th className="p-3 text-center font-semibold uppercase text-xs w-16">{t('quantity')}</th>
+                                {useDimensions && (
+                                    <>
+                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">{t('lengthLabel')}</th>
+                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">{t('heightLabel')}</th>
+                                    </>
+                                )}
                                 {!isDeliveryNote && (
                                     <>
                                         <th className="p-3 text-right font-semibold uppercase text-xs w-28">{t('unitPrice')}</th>
@@ -140,11 +147,17 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                         {item.description && <p className="text-[10px] text-neutral-500 mt-0.5">{item.description}</p>}
                                     </td>
                                     <td className="p-3 text-center align-top font-bold text-[12px]">{item.quantity}</td>
+                                    {useDimensions && (
+                                        <>
+                                            <td className="p-3 text-center align-top text-[12px]">{item.length || 1}</td>
+                                            <td className="p-3 text-center align-top text-[12px]">{item.height || 1}</td>
+                                        </>
+                                    )}
                                     {!isDeliveryNote && (
                                         <>
                                             <td className="p-3 text-right align-top text-[12px]">{item.unitPrice.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
                                             <td className="p-3 text-center align-top text-[11px] text-neutral-500">{item.vat}%</td>
-                                            <td className="p-3 text-right align-top font-medium text-neutral-900 text-[12px]">{(item.quantity * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
+                                            <td className="p-3 text-right align-top font-medium text-neutral-900 text-[12px]">{(item.quantity * (useDimensions ? (item.length || 1) : 1) * (useDimensions ? (item.height || 1) : 1) * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                 </tr>
