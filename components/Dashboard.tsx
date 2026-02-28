@@ -1,0 +1,543 @@
+
+import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
+import { Invoice, InvoiceStatus, Client, Product, CompanySettings, CreditNote, CreditNoteStatus } from '../types';
+import { Users, Package, FileText, AlertCircle, AlertTriangle, DollarSign, Archive, CheckCircle, ArrowRight, UserPlus, ChevronRight, TrendingUp, CalendarDays, Filter } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
+
+interface DashboardProps {
+    invoices: Invoice[];
+    clients: Client[];
+    products: Product[];
+    companySettings?: CompanySettings | null;
+    creditNotes?: CreditNote[];
+}
+
+const StatCard: React.FC<{
+    item: { name: string; stat: string | number; icon: React.ElementType; color: string; iconColor: string; desc: string };
+}> = ({ item }) => (
+    <div className="bg-white rounded-2xl p-6 shadow-sm ring-1 ring-slate-200/60 transition-all hover:shadow-lg hover:ring-emerald-500/20 group relative overflow-hidden">
+        <div className="flex justify-between items-start relative z-10">
+            <div className={`p-3 rounded-xl ${item.color} bg-opacity-15 group-hover:scale-110 transition-transform duration-300`}>
+                <item.icon className={`h-6 w-6 ${item.iconColor}`} strokeWidth={2.5} />
+            </div>
+        </div>
+        <div className="mt-5 relative z-10">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{item.name}</p>
+            <p className="text-2xl md:text-3xl font-black text-slate-900 mt-1 truncate tracking-tight">{item.stat}</p>
+            <p className="text-sm font-medium text-slate-500 mt-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                {item.desc}
+            </p>
+        </div>
+        {/* Subtle background decoration */}
+        <div className={`absolute -right-4 -bottom-4 w-24 h-24 rounded-full ${item.color} opacity-[0.03] group-hover:opacity-[0.06] transition-opacity`}></div>
+    </div>
+);
+
+const ShortcutCard = ({ icon: Icon, label, desc, onClick, colorClass }: { icon: React.ElementType, label: string, desc: string, onClick: () => void, colorClass: string }) => {
+    const { isRTL } = useLanguage();
+    return (
+        <button onClick={onClick} className="bg-white rounded-2xl p-5 shadow-sm ring-1 ring-slate-100 flex items-center gap-4 text-left hover:ring-emerald-500/50 hover:shadow-md transition-all group w-full">
+            <div className={`flex items-center justify-center h-12 w-12 rounded-xl ${colorClass} bg-opacity-10 group-hover:scale-110 transition-transform flex-shrink-0`}>
+                <Icon className={`h-6 w-6 ${colorClass.replace('bg-', 'text-')}`} />
+            </div>
+            <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
+                <p className="font-bold text-slate-800 truncate text-base">{label}</p>
+                <p className="text-sm text-slate-500 truncate">{desc}</p>
+            </div>
+            <div className={`opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 ${isRTL ? 'mr-auto rotate-180' : 'ml-auto'}`}>
+                <ChevronRight size={20} />
+            </div>
+        </button>
+    );
+};
+
+type ChartPeriod = 'day' | 'week' | 'month' | 'year' | 'custom';
+
+const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, companySettings, creditNotes = [] }) => {
+    const navigate = useNavigate();
+    const { t, language } = useLanguage();
+    const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('year');
+    const [customStartDate, setCustomStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
+    const [customEndDate, setCustomEndDate] = useState(new Date().toISOString().split('T')[0]);
+    
+    const todayDate = new Date().toLocaleDateString(language === 'ar' ? 'ar-MA' : (language === 'en' ? 'en-US' : 'fr-FR'), { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+
+    const { totalRevenue, unpaidInvoicesCount, unpaidAmount } = useMemo(() => {
+        const today = new Date();
+        let totalRevenue = 0;
+        let unpaidInvoicesCount = 0;
+        let unpaidAmount = 0;
+
+        invoices.forEach(inv => {
+            if (inv.status === InvoiceStatus.Paid) {
+                totalRevenue += inv.amount;
+            }
+            if (inv.status === InvoiceStatus.Pending || (inv.status !== InvoiceStatus.Paid && new Date(inv.dueDate) < today)) {
+                unpaidInvoicesCount++;
+                unpaidAmount += (inv.amount - (inv.amountPaid || 0));
+            }
+        });
+
+        const validatedCreditNotesAmount = creditNotes
+            .filter(cn => cn.status === CreditNoteStatus.Validated)
+            .reduce((sum, cn) => sum + cn.amount, 0);
+        
+        unpaidAmount = Math.max(0, unpaidAmount - validatedCreditNotesAmount);
+
+        return { totalRevenue, unpaidInvoicesCount, unpaidAmount };
+    }, [invoices, creditNotes]);
+
+    const stats = [
+        { 
+            name: t('totalRevenue'), 
+            stat: totalRevenue.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }), 
+            icon: DollarSign, 
+            color: 'bg-emerald-500',
+            iconColor: 'text-emerald-600',
+            desc: t('totalRevenueDesc')
+        },
+        { 
+            name: t('unpaidInvoices'), 
+            stat: unpaidInvoicesCount, 
+            icon: AlertCircle, 
+            color: 'bg-amber-500',
+            iconColor: 'text-amber-600',
+            desc: `${t('remainingAmount')} : ${unpaidAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 })}`
+        },
+        { 
+            name: t('activeClients'), 
+            stat: clients.length, 
+            icon: Users, 
+            color: 'bg-blue-500',
+            iconColor: 'text-blue-600',
+            desc: t('clientsDatabase')
+        },
+        { 
+            name: t('catalog'), 
+            stat: products.length, 
+            icon: Package, 
+            color: 'bg-purple-500',
+            iconColor: 'text-purple-600',
+            desc: t('catalogDesc')
+        },
+    ];
+
+    const chartData = useMemo(() => {
+        const today = new Date();
+        let data: { name: string; fullDate?: string; Revenu: number }[] = [];
+
+        const getPaidInvoices = (start: Date, end: Date) => {
+            return invoices.filter(inv => {
+                if (inv.status !== InvoiceStatus.Paid) return false;
+                const d = new Date(inv.paymentDate || inv.date);
+                return d >= start && d <= end;
+            });
+        };
+
+        if (chartPeriod === 'day') {
+            const startOfDay = new Date(today.setHours(0,0,0,0));
+            const endOfDay = new Date(today.setHours(23,59,59,999));
+            const relevantInvoices = getPaidInvoices(startOfDay, endOfDay);
+
+            for (let i = 0; i <= 24; i += 4) {
+                const label = `${i}h`;
+                const amount = relevantInvoices.reduce((acc, inv) => {
+                    const h = new Date(inv.paymentDate || inv.date).getHours();
+                    return (h >= i && h < i + 4) ? acc + inv.amount : acc;
+                }, 0);
+                data.push({ name: label, Revenu: amount });
+            }
+
+        } else if (chartPeriod === 'week') {
+            const curr = new Date();
+            const first = curr.getDate() - curr.getDay() + 1; 
+            const last = first + 6;
+            
+            const startOfWeek = new Date(curr.setDate(first));
+            startOfWeek.setHours(0,0,0,0);
+            const endOfWeek = new Date(curr.setDate(last));
+            endOfWeek.setHours(23,59,59,999);
+
+            const relevantInvoices = getPaidInvoices(startOfWeek, endOfWeek);
+            const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+            data = days.map((day, index) => {
+                const amount = relevantInvoices.reduce((acc, inv) => {
+                    let d = new Date(inv.paymentDate || inv.date).getDay();
+                    let mappedIndex = d === 0 ? 6 : d - 1;
+                    return mappedIndex === index ? acc + inv.amount : acc;
+                }, 0);
+                return { name: day, Revenu: amount };
+            });
+
+        } else if (chartPeriod === 'month') {
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            const relevantInvoices = getPaidInvoices(startOfMonth, endOfMonth);
+            const daysInMonth = endOfMonth.getDate();
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const amount = relevantInvoices.reduce((acc, inv) => {
+                    const d = new Date(inv.paymentDate || inv.date).getDate();
+                    return d === i ? acc + inv.amount : acc;
+                }, 0);
+                data.push({ name: `${i}`, Revenu: amount });
+            }
+
+        } else if (chartPeriod === 'year') {
+            const startOfYear = new Date(today.getFullYear(), 0, 1);
+            const endOfYear = new Date(today.getFullYear(), 11, 31);
+            const relevantInvoices = getPaidInvoices(startOfYear, endOfYear);
+            
+            const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+            data = months.map((month, index) => {
+                const amount = relevantInvoices.reduce((acc, inv) => {
+                    const m = new Date(inv.paymentDate || inv.date).getMonth();
+                    return m === index ? acc + inv.amount : acc;
+                }, 0);
+                return { name: month, Revenu: amount };
+            });
+        } else if (chartPeriod === 'custom') {
+            const start = new Date(customStartDate);
+            start.setHours(0,0,0,0);
+            const end = new Date(customEndDate);
+            end.setHours(23,59,59,999);
+            
+            const relevantInvoices = getPaidInvoices(start, end);
+            
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR', { day: '2-digit', month: '2-digit' });
+                const isoDate = d.toISOString().split('T')[0];
+                
+                const amount = relevantInvoices.reduce((acc, inv) => {
+                    const invDate = new Date(inv.paymentDate || inv.date).toISOString().split('T')[0];
+                    return invDate === isoDate ? acc + inv.amount : acc;
+                }, 0);
+                
+                data.push({ name: dateStr, fullDate: isoDate, Revenu: amount });
+            }
+        }
+
+        return data;
+    }, [invoices, chartPeriod, customStartDate, customEndDate, language]);
+
+    const lowStockProducts = useMemo(() => {
+        return products
+            .filter(p => p.productType === 'Produit' && (p.stockQuantity || 0) <= (p.minStockAlert || 5))
+            .sort((a, b) => (a.stockQuantity || 0) - (b.stockQuantity || 0))
+            .slice(0, 3);
+    }, [products]);
+
+    const topProducts = useMemo(() => {
+        const salesMap: Record<string, number> = {};
+        invoices.forEach(inv => {
+            if (inv.status !== InvoiceStatus.Draft) {
+                inv.lineItems.forEach(item => {
+                    if (item.productId) {
+                        salesMap[item.productId] = (salesMap[item.productId] || 0) + item.quantity;
+                    }
+                });
+            }
+        });
+        
+        return Object.entries(salesMap)
+            .map(([id, qty]) => {
+                const product = products.find(p => p.id === id);
+                return product ? { name: product.name, qty } : null;
+            })
+            .filter(Boolean)
+            .sort((a, b) => (b?.qty || 0) - (a?.qty || 0))
+            .slice(0, 3);
+    }, [invoices, products]);
+
+    const recentInvoices = useMemo(() => [...invoices].slice(0, 5), [invoices]);
+    const recentClients = useMemo(() => [...clients].slice(0, 5), [clients]);
+
+    const welcomeName = companySettings?.companyName || 'Entrepreneur';
+
+    return (
+        <div className="space-y-6 md:space-y-8 animate-fadeIn pb-8">
+            {/* Header Section */}
+            <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 -mt-20 -mr-20 w-96 h-96 bg-emerald-500 opacity-10 rounded-full blur-[100px]"></div>
+                <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-64 h-64 bg-blue-500 opacity-10 rounded-full blur-[80px]"></div>
+                
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="text-center md:text-left">
+                        <h1 className="text-3xl md:text-4xl font-black tracking-tight">{t('welcome')}, <span className="text-emerald-400">{welcomeName}</span> !</h1>
+                        <p className="text-slate-400 mt-2 text-lg font-medium">{t('welcomeSubtitle')}</p>
+                    </div>
+                    
+                    {/* Widget Date */}
+                    <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-4 border border-white/10 shadow-2xl flex items-center gap-4 min-w-[240px]">
+                        <div className="bg-emerald-500/20 p-3 rounded-xl text-emerald-400 shadow-inner">
+                            <CalendarDays className="h-6 w-6" strokeWidth={2.5} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-0.5">{t('today')}</p>
+                            <p className="text-lg font-bold capitalize leading-none text-white">{todayDate}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                {stats.map(item => <StatCard key={item.name} item={item} />)}
+            </div>
+            
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+                
+                {/* Chart Section */}
+                <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-slate-100 p-6 md:p-8 flex flex-col">
+                    <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                        <h3 className="text-lg font-bold text-slate-900">{t('revenueEvolution')}</h3>
+                        
+                        {/* Période Selector */}
+                        <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-lg w-full sm:w-auto justify-center">
+                            {(['day', 'week', 'month', 'year'] as ChartPeriod[]).map((p) => (
+                                <button
+                                    key={p}
+                                    onClick={() => setChartPeriod(p)}
+                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all flex-1 sm:flex-none text-center ${
+                                        chartPeriod === p 
+                                        ? 'bg-white text-emerald-600 shadow-sm' 
+                                        : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                                    }`}
+                                >
+                                    {p === 'day' ? t('periodDay') : p === 'week' ? t('periodWeek') : p === 'month' ? t('periodMonth') : t('periodYear')}
+                                </button>
+                            ))}
+                            <button
+                                onClick={() => setChartPeriod('custom')}
+                                className={`px-3 py-1 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${
+                                    chartPeriod === 'custom' 
+                                    ? 'bg-white text-emerald-600 shadow-sm' 
+                                    : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                                }`}
+                            >
+                                <Filter size={10} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Date Pickers */}
+                    {chartPeriod === 'custom' && (
+                        <div className="flex flex-col sm:flex-row items-center justify-end gap-2 mb-4 animate-fadeIn">
+                            <input 
+                                type="date" 
+                                value={customStartDate} 
+                                onChange={(e) => setCustomStartDate(e.target.value)}
+                                className="w-full sm:w-auto text-xs border-slate-200 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
+                            />
+                            <span className="hidden sm:inline text-slate-400">-</span>
+                            <input 
+                                type="date" 
+                                value={customEndDate} 
+                                onChange={(e) => setCustomEndDate(e.target.value)}
+                                className="w-full sm:w-auto text-xs border-slate-200 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
+                            />
+                        </div>
+                    )}
+
+                    <div className="flex-grow min-h-[300px] w-full">
+                        {chartData.every(d => d.Revenu === 0) ? (
+                            <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                                <div className="p-4 bg-slate-50 rounded-full mb-3">
+                                    <Archive className="h-8 w-8" />
+                                </div>
+                                <p>{t('noFinancialData')}</p>
+                            </div>
+                        ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} dy={10} interval="preserveStartEnd" />
+                                    <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} />
+                                    <Tooltip 
+                                        contentStyle={{ backgroundColor: 'white', border: 'none', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                                        formatter={(value: number) => [`${value.toLocaleString('fr-FR')} MAD`, 'Revenu']} 
+                                    />
+                                    <Area type="monotone" dataKey="Revenu" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Column: Actions, Stock Alerts, Top Products */}
+                <div className="space-y-6">
+                    <h3 className="text-lg font-bold text-slate-900 px-1">{t('quickActions')}</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                        <ShortcutCard 
+                            icon={FileText} 
+                            label={t('newQuote')} 
+                            desc={t('createProposal')} 
+                            colorClass="bg-blue-500" 
+                            onClick={() => navigate('/sales/quotes/new')} 
+                        />
+                        <ShortcutCard 
+                            icon={UserPlus} 
+                            label={t('addClient')} 
+                            desc={t('saveContact')} 
+                            colorClass="bg-purple-500" 
+                            onClick={() => navigate('/clients')} 
+                        />
+                        <ShortcutCard 
+                            icon={Package} 
+                            label={t('newProduct')} 
+                            desc={t('updateStock')} 
+                            colorClass="bg-amber-500" 
+                            onClick={() => navigate('/products/new')} 
+                        />
+                    </div>
+
+                    {/* Alertes Stock */}
+                    <div className="bg-red-50 rounded-2xl p-5 border border-red-100 shadow-sm mt-6">
+                        <div className="flex justify-between items-center mb-3">
+                            <h4 className="font-bold text-red-800 flex items-center gap-2">
+                                <AlertTriangle className="h-5 w-5"/> {t('stockAlerts')}
+                            </h4>
+                            <button onClick={() => navigate('/stock')} className="text-xs font-semibold text-red-600 hover:underline">{t('manage')}</button>
+                        </div>
+                        <div className="space-y-2">
+                            {lowStockProducts.length > 0 ? (
+                                lowStockProducts.map(p => (
+                                    <div key={p.id} className="flex justify-between items-center bg-white p-2 rounded-lg border border-red-100">
+                                        <span className="text-sm font-medium text-slate-700 truncate max-w-[120px]">{p.name}</span>
+                                        <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-md">
+                                            {t('remains')}: {p.stockQuantity}
+                                        </span>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-sm text-green-700 flex items-center gap-2">
+                                    <CheckCircle size={16}/> {t('stockOk')}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Meilleurs Produits */}
+                    <div className="bg-amber-50 rounded-2xl p-5 border border-amber-100 shadow-sm">
+                        <h4 className="font-bold text-amber-900 flex items-center gap-2 mb-3">
+                            <TrendingUp className="h-5 w-5 text-amber-600"/> {t('topSales')}
+                        </h4>
+                        <div className="space-y-2">
+                            {topProducts.length > 0 ? (
+                                topProducts.map((p, idx) => (
+                                    <div key={idx} className="flex justify-between items-center bg-white p-2 rounded-lg border border-amber-100">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-bold text-amber-500 w-4">{idx + 1}.</span>
+                                            <span className="text-sm font-medium text-slate-700 truncate max-w-[110px]">{p?.name}</span>
+                                        </div>
+                                        <span className="text-xs font-semibold text-slate-500">
+                                            {p?.qty} {t('sold')}
+                                        </span>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-xs text-amber-700 italic">Pas encore de données de vente.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Recent Activity Lists */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+                 <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-100 overflow-hidden">
+                    <div className="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 className="font-bold text-slate-900">{t('recentInvoices')}</h3>
+                        <button onClick={() => navigate('/sales/invoices')} className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                            {t('seeAll')} <ArrowRight className="h-4 w-4 rtl:rotate-180"/>
+                        </button>
+                    </div>
+                    {recentInvoices.length > 0 ? (
+                        <div className="divide-y divide-slate-100">
+                           {recentInvoices.map(invoice => (
+                             <div key={invoice.id} className="p-4 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                                <div className="flex items-center gap-3 md:gap-4">
+                                    <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                                        <FileText size={18} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-slate-800 text-sm truncate max-w-[120px] md:max-w-xs">{invoice.clientName}</p>
+                                        <p className="text-xs text-slate-500 font-mono">{invoice.documentId || invoice.id}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <p className="font-bold text-slate-900 text-sm">{invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</p>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                        invoice.status === InvoiceStatus.Paid ? 'bg-green-100 text-green-700' : 
+                                        invoice.status === InvoiceStatus.Pending ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+                                    }`}>
+                                        {invoice.status}
+                                    </span>
+                                </div>
+                             </div>
+                           ))}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center text-slate-400 py-12">
+                            <FileText className="h-12 w-12 mb-3 opacity-20" />
+                            <p>{t('noRecentInvoices')}</p>
+                        </div>
+                    )}
+                 </div>
+
+                 <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-100 overflow-hidden">
+                    <div className="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 className="font-bold text-slate-900">{t('newClients')}</h3>
+                        <button onClick={() => navigate('/clients')} className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                            {t('seeAll')} <ArrowRight className="h-4 w-4 rtl:rotate-180"/>
+                        </button>
+                    </div>
+                     {recentClients.length > 0 ? (
+                        <div className="divide-y divide-slate-100">
+                           {recentClients.map(client => (
+                             <div key={client.id} className="p-4 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                                <div className="flex items-center gap-3 md:gap-4">
+                                    <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 shrink-0">
+                                        <Users size={18} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-slate-800 text-sm truncate max-w-[120px] md:max-w-xs">{client.name}</p>
+                                        {client.company && <p className="text-xs text-slate-500 truncate">{client.company}</p>}
+                                    </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <p className="text-xs text-slate-400 truncate max-w-[100px]">{client.email || 'Pas d\'email'}</p>
+                                </div>
+                             </div>
+                           ))}
+                        </div>
+                    ) : (
+                         <div className="flex flex-col items-center justify-center text-slate-400 py-12">
+                            <Users className="h-12 w-12 mb-3 opacity-20" />
+                            <p>{t('noClients')}</p>
+                        </div>
+                    )}
+                 </div>
+            </div>
+
+        </div>
+    );
+};
+
+export default Dashboard;
