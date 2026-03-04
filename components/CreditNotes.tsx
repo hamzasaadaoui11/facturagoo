@@ -66,7 +66,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
 
     // Menu Dropdown State
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-    const [menuPosition, setMenuPosition] = useState<{top: number, left: number, transformOrigin: string} | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{top: number, left: number} | null>(null);
 
     useEffect(() => {
         const handleClickOutside = () => setActiveMenuId(null);
@@ -89,30 +89,11 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
             setMenuPosition(null);
         } else {
             const rect = e.currentTarget.getBoundingClientRect();
-            const viewportHeight = window.innerHeight;
-            const menuHeight = 260; 
-            const menuWidth = 208; // w-52 is 13rem = 208px
-            
-            let top: number;
-            let transformOrigin: string;
-            
-            if (rect.bottom + menuHeight > viewportHeight) {
-                top = rect.top + window.scrollY - menuHeight - 5;
-                transformOrigin = isRTL ? 'bottom left' : 'bottom right';
-            } else {
-                top = rect.bottom + window.scrollY + 5;
-                transformOrigin = isRTL ? 'top left' : 'top right';
-            }
-
-            let left: number;
-            if (isRTL) {
-                left = rect.left + window.scrollX;
-            } else {
-                left = rect.right + window.scrollX - menuWidth;
-            }
-
             setActiveMenuId(id);
-            setMenuPosition({ top, left: Math.max(10, left), transformOrigin });
+            setMenuPosition({
+                top: rect.bottom + window.scrollY + 5,
+                left: isRTL ? rect.left + window.scrollX : Math.max(10, rect.right + window.scrollX - 192)
+            });
         }
     };
 
@@ -324,60 +305,58 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
             {/* Menu Dropdown via Portal */}
             {activeMenuId && activeNote && menuPosition && createPortal(
                 <div 
-                    className="absolute z-50 w-52 rounded-2xl bg-white shadow-xl border border-slate-100/80 p-1.5 focus:outline-none animate-in fade-in zoom-in-95 duration-100"
-                    style={{ top: menuPosition.top, left: menuPosition.left, transformOrigin: menuPosition.transformOrigin }}
+                    className="absolute z-50 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    style={{ top: menuPosition.top, left: menuPosition.left }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="flex flex-col gap-0.5">
+                    <div className="py-1">
                         <button 
                             onClick={() => { handleEditClick(activeNote); setActiveMenuId(null); }} 
-                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Pencil size={16} className={`text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('edit')}
+                            <Pencil size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-emerald-600`} /> {t('edit')}
                         </button>
 
                         {activeNote.status === CreditNoteStatus.Draft && (
                              <button 
                                 onClick={() => { onUpdateCreditNoteStatus(activeNote.id, CreditNoteStatus.Validated); setActiveMenuId(null); }} 
-                                className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
+                                className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                             >
-                                <CheckCircle size={16} className={`text-green-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('validate')}
+                                <CheckCircle size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-green-600`} /> {t('validate')}
                             </button>
                         )}
 
                         {activeNote.status === CreditNoteStatus.Validated && (
                              <button 
                                 onClick={() => { onUpdateCreditNoteStatus(activeNote.id, CreditNoteStatus.Refunded); setActiveMenuId(null); }} 
-                                className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
+                                className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                             >
-                                <RefreshCw size={16} className={`text-blue-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('markRefunded')}
+                                <RefreshCw size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-blue-600`} /> {t('markRefunded')}
                             </button>
                         )}
                         
-                        <div className="border-t border-slate-100 my-1 mx-2"></div>
+                        <div className="border-t border-gray-100 my-1"></div>
 
                         <button 
                             onClick={() => { handlePrint(activeNote); setActiveMenuId(null); }}
-                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Printer size={16} className={`text-neutral-500 group-hover:text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('print')}
+                            <Printer size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-neutral-500`} /> {t('print')}
                         </button>
 
                         <button 
                             onClick={() => { handleDownload(activeNote); setActiveMenuId(null); }}
                             disabled={isDownloading}
-                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group disabled:opacity-50"
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                         >
-                            {isDownloading ? <Loader2 size={16} className={`animate-spin ${isRTL ? 'ml-3' : 'mr-3'}`} /> : <Download size={16} className={`text-neutral-500 group-hover:text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} />} {t('download')}
+                            {isDownloading ? <Loader2 size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} animate-spin`} /> : <Download size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-neutral-500`} />} {t('download')}
                         </button>
 
-                        <div className="border-t border-slate-100 my-1 mx-2"></div>
-
                         <button 
-                            onClick={() => { handleDeleteClick(activeNote.id); setActiveMenuId(null); }} 
-                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-red-600 rounded-xl hover:bg-red-50 transition-colors group"
+                            onClick={() => handleDeleteClick(activeNote.id)} 
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Trash2 size={16} className={`text-red-500 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('delete')}
+                            <Trash2 size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-red-600`} /> {t('delete')}
                         </button>
                     </div>
                 </div>,

@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
 import { Invoice, InvoiceStatus, Client, Product, CompanySettings, CreditNote, CreditNoteStatus } from '../types';
-import { Users, Package, FileText, AlertCircle, AlertTriangle, DollarSign, Archive, CheckCircle, ArrowRight, UserPlus, ChevronRight, TrendingUp, CalendarDays, Filter, Clock, UserCheck, Layers, BarChart3, Receipt, Users2, Box, ShieldAlert, Wallet } from 'lucide-react';
+import { Users, Package, FileText, AlertCircle, AlertTriangle, DollarSign, Archive, CheckCircle, ArrowRight, UserPlus, ChevronRight, TrendingUp, CalendarDays, Filter } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface DashboardProps {
@@ -15,28 +15,35 @@ interface DashboardProps {
 }
 
 const StatCard: React.FC<{
-    item: { name: string; stat: string | number; icon: React.ElementType; color: string; iconColor: string; desc: string };
+    item: { name: string; stat: string | number; icon: React.ElementType; color: string; desc: string };
 }> = ({ item }) => (
-    <div className="bg-white rounded-3xl p-6 border border-slate-100/50 shadow-sm hover:shadow-md transition-all flex flex-col">
-        <div className={`flex items-center justify-center h-14 w-14 rounded-2xl ${item.color.replace('bg-', 'bg-').replace('-500', '-50')} mb-4`}>
-            <item.icon className={`h-7 w-7 ${item.iconColor}`} />
+    <div className="bg-white rounded-2xl p-6 md:p-8 shadow-sm ring-1 ring-slate-100 transition-all hover:shadow-md group">
+        <div className="flex justify-between items-start">
+            <div className={`p-3 rounded-xl ${item.color} bg-opacity-10 group-hover:bg-opacity-20 transition-all`}>
+                <item.icon className={`h-6 w-6 ${item.color.replace('bg-', 'text-')}`} />
+            </div>
         </div>
-        <p className="text-sm font-medium text-slate-500 mb-1">{item.name}</p>
-        <p className="text-3xl font-bold text-slate-900 mb-2">{item.stat}</p>
-        <p className="text-xs text-slate-400">{item.desc}</p>
+        <div className="mt-4">
+            <p className="text-sm font-medium text-slate-500">{item.name}</p>
+            <p className="text-2xl md:text-3xl font-bold text-slate-900 mt-1 truncate">{item.stat}</p>
+            <p className="text-sm text-slate-400 mt-1">{item.desc}</p>
+        </div>
     </div>
 );
 
 const ShortcutCard = ({ icon: Icon, label, desc, onClick, colorClass }: { icon: React.ElementType, label: string, desc: string, onClick: () => void, colorClass: string }) => {
     const { isRTL } = useLanguage();
     return (
-        <button onClick={onClick} className="bg-white rounded-3xl p-5 border border-slate-100/50 shadow-sm hover:shadow-md flex items-center gap-5 text-left transition-all group w-full">
-            <div className={`flex items-center justify-center h-14 w-14 rounded-2xl ${colorClass.replace('bg-', 'bg-').replace('-500', '-50')} flex-shrink-0`}>
+        <button onClick={onClick} className="bg-white rounded-2xl p-5 shadow-sm ring-1 ring-slate-100 flex items-center gap-4 text-left hover:ring-emerald-500/50 hover:shadow-md transition-all group w-full">
+            <div className={`flex items-center justify-center h-12 w-12 rounded-xl ${colorClass} bg-opacity-10 group-hover:scale-110 transition-transform flex-shrink-0`}>
                 <Icon className={`h-6 w-6 ${colorClass.replace('bg-', 'text-')}`} />
             </div>
             <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
-                <p className="font-bold text-slate-900 text-[15px]">{label}</p>
-                <p className="text-[13px] text-slate-500">{desc}</p>
+                <p className="font-bold text-slate-800 truncate text-base">{label}</p>
+                <p className="text-sm text-slate-500 truncate">{desc}</p>
+            </div>
+            <div className={`opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 ${isRTL ? 'mr-auto rotate-180' : 'ml-auto'}`}>
+                <ChevronRight size={20} />
             </div>
         </button>
     );
@@ -88,32 +95,28 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
             name: t('totalRevenue'), 
             stat: totalRevenue.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }), 
             icon: DollarSign, 
-            color: 'bg-emerald-500',
-            iconColor: 'text-emerald-600',
+            color: 'bg-emerald-500 text-emerald-600',
             desc: t('totalRevenueDesc')
         },
         { 
             name: t('unpaidInvoices'), 
             stat: unpaidInvoicesCount, 
             icon: AlertCircle, 
-            color: 'bg-orange-500',
-            iconColor: 'text-orange-600',
+            color: 'bg-amber-500 text-amber-600',
             desc: `${t('remainingAmount')} : ${unpaidAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 })}`
         },
         { 
             name: t('activeClients'), 
             stat: clients.length, 
             icon: Users, 
-            color: 'bg-blue-500',
-            iconColor: 'text-blue-600',
+            color: 'bg-blue-500 text-blue-600',
             desc: t('clientsDatabase')
         },
         { 
             name: t('catalog'), 
             stat: products.length, 
             icon: Package, 
-            color: 'bg-purple-500',
-            iconColor: 'text-purple-600',
+            color: 'bg-purple-500 text-purple-600',
             desc: t('catalogDesc')
         },
     ];
@@ -253,29 +256,32 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
 
     return (
         <div className="space-y-6 md:space-y-8 animate-fadeIn pb-8">
-            {/* Header Section - Emerald Theme */}
-            <div className="bg-gradient-to-r from-emerald-900 to-emerald-800 rounded-[2rem] p-8 md:p-10 text-white relative overflow-hidden">
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div className="text-center md:text-left">
-                        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{t('welcome')}, {welcomeName} !</h1>
-                        <p className="text-emerald-100/90 mt-2 text-lg">{t('welcomeSubtitle')}</p>
+            {/* Header Section */}
+            <div className="bg-gradient-to-r from-emerald-900 to-emerald-700 rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-emerald-400 opacity-10 rounded-full blur-2xl"></div>
+                
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold">{t('welcome')}, {welcomeName} !</h1>
+                        <p className="text-emerald-100 mt-2 text-base md:text-lg">{t('welcomeSubtitle')}</p>
                     </div>
                     
                     {/* Widget Date */}
-                    <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center gap-4 min-w-[240px]">
-                        <div className="bg-white/20 p-3 rounded-xl text-white">
+                    <div className="w-full md:w-auto bg-white/10 backdrop-blur-md rounded-2xl p-2 pr-5 border border-white/10 shadow-lg flex items-center gap-4">
+                        <div className="bg-white/20 p-3 rounded-xl text-white shadow-inner">
                             <CalendarDays className="h-6 w-6" />
                         </div>
-                        <div>
-                            <p className="text-[10px] text-emerald-100 font-bold uppercase tracking-wider mb-0.5">{t('today')}</p>
-                            <p className="text-base font-bold capitalize leading-none text-white">{todayDate}</p>
+                        <div className="text-white">
+                            <p className="text-xs text-emerald-200 font-bold uppercase tracking-wider mb-0.5">{t('today')}</p>
+                            <p className="text-base md:text-lg font-bold capitalize leading-none">{todayDate}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {stats.map(item => <StatCard key={item.name} item={item} />)}
             </div>
             
@@ -283,20 +289,20 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
                 
                 {/* Chart Section */}
-                <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100/50 shadow-sm p-6 md:p-8 flex flex-col">
-                    <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-                        <h3 className="text-xl font-bold text-slate-900">{t('revenueEvolution')}</h3>
+                <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm ring-1 ring-slate-100 p-6 md:p-8 flex flex-col">
+                    <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                        <h3 className="text-lg font-bold text-slate-900">{t('revenueEvolution')}</h3>
                         
                         {/* Période Selector */}
-                        <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-100 w-full sm:w-auto justify-center">
+                        <div className="flex flex-wrap gap-1 bg-slate-100 p-1 rounded-lg w-full sm:w-auto justify-center">
                             {(['day', 'week', 'month', 'year'] as ChartPeriod[]).map((p) => (
                                 <button
                                     key={p}
                                     onClick={() => setChartPeriod(p)}
-                                    className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-all flex-1 sm:flex-none text-center ${
+                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all flex-1 sm:flex-none text-center ${
                                         chartPeriod === p 
-                                        ? 'bg-white text-slate-900 border border-slate-100' 
-                                        : 'text-slate-500 hover:text-slate-700'
+                                        ? 'bg-white text-emerald-600 shadow-sm' 
+                                        : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700'
                                     }`}
                                 >
                                     {p === 'day' ? t('periodDay') : p === 'week' ? t('periodWeek') : p === 'month' ? t('periodMonth') : t('periodYear')}
@@ -304,13 +310,13 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                             ))}
                             <button
                                 onClick={() => setChartPeriod('custom')}
-                                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1 ${
+                                className={`px-3 py-1 text-xs font-medium rounded-md transition-all flex items-center gap-1 ${
                                     chartPeriod === 'custom' 
-                                    ? 'bg-white text-slate-900 border border-slate-100' 
-                                    : 'text-slate-500 hover:text-slate-700'
+                                    ? 'bg-white text-emerald-600 shadow-sm' 
+                                    : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700'
                                 }`}
                             >
-                                <Filter size={14} />
+                                <Filter size={10} />
                             </button>
                         </div>
                     </div>
@@ -322,14 +328,14 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                                 type="date" 
                                 value={customStartDate} 
                                 onChange={(e) => setCustomStartDate(e.target.value)}
-                                className="w-full sm:w-auto text-xs border-slate-200 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
+                                className="w-full sm:w-auto text-xs border-slate-200 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
                             />
                             <span className="hidden sm:inline text-slate-400">-</span>
                             <input 
                                 type="date" 
                                 value={customEndDate} 
                                 onChange={(e) => setCustomEndDate(e.target.value)}
-                                className="w-full sm:w-auto text-xs border-slate-200 rounded-lg focus:ring-emerald-500 focus:border-emerald-500"
+                                className="w-full sm:w-auto text-xs border-slate-200 rounded-md focus:ring-emerald-500 focus:border-emerald-500"
                             />
                         </div>
                     )}
@@ -367,7 +373,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
 
                 {/* Right Column: Actions, Stock Alerts, Top Products */}
                 <div className="space-y-6">
-                    <h3 className="text-xl font-bold text-slate-900 px-1">{t('quickActions')}</h3>
+                    <h3 className="text-lg font-bold text-slate-900 px-1">{t('quickActions')}</h3>
                     <div className="grid grid-cols-1 gap-4">
                         <ShortcutCard 
                             icon={FileText} 
@@ -393,25 +399,25 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                     </div>
 
                     {/* Alertes Stock */}
-                    <div className="bg-red-50/80 rounded-3xl p-6 border border-red-100 mt-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h4 className="text-base font-bold text-red-800 flex items-center gap-2">
+                    <div className="bg-red-50 rounded-2xl p-5 border border-red-100 shadow-sm mt-6">
+                        <div className="flex justify-between items-center mb-3">
+                            <h4 className="font-bold text-red-800 flex items-center gap-2">
                                 <AlertTriangle className="h-5 w-5"/> {t('stockAlerts')}
                             </h4>
-                            <button onClick={() => navigate('/stock')} className="text-sm font-bold text-red-600 hover:text-red-700 transition-colors">{t('manage')}</button>
+                            <button onClick={() => navigate('/stock')} className="text-xs font-semibold text-red-600 hover:underline">{t('manage')}</button>
                         </div>
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                             {lowStockProducts.length > 0 ? (
                                 lowStockProducts.map(p => (
-                                    <div key={p.id} className="flex justify-between items-center bg-white p-3.5 rounded-2xl border border-red-100/50">
+                                    <div key={p.id} className="flex justify-between items-center bg-white p-2 rounded-lg border border-red-100">
                                         <span className="text-sm font-medium text-slate-700 truncate max-w-[120px]">{p.name}</span>
-                                        <span className="text-xs font-bold text-red-600 bg-red-100/80 px-3 py-1.5 rounded-lg">
-                                            Reste: {p.stockQuantity}
+                                        <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-md">
+                                            {t('remains')}: {p.stockQuantity}
                                         </span>
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-sm text-emerald-700 flex items-center gap-2 bg-emerald-50 p-3 rounded-2xl border border-emerald-100/50">
+                                <div className="text-sm text-green-700 flex items-center gap-2">
                                     <CheckCircle size={16}/> {t('stockOk')}
                                 </div>
                             )}
@@ -419,27 +425,25 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                     </div>
 
                     {/* Meilleurs Produits */}
-                    <div className="bg-amber-50/80 rounded-3xl p-6 border border-amber-100">
-                        <div className="flex justify-between items-center mb-4">
-                            <h4 className="text-base font-bold text-amber-900 flex items-center gap-2">
-                                <TrendingUp className="h-5 w-5"/> {t('topSales')}
-                            </h4>
-                        </div>
-                        <div className="space-y-3">
+                    <div className="bg-amber-50 rounded-2xl p-5 border border-amber-100 shadow-sm">
+                        <h4 className="font-bold text-amber-900 flex items-center gap-2 mb-3">
+                            <TrendingUp className="h-5 w-5 text-amber-600"/> {t('topSales')}
+                        </h4>
+                        <div className="space-y-2">
                             {topProducts.length > 0 ? (
                                 topProducts.map((p, idx) => (
-                                    <div key={idx} className="flex justify-between items-center bg-white p-3.5 rounded-2xl border border-amber-100/50">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-sm font-bold text-amber-600 w-4">{idx + 1}.</span>
+                                    <div key={idx} className="flex justify-between items-center bg-white p-2 rounded-lg border border-amber-100">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-bold text-amber-500 w-4">{idx + 1}.</span>
                                             <span className="text-sm font-medium text-slate-700 truncate max-w-[110px]">{p?.name}</span>
                                         </div>
                                         <span className="text-xs font-semibold text-slate-500">
-                                            {p?.qty} vendus
+                                            {p?.qty} {t('sold')}
                                         </span>
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-xs text-slate-400 italic">Pas encore de données.</p>
+                                <p className="text-xs text-amber-700 italic">Pas encore de données de vente.</p>
                             )}
                         </div>
                     </div>
@@ -448,31 +452,31 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
 
             {/* Recent Activity Lists */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-                 <div className="bg-white rounded-3xl border border-slate-100/50 shadow-sm overflow-hidden">
-                    <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-                        <h3 className="text-lg font-bold text-slate-900">{t('recentInvoices')}</h3>
-                        <button onClick={() => navigate('/sales/invoices')} className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors">
-                            {t('seeAll')}
+                 <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-100 overflow-hidden">
+                    <div className="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 className="font-bold text-slate-900">{t('recentInvoices')}</h3>
+                        <button onClick={() => navigate('/sales/invoices')} className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                            {t('seeAll')} <ArrowRight className="h-4 w-4 rtl:rotate-180"/>
                         </button>
                     </div>
                     {recentInvoices.length > 0 ? (
-                        <div className="divide-y divide-slate-50">
+                        <div className="divide-y divide-slate-100">
                            {recentInvoices.map(invoice => (
-                             <div key={invoice.id} className="p-5 flex justify-between items-center hover:bg-slate-50 transition-colors">
-                                <div className="flex items-center gap-4">
-                                    <div className="h-12 w-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-500 shrink-0">
-                                        <FileText size={20} />
+                             <div key={invoice.id} className="p-4 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                                <div className="flex items-center gap-3 md:gap-4">
+                                    <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
+                                        <FileText size={18} />
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="font-bold text-slate-900 text-sm truncate max-w-[120px] md:max-w-xs">{invoice.clientName}</p>
+                                        <p className="font-bold text-slate-800 text-sm truncate max-w-[120px] md:max-w-xs">{invoice.clientName}</p>
                                         <p className="text-xs text-slate-500 font-mono">{invoice.documentId || invoice.id}</p>
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
                                     <p className="font-bold text-slate-900 text-sm">{invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</p>
-                                    <span className={`text-[10px] px-2.5 py-1 rounded-lg font-medium ${
-                                        invoice.status === InvoiceStatus.Paid ? 'bg-emerald-50 text-emerald-700' : 
-                                        invoice.status === InvoiceStatus.Pending ? 'bg-amber-50 text-amber-700' : 'bg-slate-50 text-slate-600'
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                        invoice.status === InvoiceStatus.Paid ? 'bg-green-100 text-green-700' : 
+                                        invoice.status === InvoiceStatus.Pending ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
                                     }`}>
                                         {invoice.status}
                                     </span>
@@ -483,33 +487,33 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                     ) : (
                         <div className="flex flex-col items-center justify-center text-slate-400 py-12">
                             <FileText className="h-12 w-12 mb-3 opacity-20" />
-                            <p className="text-sm">{t('noRecentInvoices')}</p>
+                            <p>{t('noRecentInvoices')}</p>
                         </div>
                     )}
                  </div>
 
-                 <div className="bg-white rounded-3xl border border-slate-100/50 shadow-sm overflow-hidden">
-                    <div className="p-6 border-b border-slate-50 flex justify-between items-center">
-                        <h3 className="text-lg font-bold text-slate-900">{t('newClients')}</h3>
-                        <button onClick={() => navigate('/clients')} className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors">
-                            {t('seeAll')}
+                 <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-100 overflow-hidden">
+                    <div className="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 className="font-bold text-slate-900">{t('newClients')}</h3>
+                        <button onClick={() => navigate('/clients')} className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                            {t('seeAll')} <ArrowRight className="h-4 w-4 rtl:rotate-180"/>
                         </button>
                     </div>
                      {recentClients.length > 0 ? (
-                        <div className="divide-y divide-slate-50">
+                        <div className="divide-y divide-slate-100">
                            {recentClients.map(client => (
-                             <div key={client.id} className="p-5 flex justify-between items-center hover:bg-slate-50 transition-colors">
-                                <div className="flex items-center gap-4">
-                                    <div className="h-12 w-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-500 shrink-0">
-                                        <Users size={20} />
+                             <div key={client.id} className="p-4 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                                <div className="flex items-center gap-3 md:gap-4">
+                                    <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 shrink-0">
+                                        <Users size={18} />
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="font-bold text-slate-900 text-sm truncate max-w-[120px] md:max-w-xs">{client.name}</p>
+                                        <p className="font-bold text-slate-800 text-sm truncate max-w-[120px] md:max-w-xs">{client.name}</p>
                                         {client.company && <p className="text-xs text-slate-500 truncate">{client.company}</p>}
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <p className="text-xs text-slate-500 truncate max-w-[100px]">{client.email || 'Pas d\'email'}</p>
+                                    <p className="text-xs text-slate-400 truncate max-w-[100px]">{client.email || 'Pas d\'email'}</p>
                                 </div>
                              </div>
                            ))}
@@ -517,7 +521,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                     ) : (
                          <div className="flex flex-col items-center justify-center text-slate-400 py-12">
                             <Users className="h-12 w-12 mb-3 opacity-20" />
-                            <p className="text-sm">{t('noClients')}</p>
+                            <p>{t('noClients')}</p>
                         </div>
                     )}
                  </div>

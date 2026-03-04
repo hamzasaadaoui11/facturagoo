@@ -81,7 +81,6 @@ export interface LineItem {
   unitPrice: number;
   vat: number;
   showDimensions?: boolean; // Persisted here to avoid schema changes
-  calculationMode?: 'piece' | 'm2' | 'ml';
 }
 
 export interface Quote {

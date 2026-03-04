@@ -135,15 +135,6 @@ export const dbService = {
     },
     products: {
         getAll: () => getAll<Product>('products'),
-        getById: async (id: string) => {
-            const { data, error } = await supabase
-                .from('products')
-                .select('*')
-                .eq('id', id)
-                .single();
-            if (error) throw error;
-            return data as Product;
-        },
         add: (item: Product) => add<Product>('products', item),
         update: (item: Product) => update<Product>('products', item),
         delete: (id: string) => remove('products', id),
@@ -213,9 +204,9 @@ export const dbService = {
 
             const settings = data as CompanySettings | null;
             if (settings) {
-                const localShowAmount = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS);
-                if (localShowAmount !== null) {
-                    settings.showAmountInWords = localShowAmount === 'true';
+                const localShowWords = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS);
+                if (localShowWords !== null) {
+                    settings.showAmountInWords = localShowWords === 'true';
                 } else if (settings.showAmountInWords === undefined) {
                     settings.showAmountInWords = true;
                 }
@@ -227,11 +218,6 @@ export const dbService = {
             const userId = await getCurrentUserId();
             if (!userId) throw new Error("Utilisateur non connecté");
             
-            // Save showAmountInWords to localStorage
-            if (settings.showAmountInWords !== undefined) {
-                localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS, String(settings.showAmountInWords));
-            }
-            
             const { data: existingRow, error: fetchError } = await supabase
                 .from('settings')
                 .select('id')
@@ -242,11 +228,14 @@ export const dbService = {
 
             if (fetchError) throw fetchError;
 
-            const { id, ...settingsData } = settings;
+            const { showAmountInWords, id, ...settingsData } = settings;
             
+            if (showAmountInWords !== undefined) {
+                localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS, String(showAmountInWords));
+            }
+
             const cleanData = { ...settingsData };
             delete (cleanData as any).created_at;
-            delete (cleanData as any).showAmountInWords; // Remove to avoid Supabase schema error
 
             let resultData, resultError;
 
@@ -276,6 +265,7 @@ export const dbService = {
             }
 
             const finalResult = resultData as CompanySettings;
+            finalResult.showAmountInWords = showAmountInWords;
             return finalResult;
         }
     },

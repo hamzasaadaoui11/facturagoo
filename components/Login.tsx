@@ -17,9 +17,6 @@ const Login: React.FC = () => {
         setError(null);
 
         try {
-            // Clear any stale local session state before attempting a new login
-            await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-            
             const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,

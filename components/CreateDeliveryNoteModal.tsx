@@ -26,7 +26,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [subject, setSubject] = useState('');
-    const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml'>('piece');
+    const [showDimensions, setShowDimensions] = useState(false);
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
     const [selectedProductId, setSelectedProductId] = useState('');
@@ -49,8 +49,8 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setClientId(noteToEdit.clientId);
                 setDate(noteToEdit.date);
                 setSubject(noteToEdit.subject || '');
-                // Read calculationMode from first line item
-                setCalculationMode(noteToEdit.lineItems[0]?.calculationMode || 'piece');
+                // Read showDimensions from document or first line item
+                setShowDimensions(!!noteToEdit.showDimensions || !!noteToEdit.lineItems[0]?.showDimensions);
                 setLineItems(JSON.parse(JSON.stringify(noteToEdit.lineItems)));
                 setPaymentAmount(noteToEdit.paymentAmount || 0);
                 setPaymentMethod(noteToEdit.paymentMethod || 'Espèces');
@@ -58,6 +58,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
                 setSubject('');
+                setShowDimensions(false);
                 setLineItems([]);
                 setPaymentAmount(0);
                 setTempVat(language === 'es' ? 21 : 20);
@@ -104,24 +105,13 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         }
     }, [selectedProductId, products, language, isModeTTC]);
 
-    const isM2 = calculationMode === 'm2';
-    const isML = calculationMode === 'ml';
-    const showLengthColumn = calculationMode === 'm2' || calculationMode === 'ml';
-    const showHeightColumn = calculationMode === 'm2';
-
-    const getLineMultiplier = (item: LineItem) => {
-        if (isM2) return (item.length || 1) * (item.height || 1);
-        if (isML) return (item.length || 1);
-        return 1;
-    };
-
     const handleAddItem = () => {
         if (!tempName) return;
         const qty = parseDecimalInput(itemQuantity);
         const inputPrice = parseDecimalInput(tempPrice);
         const price = isModeTTC ? (inputPrice / (1 + tempVat / 100)) : inputPrice;
-        const length = showLengthColumn ? parseDecimalInput(tempLength) : 1;
-        const height = showHeightColumn ? parseDecimalInput(tempHeight) : 1;
+        const length = showDimensions ? parseDecimalInput(tempLength) : 1;
+        const height = showDimensions ? parseDecimalInput(tempHeight) : 1;
 
         const newItem: LineItem = {
             id: `temp-${Date.now()}`,
@@ -144,20 +134,20 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     };
 
     const totals = useMemo(() => {
-        const subTotal = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * getLineMultiplier(item)), 0);
-        const vatAmount = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * getLineMultiplier(item) * (item.vat / 100)), 0);
+        const subTotal = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * (item.length || 1) * (item.height || 1)), 0);
+        const vatAmount = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * (item.length || 1) * (item.height || 1) * (item.vat / 100)), 0);
         const totalTTC = subTotal + vatAmount;
         return { subTotal, vatAmount, totalTTC };
-    }, [lineItems, calculationMode]);
+    }, [lineItems]);
 
     const handleSave = async () => {
         if (!clientId || lineItems.length === 0) return;
         const client = clients.find(c => c.id === clientId);
         const clientNameDisplay = client ? (client.company || client.name) : 'Client inconnu';
-        // Store calculationMode in the first line item to avoid schema changes
+        // Store showDimensions in the first line item to avoid schema changes
         const updatedLineItems = [...lineItems];
         if (updatedLineItems.length > 0) {
-            updatedLineItems[0] = { ...updatedLineItems[0], calculationMode };
+            updatedLineItems[0] = { ...updatedLineItems[0], showDimensions };
         }
 
         setIsSubmitting(true);
@@ -204,20 +194,18 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
                             <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
-                        <div className="md:col-span-2 flex items-center gap-6 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="md:col-span-2 flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                             <div className="flex items-center gap-2">
-                                <label htmlFor="calculation-mode" className="text-sm font-bold text-slate-700">Mode de calcul</label>
-                                <select 
-                                    id="calculation-mode"
-                                    value={calculationMode}
-                                    onChange={(e) => setCalculationMode(e.target.value as 'piece' | 'm2' | 'ml')}
-                                    className="rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm py-1.5"
-                                >
-                                    <option value="piece">Par pièce</option>
-                                    <option value="m2">Par m²</option>
-                                    <option value="ml">Par mètre linéaire</option>
-                                </select>
+                                <label htmlFor="dimensions-toggle" className="text-sm font-bold text-slate-700">Activer les dimensions</label>
+                                <input 
+                                    type="checkbox" 
+                                    id="dimensions-toggle"
+                                    checked={showDimensions}
+                                    onChange={(e) => setShowDimensions(e.target.checked)}
+                                    className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                />
                             </div>
+                            <p className="text-xs text-slate-500 italic">Ajoute les colonnes Longueur et Hauteur au tableau.</p>
                         </div>
                     </div>
 
@@ -256,17 +244,17 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('quantity')}</label>
                                 <input type="text" value={itemQuantity} onChange={(e) => setItemQuantity(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                             </div>
-                            {showLengthColumn && (
-                                <div className="col-span-12 lg:col-span-2">
-                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Long.</label>
-                                    <input type="text" value={tempLength} onChange={(e) => setTempLength(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
-                                </div>
-                            )}
-                            {showHeightColumn && (
-                                <div className="col-span-12 lg:col-span-2">
-                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Haut.</label>
-                                    <input type="text" value={tempHeight} onChange={(e) => setTempHeight(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
-                                </div>
+                            {showDimensions && (
+                                <>
+                                    <div className="col-span-12 lg:col-span-2">
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Long.</label>
+                                        <input type="text" value={tempLength} onChange={(e) => setTempLength(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                    </div>
+                                    <div className="col-span-12 lg:col-span-2">
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Haut.</label>
+                                        <input type="text" value={tempHeight} onChange={(e) => setTempHeight(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                    </div>
+                                </>
                             )}
                             <div className="col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('vat')}</label>
@@ -289,8 +277,12 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                     <tr>
                                         <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('description')}</th>
                                         <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
-                                        {showLengthColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Long.</th>}
-                                        {showHeightColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Haut.</th>}
+                                        {showDimensions && (
+                                            <>
+                                                <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Long.</th>
+                                                <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Haut.</th>
+                                            </>
+                                        )}
                                         <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</th>
                                         <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('totalTTCLabel') : t('totalHTLabel')}</th>
                                         <th className="px-4 py-3 w-10"></th>
@@ -299,7 +291,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                 <tbody className="bg-white divide-y divide-slate-100">
                                     {lineItems.map(item => {
                                         const displayPrice = isModeTTC ? (item.unitPrice * (1 + item.vat/100)) : item.unitPrice;
-                                        const displayLineTotal = item.quantity * getLineMultiplier(item) * displayPrice;
+                                        const displayLineTotal = item.quantity * (item.length || 1) * (item.height || 1) * displayPrice;
                                         
                                         return (
                                         <tr key={item.id} className="hover:bg-slate-50 transition-colors">
@@ -315,26 +307,26 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                                     className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
                                                 />
                                             </td>
-                                        {showLengthColumn && (
-                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                <input 
-                                                    type="text" 
-                                                    value={formatDecimalForInput(item.length || 1, language)} 
-                                                    onChange={(e) => updateLineItem(item.id, { length: parseDecimalInput(e.target.value) })}
-                                                    className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                />
-                                            </td>
-                                        )}
-                                        {showHeightColumn && (
-                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                <input 
-                                                    type="text" 
-                                                    value={formatDecimalForInput(item.height || 1, language)} 
-                                                    onChange={(e) => updateLineItem(item.id, { height: parseDecimalInput(e.target.value) })}
-                                                    className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                />
-                                            </td>
-                                        )}
+                                            {showDimensions && (
+                                                <>
+                                                    <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                        <input 
+                                                            type="text" 
+                                                            value={formatDecimalForInput(item.length || 1, language)} 
+                                                            onChange={(e) => updateLineItem(item.id, { length: parseDecimalInput(e.target.value) })}
+                                                            className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                        <input 
+                                                            type="text" 
+                                                            value={formatDecimalForInput(item.height || 1, language)} 
+                                                            onChange={(e) => updateLineItem(item.id, { height: parseDecimalInput(e.target.value) })}
+                                                            className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                        />
+                                                    </td>
+                                                </>
+                                            )}
                                             <td className="px-4 py-3 text-right text-xs">
                                                 <input 
                                                     type="text" 
@@ -404,6 +396,19 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                     <button onClick={handleSave} disabled={isSubmitting} className="order-1 md:order-2 flex-1 md:flex-none px-10 py-3.5 text-sm font-bold text-white bg-emerald-600 border border-transparent rounded-xl shadow-lg shadow-emerald-500/30 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">{isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Calculator size={18} />} {t('save')}</button>
                 </div>
             </div>
+            <style>{`
+                .grid-cols-24 { grid-template-columns: repeat(24, minmax(0, 1fr)); }
+                @media (max-width: 1023px) {
+                    .lg\\:col-span-2, .lg\\:col-span-4, .lg\\:col-span-3 { grid-column: span 12 / span 12; }
+                    .lg\\:col-span-6, .lg\\:col-span-24 { grid-column: span 24 / span 24; }
+                }
+                @media (min-width: 1024px) {
+                    .lg\\:col-span-2 { grid-column: span 2 / span 2; }
+                    .lg\\:col-span-4 { grid-column: span 4 / span 4; }
+                    .lg\\:col-span-6 { grid-column: span 6 / span 6; }
+                    .lg\\:col-span-3 { grid-column: span 3 / span 3; }
+                }
+            `}</style>
         </div>
     );
 };

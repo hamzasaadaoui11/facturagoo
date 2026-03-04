@@ -61,7 +61,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     }, [deliveryNotes.length, itemsPerPage]);
     
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-    const [menuPosition, setMenuPosition] = useState<{top: number, left: number, transformOrigin: string} | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{top: number, left: number} | null>(null);
     
     const [noteToEdit, setNoteToEdit] = useState<DeliveryNote | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -178,30 +178,11 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
             setMenuPosition(null);
         } else {
             const rect = e.currentTarget.getBoundingClientRect();
-            const viewportHeight = window.innerHeight;
-            const menuHeight = 300; 
-            const menuWidth = 208; // w-52 is 13rem = 208px
-            
-            let top: number;
-            let transformOrigin: string;
-            
-            if (rect.bottom + menuHeight > viewportHeight) {
-                top = rect.top + window.scrollY - menuHeight - 5;
-                transformOrigin = isRTL ? 'bottom left' : 'bottom right';
-            } else {
-                top = rect.bottom + window.scrollY + 5;
-                transformOrigin = isRTL ? 'top left' : 'top right';
-            }
-
-            let left: number;
-            if (isRTL) {
-                left = rect.left + window.scrollX;
-            } else {
-                left = rect.right + window.scrollX - menuWidth;
-            }
-
             setActiveMenuId(id);
-            setMenuPosition({ top, left: Math.max(10, left), transformOrigin });
+            setMenuPosition({
+                top: rect.bottom + window.scrollY + 5,
+                left: isRTL ? rect.left + window.scrollX : rect.right + window.scrollX - 192 
+            });
         }
     };
 
@@ -427,66 +408,62 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
 
             {activeMenuId && activeNote && menuPosition && createPortal(
                 <div 
-                    className="absolute z-50 w-52 rounded-2xl bg-white shadow-xl border border-slate-100/80 p-1.5 focus:outline-none animate-in fade-in zoom-in-95 duration-100"
-                    style={{ top: menuPosition.top, left: menuPosition.left, transformOrigin: menuPosition.transformOrigin }}
+                    className="absolute z-50 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    style={{ top: menuPosition.top, left: menuPosition.left }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="flex flex-col gap-0.5">
+                    <div className="py-1">
                         <button 
-                            onClick={() => { handleEditClick(activeNote); setActiveMenuId(null); }} 
-                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
+                            onClick={() => handleEditClick(activeNote)} 
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Pencil size={16} className={`text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('edit')}
+                            <Pencil size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-emerald-600`} /> {t('edit')}
                         </button>
                         
                         {!activeNote.invoiceId ? (
                             onCreateInvoice && (
                                 <button 
-                                    onClick={() => { handleConvertToInvoice(activeNote.id); setActiveMenuId(null); }} 
+                                    onClick={() => handleConvertToInvoice(activeNote.id)} 
                                     disabled={isConverting}
-                                    className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group disabled:opacity-50"
+                                    className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                                 >
                                     {isConverting ? (
-                                        <Loader2 size={16} className={`animate-spin text-purple-600 ${isRTL ? 'ml-3' : 'mr-3'}`} />
+                                        <Loader2 size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} animate-spin text-purple-600`} />
                                     ) : (
-                                        <FileText size={16} className={`text-purple-600 ${isRTL ? 'ml-3' : 'mr-3'}`} />
+                                        <FileText size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-purple-600`} />
                                     )}
                                     {t('convert')}
                                 </button>
                             )
                         ) : (
                             <button 
-                                onClick={() => { navigate('/sales/invoices'); setActiveMenuId(null); }} 
-                                className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
+                                onClick={() => navigate('/sales/invoices')} 
+                                className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                             >
-                                <FileCheck size={16} className={`text-teal-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('view')} {t('invoices')}
+                                <FileCheck size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-teal-600`} /> {t('view')} {t('invoices')}
                             </button>
                         )}
                         
-                        <div className="border-t border-slate-100 my-1 mx-2"></div>
-
                         <button 
-                            onClick={() => { handlePrintClick(activeNote); setActiveMenuId(null); }}
-                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
+                            onClick={() => handlePrintClick(activeNote)}
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Printer size={16} className={`text-neutral-500 group-hover:text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('print')}
+                            <Printer size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-neutral-500`} /> {t('print')}
                         </button>
 
                         <button 
-                            onClick={() => { handlePDFClick(activeNote); setActiveMenuId(null); }}
+                            onClick={() => handlePDFClick(activeNote)}
                             disabled={isDownloading}
-                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group disabled:opacity-50"
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
                         >
-                            {isDownloading ? <Loader2 size={16} className={`animate-spin ${isRTL ? 'ml-3' : 'mr-3'}`} /> : <Download size={16} className={`text-neutral-500 group-hover:text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} />} {t('download')}
+                            {isDownloading ? <Loader2 size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} animate-spin`} /> : <Download size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-neutral-500`} />} {t('download')}
                         </button>
                         
-                        <div className="border-t border-slate-100 my-1 mx-2"></div>
-
                         <button 
-                            onClick={() => { handleDeleteClick(activeNote.id); setActiveMenuId(null); }} 
-                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-red-600 rounded-xl hover:bg-red-50 transition-colors group"
+                            onClick={() => handleDeleteClick(activeNote.id)} 
+                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
                         >
-                            <Trash2 size={16} className={`text-red-500 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('delete')}
+                            <Trash2 size={16} className={`${isRTL ? 'ml-3' : 'mr-3'} text-red-600`} /> {t('delete')}
                         </button>
                     </div>
                 </div>,

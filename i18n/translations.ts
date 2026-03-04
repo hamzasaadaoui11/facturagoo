@@ -297,11 +297,6 @@ export const translations = {
     periodMonth: 'Mois',
     periodYear: 'An',
     noFinancialData: 'Aucune donnée financière',
-    enableDimensions: 'Activer les dimensions',
-    length: 'Longueur',
-    height: 'Hauteur',
-    lengthLabel: 'Long.',
-    heightLabel: 'Haut.',
   },
   es: {
     // Navigation
@@ -598,11 +593,6 @@ export const translations = {
     periodMonth: 'Mes',
     periodYear: 'Año',
     noFinancialData: 'Sin datos financieros',
-    enableDimensions: 'Activar dimensiones',
-    length: 'Longitud',
-    height: 'Altura',
-    lengthLabel: 'Long.',
-    heightLabel: 'Alt.',
   },
   en: {
     // Navigation
@@ -899,11 +889,6 @@ export const translations = {
     periodMonth: 'Month',
     periodYear: 'Year',
     noFinancialData: 'No financial data',
-    enableDimensions: 'Enable dimensions',
-    length: 'Length',
-    height: 'Height',
-    lengthLabel: 'Len.',
-    heightLabel: 'Hei.',
   },
   ar: {
     // Navigation
@@ -1191,10 +1176,5 @@ export const translations = {
     periodMonth: 'شهر',
     periodYear: 'سنة',
     noFinancialData: 'لا توجد بيانات مالية',
-    enableDimensions: 'تفعيل الأبعاد',
-    length: 'الطول',
-    height: 'الارتفاع',
-    lengthLabel: 'طول',
-    heightLabel: 'ارتفاع',
   }
 };
