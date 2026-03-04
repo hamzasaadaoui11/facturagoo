@@ -78,10 +78,11 @@ export interface LineItem {
   quantity: number;
   length?: number;
   height?: number;
+  weight?: number;
   unitPrice: number;
   vat: number;
   showDimensions?: boolean; // Persisted here to avoid schema changes
-  calculationMode?: 'piece' | 'm2' | 'ml';
+  calculationMode?: 'piece' | 'm2' | 'ml' | 'kg';
 }
 
 export interface Quote {

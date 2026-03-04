@@ -590,12 +590,6 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                         placeholder="Ex: Net à Payer" 
                                     />
                                     <InputField 
-                                        label={t('labelSignatureSender')} 
-                                        value={currentLabels.signatureSender || ''} 
-                                        onChange={(e: any) => handleLabelChange('signatureSender', e.target.value)} 
-                                        placeholder="Ex: Signature Expéditeur" 
-                                    />
-                                    <InputField 
                                         label={t('labelSignatureRecipient')} 
                                         value={currentLabels.signatureRecipient || ''} 
                                         onChange={(e: any) => handleLabelChange('signatureRecipient', e.target.value)} 

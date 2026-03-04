@@ -42,6 +42,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
     
     const isM2 = calculationMode === 'm2' || (legacyShowDimensions && calculationMode === 'piece');
     const isML = calculationMode === 'ml';
+    const isKg = calculationMode === 'kg';
 
     const getLineMultiplier = (item: any) => {
         if (isM2) return (item.length || 1) * (item.height || 1);
@@ -178,6 +179,12 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                         <th className="p-3 text-center font-semibold uppercase text-xs w-16">ML</th>
                                     </>
                                 )}
+                                {isKg && (
+                                    <>
+                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">Poids (kg)</th>
+                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">Total kg</th>
+                                    </>
+                                )}
                                 {!isDeliveryNote && (
                                     <>
                                         <th className="p-3 text-right font-semibold uppercase text-xs w-28">{t('unitPrice')}</th>
@@ -206,6 +213,12 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                         <>
                                             <td className="p-3 text-center align-top text-[12px]">{item.length || 1}</td>
                                             <td className="p-3 text-center align-top text-[12px] font-medium">{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
+                                        </>
+                                    )}
+                                    {isKg && (
+                                        <>
+                                            <td className="p-3 text-center align-top text-[12px]">{item.weight || 1}</td>
+                                            <td className="p-3 text-center align-top text-[12px] font-medium">{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                     {!isDeliveryNote && (

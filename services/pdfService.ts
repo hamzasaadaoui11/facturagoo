@@ -157,6 +157,7 @@ const generateDocumentHTML = (
     
     const isM2 = calculationMode === 'm2' || (legacyShowDimensions && calculationMode === 'piece');
     const isML = calculationMode === 'ml';
+    const isKg = calculationMode === 'kg';
 
     const getLineMultiplier = (item: any) => {
         if (isM2) return (item.length || 1) * (item.height || 1);
@@ -269,14 +270,16 @@ const generateDocumentHTML = (
         }
     }
 
-    // --- Override labels for Language context ---
+    // Override labels for Language context
     activeColumns = activeColumns.map(col => {
         let label = col.label;
         if (isDeliveryNote && !showPrices) {
             if (col.id === 'unitPrice' || col.id === 'vat' || col.id === 'total') return null;
         }
         
-        if (lang === 'es') {
+        if (col.id === 'quantity' && isKg) {
+            label = lang === 'es' ? 'Peso (kg)' : (lang === 'en' ? 'Weight (kg)' : 'Poids (kg)');
+        } else if (lang === 'es') {
             if (col.id === 'unitPrice') label = isModeTTC ? 'P.U. Total' : 'P.U. Base';
             if (col.id === 'total') label = isModeTTC ? 'Total con IVA' : 'Base imponible';
             if (col.id === 'vat') label = 'IVA';
@@ -536,15 +539,10 @@ const generateDocumentHTML = (
     ` : '';
 
     const signaturesHtml = `
-        <div class="totals-section" style="display: flex; justify-content: space-between; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+        <div class="totals-section" style="display: flex; justify-content: flex-end; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
             <div style="width: 45%; text-align: center;">
-                <div style="font-weight: bold; margin-bottom: 60px; text-decoration: underline;">${txtSigSender}</div>
-                <div style="border-bottom: 1px dashed #ccc; width: 80%; margin: 0 auto;"></div>
-            </div>
-            <div style="width: 45%; text-align: center;">
-                <div style="font-weight: bold; margin-bottom: 60px; text-decoration: underline;">${txtSigRecipient}</div>
-                ${settings.showSignatureRecipient && settings.stamp ? `<img src="${settings.stamp}" style="max-height: 80px; max-width: 200px; object-fit: contain; margin-top: 10px;" />` : settings.showSignatureRecipient ? '<div style="height: 80px;"></div>' : ''}
-                <div style="border-bottom: 1px dashed #ccc; width: 80%; margin: 0 auto;"></div>
+                <div style="font-weight: bold; margin-bottom: 5px; text-decoration: underline;">${txtSigRecipient}</div>
+                ${settings.showSignatureRecipient && settings.stamp ? `<img src="${settings.stamp}" style="max-height: 110px; max-width: 220px; object-fit: contain; margin-top: 2px;" />` : settings.showSignatureRecipient ? '<div style="height: 80px;"></div>' : ''}
             </div>
         </div>
     `;

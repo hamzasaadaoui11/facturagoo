@@ -27,7 +27,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [reason, setReason] = useState('');
-    const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml'>('piece');
+    const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
     const [selectedProductId, setSelectedProductId] = useState('');
@@ -38,6 +38,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const [itemQuantity, setItemQuantity] = useState<string>('1');
     const [tempLength, setTempLength] = useState<string>('1');
     const [tempHeight, setTempHeight] = useState<string>('1');
+    const [tempWeight, setTempWeight] = useState<string>('1');
     const [tempProductCode, setTempProductCode] = useState('');
 
     const [isDiscountEnabled, setIsDiscountEnabled] = useState(false);
@@ -107,12 +108,14 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
 
     const isM2 = calculationMode === 'm2';
     const isML = calculationMode === 'ml';
+    const isKg = calculationMode === 'kg';
     const showLengthColumn = calculationMode === 'm2' || calculationMode === 'ml';
     const showHeightColumn = calculationMode === 'm2';
 
     const getLineMultiplier = (item: LineItem) => {
         if (isM2) return (item.length || 1) * (item.height || 1);
         if (isML) return (item.length || 1);
+        if (isKg) return (item.weight || 1);
         return 1;
     };
 
@@ -121,6 +124,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
         const qty = parseDecimalInput(itemQuantity);
         const length = showLengthColumn ? parseDecimalInput(tempLength) : 1;
         const height = showHeightColumn ? parseDecimalInput(tempHeight) : 1;
+        const weight = isKg ? parseDecimalInput(tempWeight) : 1;
 
         const newItem: LineItem = {
             id: `temp-${Date.now()}`,
@@ -131,6 +135,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
             quantity: qty,
             length: length || 1,
             height: height || 1,
+            weight: weight || 1,
             unitPrice: isModeTTC ? (tempPrice / (1 + tempVat / 100)) : tempPrice,
             vat: tempVat
         };
@@ -245,12 +250,13 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                 <select 
                                     id="calculation-mode"
                                     value={calculationMode}
-                                    onChange={(e) => setCalculationMode(e.target.value as 'piece' | 'm2' | 'ml')}
+                                    onChange={(e) => setCalculationMode(e.target.value as 'piece' | 'm2' | 'ml' | 'kg')}
                                     className="rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm py-1.5"
                                 >
                                     <option value="piece">Par pièce</option>
                                     <option value="m2">Par m²</option>
                                     <option value="ml">Par mètre linéaire</option>
+                                    <option value="kg">Par kg</option>
                                 </select>
                             </div>
                         </div>
@@ -298,6 +304,12 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     <input type="text" value={tempHeight} onChange={(e) => setTempHeight(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                                 </div>
                             )}
+                            {isKg && (
+                                <div className="col-span-12 lg:col-span-2">
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Poids (kg)</label>
+                                    <input type="text" value={tempWeight} onChange={(e) => setTempWeight(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                </div>
+                            )}
                             <div className="col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('vat')}</label>
                                 <select value={tempVat} onChange={(e) => setTempVat(parseInt(e.target.value))} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11">
@@ -321,6 +333,10 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                         <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
                                         {showLengthColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Long.</th>}
                                         {showHeightColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Haut.</th>}
+                                        {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Poids (kg)</th>}
+                                        {isM2 && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">M²</th>}
+                                        {isML && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">ML</th>}
+                                        {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Total kg</th>}
                                         <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{t('totalHTLabel')}</th>
                                         <th className="px-4 py-3 w-10"></th>
                                     </tr>
@@ -360,6 +376,19 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                                 />
                                             </td>
                                         )}
+                                        {isKg && (
+                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                <input 
+                                                    type="text" 
+                                                    value={formatDecimalForInput(item.weight || 1, language)} 
+                                                    onChange={(e) => updateLineItem(item.id, { weight: parseDecimalInput(e.target.value) })}
+                                                    className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                />
+                                            </td>
+                                        )}
+                                        {isM2 && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1) * (item.height || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
+                                        {isML && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
+                                        {isKg && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
                                             <td className="px-4 py-3 text-right text-xs font-bold text-slate-900">{(item.quantity * getLineMultiplier(item) * item.unitPrice).toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })}</td>
                                             <td className="px-4 py-3 text-center"><button onClick={() => handleRemoveItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1"><Trash2 size={16}/></button></td>
                                         </tr>
