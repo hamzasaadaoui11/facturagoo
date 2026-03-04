@@ -65,7 +65,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
 
     // Menu Dropdown State
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-    const [menuPosition, setMenuPosition] = useState<{top: number, left: number} | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{top: number, left: number, transformOrigin: string} | null>(null);
 
     useEffect(() => {
         const handleClickOutside = () => setActiveMenuId(null);
@@ -88,12 +88,30 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
             setMenuPosition(null);
         } else {
             const rect = e.currentTarget.getBoundingClientRect();
-            const leftPos = rect.right + window.scrollX - 192;
+            const viewportHeight = window.innerHeight;
+            const menuHeight = 320; 
+            const menuWidth = 208; // w-52 is 13rem = 208px
+            
+            let top: number;
+            let transformOrigin: string;
+            
+            if (rect.bottom + menuHeight > viewportHeight) {
+                top = rect.top + window.scrollY - menuHeight - 5;
+                transformOrigin = isRTL ? 'bottom left' : 'bottom right';
+            } else {
+                top = rect.bottom + window.scrollY + 5;
+                transformOrigin = isRTL ? 'top left' : 'top right';
+            }
+
+            let left: number;
+            if (isRTL) {
+                left = rect.left + window.scrollX;
+            } else {
+                left = rect.right + window.scrollX - menuWidth;
+            }
+
             setActiveMenuId(id);
-            setMenuPosition({
-                top: rect.bottom + window.scrollY + 5,
-                left: isRTL ? rect.left + window.scrollX : Math.max(10, leftPos)
-            });
+            setMenuPosition({ top, left: Math.max(10, left), transformOrigin });
         }
     };
 
@@ -366,14 +384,14 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
             {/* Menu Dropdown via Portal */}
             {activeMenuId && activeInvoice && menuPosition && createPortal(
                 <div 
-                    className="absolute z-50 w-48 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
-                    style={{ top: menuPosition.top, left: menuPosition.left }}
+                    className="absolute z-50 w-52 rounded-2xl bg-white shadow-xl border border-slate-100/80 p-1.5 focus:outline-none animate-in fade-in zoom-in-95 duration-100"
+                    style={{ top: menuPosition.top, left: menuPosition.left, transformOrigin: menuPosition.transformOrigin }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="py-1">
+                    <div className="flex flex-col gap-0.5">
                         <button 
                             onClick={() => { handleEditClick(activeInvoice); setActiveMenuId(null); }} 
-                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
                         >
                             <Pencil size={16} className={`text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('edit')}
                         </button>
@@ -381,7 +399,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                         {activeInvoice.status === InvoiceStatus.Draft && (
                              <button 
                                 onClick={() => { onUpdateInvoiceStatus(activeInvoice.id, InvoiceStatus.Pending); setActiveMenuId(null); }} 
-                                className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                                className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
                             >
                                 <CheckCircle size={16} className={`text-green-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('validate')}
                             </button>
@@ -390,7 +408,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                         {activeInvoiceRemaining > 0 && (
                             <button 
                                 onClick={() => { openPaymentModal(activeInvoice); setActiveMenuId(null); }} 
-                                className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                                className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
                             >
                                 <CreditCard size={16} className={`text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('paymentAmount')}
                             </button>
@@ -398,35 +416,37 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
 
                         {onCreateCreditNote && (
                             <button 
-                                onClick={() => handleCreateCreditNote(activeInvoice.id)} 
-                                className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                                onClick={() => { handleCreateCreditNote(activeInvoice.id); setActiveMenuId(null); }} 
+                                className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
                             >
                                 <ArrowLeftRight size={16} className={`text-purple-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('newCreditNote')}
                             </button>
                         )}
                         
-                        <div className="border-t border-gray-100 my-1"></div>
+                        <div className="border-t border-slate-100 my-1 mx-2"></div>
 
                         <button 
                             onClick={() => { handlePrint(activeInvoice); setActiveMenuId(null); }}
-                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
                         >
-                            <Printer size={16} className={`text-neutral-500 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('print')}
+                            <Printer size={16} className={`text-neutral-500 group-hover:text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('print')}
                         </button>
 
                         <button 
                             onClick={() => { handleDownload(activeInvoice); setActiveMenuId(null); }}
                             disabled={isDownloading}
-                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
+                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group disabled:opacity-50"
                         >
-                            {isDownloading ? <Loader2 size={16} className={`animate-spin ${isRTL ? 'ml-3' : 'mr-3'}`} /> : <Download size={16} className={`text-neutral-500 ${isRTL ? 'ml-3' : 'mr-3'}`} />} {t('download')}
+                            {isDownloading ? <Loader2 size={16} className={`animate-spin ${isRTL ? 'ml-3' : 'mr-3'}`} /> : <Download size={16} className={`text-neutral-500 group-hover:text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} />} {t('download')}
                         </button>
 
+                        <div className="border-t border-slate-100 my-1 mx-2"></div>
+
                         <button 
-                            onClick={() => handleDeleteClick(activeInvoice.id)} 
-                            className="flex w-full items-center px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-100"
+                            onClick={() => { handleDeleteClick(activeInvoice.id); setActiveMenuId(null); }} 
+                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-red-600 rounded-xl hover:bg-red-50 transition-colors group"
                         >
-                            <Trash2 size={16} className={`text-red-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('delete')}
+                            <Trash2 size={16} className={`text-red-500 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('delete')}
                         </button>
                     </div>
                 </div>,

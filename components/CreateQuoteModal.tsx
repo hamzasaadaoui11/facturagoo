@@ -26,7 +26,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [subject, setSubject] = useState('');
     const [reference, setReference] = useState('');
-    const [showDimensions, setShowDimensions] = useState(false);
+    const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
     const [selectedProductId, setSelectedProductId] = useState('');
@@ -41,7 +41,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
 
     const [isDiscountEnabled, setIsDiscountEnabled] = useState(false);
     const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
-    const [discountValue, setDiscountValue] = useState<string>('0');
+    const [discountValue, setDiscountValue] = useState<string>('');
 
     useEffect(() => {
         if (isOpen) {
@@ -51,18 +51,17 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setDate(quoteToEdit.date);
                 setSubject(quoteToEdit.subject || '');
                 setReference(quoteToEdit.reference || '');
-                // Read showDimensions from document or first line item
-                setShowDimensions(!!quoteToEdit.showDimensions || !!quoteToEdit.lineItems[0]?.showDimensions);
+                // Read calculationMode from first line item
+                setCalculationMode(quoteToEdit.lineItems[0]?.calculationMode || 'piece');
                 setLineItems(JSON.parse(JSON.stringify(quoteToEdit.lineItems)));
                 setIsDiscountEnabled(!!quoteToEdit.discountValue && quoteToEdit.discountValue > 0);
                 setDiscountType(quoteToEdit.discountType || 'percentage');
-                setDiscountValue(formatDecimalForInput(quoteToEdit.discountValue || 0, language));
+                setDiscountValue(quoteToEdit.discountValue ? formatDecimalForInput(quoteToEdit.discountValue, language) : '');
             } else {
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
                 setSubject('');
                 setReference('');
-                setShowDimensions(false);
                 setLineItems([]);
                 setTempVat(language === 'es' ? 21 : 20);
                 setIsDiscountEnabled(false);
@@ -106,13 +105,24 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
         }
     }, [selectedProductId, products, language, isModeTTC]);
 
+    const isM2 = calculationMode === 'm2';
+    const isML = calculationMode === 'ml';
+    const showLengthColumn = calculationMode === 'm2' || calculationMode === 'ml';
+    const showHeightColumn = calculationMode === 'm2';
+
+    const getLineMultiplier = (item: LineItem) => {
+        if (isM2) return (item.length || 1) * (item.height || 1);
+        if (isML) return (item.length || 1);
+        return 1;
+    };
+
     const handleAddItem = () => {
         if (!tempName) return;
         const qty = parseDecimalInput(itemQuantity);
         const inputPrice = parseDecimalInput(tempPrice);
         const price = isModeTTC ? (inputPrice / (1 + tempVat / 100)) : inputPrice;
-        const length = showDimensions ? parseDecimalInput(tempLength) : 1;
-        const height = showDimensions ? parseDecimalInput(tempHeight) : 1;
+        const length = showLengthColumn ? parseDecimalInput(tempLength) : 1;
+        const height = showHeightColumn ? parseDecimalInput(tempHeight) : 1;
 
         const newItem: LineItem = {
             id: `temp-${Date.now()}`,
@@ -140,7 +150,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
 
     const totals = useMemo(() => {
         const subTotal = lineItems.reduce((acc, item) => {
-            const lineTotal = (item.unitPrice * item.quantity * (item.length || 1) * (item.height || 1));
+            const lineTotal = item.unitPrice * item.quantity * getLineMultiplier(item);
             return acc + lineTotal;
         }, 0);
         
@@ -157,7 +167,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
         const subTotalAfterDiscount = subTotal - discountAmount;
 
         const vatAmountAfterDiscount = lineItems.reduce((acc, item) => {
-            const itemTotalHT = item.unitPrice * item.quantity * (item.length || 1) * (item.height || 1);
+            const itemTotalHT = item.unitPrice * item.quantity * getLineMultiplier(item);
             const itemDiscount = subTotal > 0 ? (itemTotalHT / subTotal) * discountAmount : 0;
             const itemBaseForVat = itemTotalHT - itemDiscount;
             return acc + (itemBaseForVat * (item.vat / 100));
@@ -165,17 +175,17 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
 
         const totalTTC = subTotalAfterDiscount + vatAmountAfterDiscount;
         return { subTotal, vatAmount: vatAmountAfterDiscount, totalTTC, discountAmount };
-    }, [lineItems, isDiscountEnabled, discountType, discountValue, language]);
+    }, [lineItems, isDiscountEnabled, discountType, discountValue, language, calculationMode]);
 
     const handleSave = () => {
         if (!clientId || lineItems.length === 0) return;
         const client = clients.find(c => c.id === clientId);
         const clientNameDisplay = client ? (client.company || client.name) : 'Client inconnu';
 
-        // Store showDimensions in the first line item to avoid schema changes
+        // Store calculationMode in the first line item to avoid schema changes
         const updatedLineItems = [...lineItems];
         if (updatedLineItems.length > 0) {
-            updatedLineItems[0] = { ...updatedLineItems[0], showDimensions };
+            updatedLineItems[0] = { ...updatedLineItems[0], calculationMode };
         }
 
         const quoteData = {
@@ -227,18 +237,20 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
                             <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
-                        <div className="md:col-span-2 flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="md:col-span-2 flex items-center gap-6 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                             <div className="flex items-center gap-2">
-                                <label htmlFor="dimensions-toggle" className="text-sm font-bold text-slate-700">Activer les dimensions</label>
-                                <input 
-                                    type="checkbox" 
-                                    id="dimensions-toggle"
-                                    checked={showDimensions}
-                                    onChange={(e) => setShowDimensions(e.target.checked)}
-                                    className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                                />
+                                <label htmlFor="calculation-mode" className="text-sm font-bold text-slate-700">Mode de calcul</label>
+                                <select 
+                                    id="calculation-mode"
+                                    value={calculationMode}
+                                    onChange={(e) => setCalculationMode(e.target.value as 'piece' | 'm2' | 'ml')}
+                                    className="rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm py-1.5"
+                                >
+                                    <option value="piece">Par pièce</option>
+                                    <option value="m2">Par m²</option>
+                                    <option value="ml">Par mètre linéaire</option>
+                                </select>
                             </div>
-                            <p className="text-xs text-slate-500 italic">Ajoute les colonnes Longueur et Hauteur au tableau.</p>
                         </div>
                     </div>
 
@@ -277,17 +289,17 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('quantity')}</label>
                                 <input type="text" value={itemQuantity} onChange={(e) => setItemQuantity(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
                             </div>
-                            {showDimensions && (
-                                <>
-                                    <div className="col-span-12 lg:col-span-2">
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Long.</label>
-                                        <input type="text" value={tempLength} onChange={(e) => setTempLength(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
-                                    </div>
-                                    <div className="col-span-12 lg:col-span-2">
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Haut.</label>
-                                        <input type="text" value={tempHeight} onChange={(e) => setTempHeight(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
-                                    </div>
-                                </>
+                            {showLengthColumn && (
+                                <div className="col-span-12 lg:col-span-2">
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Long.</label>
+                                    <input type="text" value={tempLength} onChange={(e) => setTempLength(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                </div>
+                            )}
+                            {showHeightColumn && (
+                                <div className="col-span-12 lg:col-span-2">
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Haut.</label>
+                                    <input type="text" value={tempHeight} onChange={(e) => setTempHeight(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                </div>
                             )}
                             <div className="col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('vat')}</label>
@@ -310,12 +322,8 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                     <tr>
                                         <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('description')}</th>
                                         <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
-                                        {showDimensions && (
-                                            <>
-                                                <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Long.</th>
-                                                <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Haut.</th>
-                                            </>
-                                        )}
+                                        {showLengthColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Long.</th>}
+                                        {showHeightColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Haut.</th>}
                                         <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</th>
                                         <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('totalTTCLabel') : t('totalHTLabel')}</th>
                                         <th className="px-4 py-3 w-10"></th>
@@ -324,7 +332,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 <tbody className="bg-white divide-y divide-slate-100">
                                     {lineItems.map(item => {
                                         const displayPrice = isModeTTC ? (item.unitPrice * (1 + item.vat/100)) : item.unitPrice;
-                                        const displayLineTotal = item.quantity * (item.length || 1) * (item.height || 1) * displayPrice;
+                                        const displayLineTotal = item.quantity * getLineMultiplier(item) * displayPrice;
                                         
                                         return (
                                         <tr key={item.id} className="hover:bg-slate-50 transition-colors">
@@ -340,26 +348,26 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                                     className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
                                                 />
                                             </td>
-                                            {showDimensions && (
-                                                <>
-                                                    <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                        <input 
-                                                            type="text" 
-                                                            value={formatDecimalForInput(item.length || 1, language)} 
-                                                            onChange={(e) => updateLineItem(item.id, { length: parseDecimalInput(e.target.value) })}
-                                                            className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                        />
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                        <input 
-                                                            type="text" 
-                                                            value={formatDecimalForInput(item.height || 1, language)} 
-                                                            onChange={(e) => updateLineItem(item.id, { height: parseDecimalInput(e.target.value) })}
-                                                            className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                        />
-                                                    </td>
-                                                </>
-                                            )}
+                                        {showLengthColumn && (
+                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                <input 
+                                                    type="text" 
+                                                    value={formatDecimalForInput(item.length || 1, language)} 
+                                                    onChange={(e) => updateLineItem(item.id, { length: parseDecimalInput(e.target.value) })}
+                                                    className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                />
+                                            </td>
+                                        )}
+                                        {showHeightColumn && (
+                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                <input 
+                                                    type="text" 
+                                                    value={formatDecimalForInput(item.height || 1, language)} 
+                                                    onChange={(e) => updateLineItem(item.id, { height: parseDecimalInput(e.target.value) })}
+                                                    className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                />
+                                            </td>
+                                        )}
                                             <td className="px-4 py-3 text-right text-xs">
                                                 <input 
                                                     type="text" 
@@ -401,7 +409,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                         className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                                     />
                                 </div>
-                                {isDiscountEnabled && (
+                                {isDiscountEnabled && totals.discountAmount > 0 && (
                                     <span className="font-bold text-red-500">
                                         - {totals.discountAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}
                                     </span>
@@ -410,25 +418,23 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
 
                             {isDiscountEnabled && (
                                 <div className="pl-4 pb-2">
-                                    <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
-                                        <div className="relative flex w-full">
-                                            <input 
-                                                type="text" 
-                                                value={discountValue}
-                                                onChange={e => setDiscountValue(e.target.value)}
-                                                className={`w-full h-9 rounded-md border-transparent bg-transparent text-sm font-bold text-right pr-16 focus:ring-0`}
-                                            />
-                                            <div className="absolute inset-y-0 right-0 flex items-center">
-                                                <select 
-                                                    value={discountType}
-                                                    onChange={e => setDiscountType(e.target.value as 'percentage' | 'fixed')}
-                                                    className="h-full rounded-md border-transparent bg-transparent py-0 pl-2 pr-7 text-slate-500 focus:ring-0 sm:text-sm font-bold"
-                                                >
-                                                    <option value="percentage">%</option>
-                                                    <option value="fixed">MAD</option>
-                                                </select>
-                                            </div>
-                                        </div>
+                                    <div className="flex items-stretch bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+                                        <input 
+                                            type="text" 
+                                            value={discountValue}
+                                            onChange={e => setDiscountValue(e.target.value)}
+                                            placeholder="0"
+                                            className="flex-1 min-w-0 h-9 border-0 bg-transparent text-sm font-bold text-right focus:ring-0 px-3"
+                                        />
+                                        <div className="w-px bg-slate-200 my-1"></div>
+                                        <select 
+                                            value={discountType}
+                                            onChange={e => setDiscountType(e.target.value as 'percentage' | 'fixed')}
+                                            className="h-9 border-0 bg-slate-50 py-0 pl-3 pr-8 text-slate-600 focus:ring-0 sm:text-sm font-bold cursor-pointer hover:bg-slate-100 transition-colors"
+                                        >
+                                            <option value="percentage">%</option>
+                                            <option value="fixed">MAD</option>
+                                        </select>
                                     </div>
                                 </div>
                             )}
@@ -445,19 +451,6 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                     <button onClick={handleSave} className="order-1 md:order-2 flex-1 md:flex-none px-10 py-3.5 text-sm font-bold text-white bg-emerald-600 border border-transparent rounded-xl shadow-lg shadow-emerald-500/30 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 active:scale-95"><FileText size={18} /> {quoteToEdit ? t('update') : t('save')}</button>
                 </div>
             </div>
-            <style>{`
-                .grid-cols-24 { grid-template-columns: repeat(24, minmax(0, 1fr)); }
-                @media (max-width: 1023px) {
-                    .lg\\:col-span-2, .lg\\:col-span-4, .lg\\:col-span-3 { grid-column: span 12 / span 12; }
-                    .lg\\:col-span-6, .lg\\:col-span-24 { grid-column: span 24 / span 24; }
-                }
-                @media (min-width: 1024px) {
-                    .lg\\:col-span-2 { grid-column: span 2 / span 2; }
-                    .lg\\:col-span-4 { grid-column: span 4 / span 4; }
-                    .lg\\:col-span-6 { grid-column: span 6 / span 6; }
-                    .lg\\:col-span-3 { grid-column: span 3 / span 3; }
-                }
-            `}</style>
         </div>
     );
 };

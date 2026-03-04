@@ -724,18 +724,31 @@ const App: React.FC = () => {
                 const { data: { session }, error } = await supabase.auth.getSession();
                 if (error) {
                     console.error("Session initialization error:", error.message);
-                    // If it's a refresh token error or failed fetch, we should clear the local session to allow re-login
-                    if (error.message.includes('Refresh Token Not Found') || 
+                    // If it's a refresh token error or invalid grant, we MUST clear the local session to allow re-login
+                    if (error.message.includes('Refresh Token') || 
                         error.message.includes('invalid_grant') ||
-                        error.message.includes('Failed to fetch')) {
-                        await supabase.auth.signOut({ scope: 'local' }).catch(console.error);
+                        error.message.includes('Failed to fetch') ||
+                        error.message.includes('not found')) {
+                        console.warn("Clearing stale session due to auth error...");
+                        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+                        // Force clear localStorage just in case
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const key = localStorage.key(i);
+                            if (key && key.includes('supabase.auth.token')) {
+                                localStorage.removeItem(key);
+                            }
+                        }
                     }
                     setSession(null);
                 } else {
                     setSession(session);
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Auth initialization exception:", err);
+                // If the exception is a refresh token error, clear local session
+                if (err.message?.includes('Refresh Token') || err.message?.includes('not found')) {
+                    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+                }
                 setSession(null);
             } finally {
                 setLoading(false);
@@ -750,7 +763,14 @@ const App: React.FC = () => {
                 setSession(null);
             } else if ((event as any) === 'TOKEN_REFRESH_FAILED') {
                 console.error('Token refresh failed, clearing local session...');
-                await supabase.auth.signOut({ scope: 'local' }).catch(console.error);
+                await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+                // Force clear localStorage just in case
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.includes('supabase.auth.token')) {
+                        localStorage.removeItem(key);
+                    }
+                }
                 setSession(null);
             } else if (event === 'INITIAL_SESSION' && !session) {
                 // No session found, ensure we are logged out

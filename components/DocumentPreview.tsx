@@ -37,9 +37,19 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
         isDeliveryNote = true;
     }
 
-    const showDimensions = (document as any).showDimensions || document.lineItems[0]?.showDimensions;
+    const calculationMode = document.lineItems[0]?.calculationMode || 'piece';
+    const legacyShowDimensions = (document as any).showDimensions || document.lineItems[0]?.showDimensions;
+    
+    const isM2 = calculationMode === 'm2' || (legacyShowDimensions && calculationMode === 'piece');
+    const isML = calculationMode === 'ml';
 
-    const subTotal = document.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * (item.length || 1) * (item.height || 1)), 0);
+    const getLineMultiplier = (item: any) => {
+        if (isM2) return (item.length || 1) * (item.height || 1);
+        if (isML) return (item.length || 1);
+        return 1;
+    };
+
+    const subTotal = document.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * getLineMultiplier(item)), 0);
     
     let discountAmount = 0;
     const doc = document as any;
@@ -53,7 +63,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
     const subTotalAfterDiscount = subTotal - discountAmount;
 
     const vatAmount = document.lineItems.reduce((acc, item) => {
-        const itemTotalHT = item.unitPrice * item.quantity * (item.length || 1) * (item.height || 1);
+        const itemTotalHT = item.unitPrice * item.quantity * getLineMultiplier(item);
         const itemDiscount = subTotal > 0 ? (itemTotalHT / subTotal) * discountAmount : 0;
         const itemBaseForVat = itemTotalHT - itemDiscount;
         return acc + (itemBaseForVat * (item.vat / 100));
@@ -155,10 +165,17 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                             <tr style={{ backgroundColor: primaryColor, color: 'white' }}>
                                 <th className="p-3 font-semibold uppercase text-xs rounded-tl-lg rounded-bl-lg">{t('description')}</th>
                                 <th className="p-3 text-center font-semibold uppercase text-xs w-16">{t('quantity')}</th>
-                                {showDimensions && (
+                                {isM2 && (
                                     <>
                                         <th className="p-3 text-center font-semibold uppercase text-xs w-16">Long.</th>
                                         <th className="p-3 text-center font-semibold uppercase text-xs w-16">Haut.</th>
+                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">M²</th>
+                                    </>
+                                )}
+                                {isML && (
+                                    <>
+                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">Long.</th>
+                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">ML</th>
                                     </>
                                 )}
                                 {!isDeliveryNote && (
@@ -178,17 +195,24 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                         {item.description && <p className="text-[10px] text-neutral-500 mt-0.5">{item.description}</p>}
                                     </td>
                                     <td className="p-3 text-center align-top font-bold text-[12px]">{item.quantity}</td>
-                                    {showDimensions && (
+                                    {isM2 && (
                                         <>
                                             <td className="p-3 text-center align-top text-[12px]">{item.length || 1}</td>
                                             <td className="p-3 text-center align-top text-[12px]">{item.height || 1}</td>
+                                            <td className="p-3 text-center align-top text-[12px] font-medium">{(item.quantity * (item.length || 1) * (item.height || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
+                                        </>
+                                    )}
+                                    {isML && (
+                                        <>
+                                            <td className="p-3 text-center align-top text-[12px]">{item.length || 1}</td>
+                                            <td className="p-3 text-center align-top text-[12px] font-medium">{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                     {!isDeliveryNote && (
                                         <>
                                             <td className="p-3 text-right align-top text-[12px]">{item.unitPrice.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
                                             <td className="p-3 text-center align-top text-[11px] text-neutral-500">{item.vat}%</td>
-                                            <td className="p-3 text-right align-top font-medium text-neutral-900 text-[12px]">{(item.quantity * (item.length || 1) * (item.height || 1) * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
+                                            <td className="p-3 text-right align-top font-medium text-neutral-900 text-[12px]">{(item.quantity * getLineMultiplier(item) * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                 </tr>

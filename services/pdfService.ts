@@ -1,6 +1,7 @@
 
 import { CompanySettings, Invoice, Quote, DeliveryNote, PurchaseOrder, Client, Supplier, LineItem, DocumentColumn, CreditNote } from '../types';
 import { translations } from '../i18n/translations';
+import html2pdf from 'html2pdf.js';
 
 interface DocumentData {
     id: string;
@@ -114,7 +115,7 @@ const numberToWordsFr = (amount: number): string => {
         return str.trim();
     };
 
-    let result = convertInteger(integerPart) + ' dirhams';
+    let result = convertInteger(integerPart) + (integerPart === 1 ? ' dirham' : ' dirhams');
     if (decimalPart > 0) {
         result += ` et ${convertInteger(decimalPart)} centimes`;
     }
@@ -151,9 +152,19 @@ const generateDocumentHTML = (
     const showPrices = options?.showPrices !== false;
     const showAmountInWords = settings.showAmountInWords !== false;
     const isModeTTC = settings.priceDisplayMode === 'TTC';
-    const showDimensions = (doc as any).showDimensions || doc.lineItems[0]?.showDimensions;
+    const calculationMode = doc.lineItems[0]?.calculationMode || 'piece';
+    const legacyShowDimensions = (doc as any).showDimensions || doc.lineItems[0]?.showDimensions;
+    
+    const isM2 = calculationMode === 'm2' || (legacyShowDimensions && calculationMode === 'piece');
+    const isML = calculationMode === 'ml';
 
-    const subTotal = doc.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * (item.length || 1) * (item.height || 1)), 0);
+    const getLineMultiplier = (item: any) => {
+        if (isM2) return (item.length || 1) * (item.height || 1);
+        if (isML) return (item.length || 1);
+        return 1;
+    };
+
+    const subTotal = doc.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * getLineMultiplier(item)), 0);
     let discountAmount = 0;
     if (doc.discountType && doc.discountValue && doc.discountValue > 0) {
         if (doc.discountType === 'percentage') {
@@ -166,7 +177,7 @@ const generateDocumentHTML = (
     const subTotalAfterDiscount = subTotal - discountAmount;
 
     const vatAmount = doc.lineItems.reduce((acc, item) => {
-        const itemTotalHT = item.unitPrice * item.quantity * (item.length || 1) * (item.height || 1);
+        const itemTotalHT = item.unitPrice * item.quantity * getLineMultiplier(item);
         const itemDiscount = subTotal > 0 ? (itemTotalHT / subTotal) * discountAmount : 0;
         const itemBaseForVat = itemTotalHT - itemDiscount;
         return acc + (itemBaseForVat * (item.vat / 100));
@@ -192,11 +203,23 @@ const generateDocumentHTML = (
     let txtSigRecipient = labels.signatureRecipient || dict.pdfSigRecipient || 'Signature & Cachet';
 
     // Strict ICE -> NIF mapping for Spanish
-    const taxIdLabel = lang === 'es' ? 'NIF' : (lang === 'en' ? 'Tax ID' : 'ICE');
+    const taxIdLabel = dict.ice || (lang === 'es' ? 'NIF' : (lang === 'en' ? 'Tax ID' : 'ICE'));
 
-    const primaryColor = settings.primaryColor || '#10b981';
+    let primaryColor = settings.primaryColor || '#10b981';
+    if (primaryColor.includes('oklch')) primaryColor = '#10b981';
+    
     const dateStr = new Date(doc.date).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
-    const amountInLetters = lang === 'es' ? `${totalAmount.toFixed(2)} MAD` : (lang === 'en' ? `${totalAmount.toFixed(2)} MAD` : numberToWordsFr(totalAmount));
+    
+    let amountInLetters = '';
+    if (lang === 'fr') {
+        amountInLetters = numberToWordsFr(totalAmount);
+    } else if (lang === 'en') {
+        amountInLetters = numberToWordsEn(totalAmount);
+    } else if (lang === 'es') {
+        amountInLetters = numberToWordsEs(totalAmount);
+    } else {
+        amountInLetters = `${totalAmount.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} MAD`;
+    }
     
     const displayId = doc.documentId || doc.id;
     const isDeliveryNote = docType === 'Bon de Livraison';
@@ -227,12 +250,21 @@ const generateDocumentHTML = (
         activeColumns = activeColumns.filter(c => c.id === 'name' || c.id === 'quantity' || c.id === 'reference');
     }
 
-    if (showDimensions) {
+    if (isM2) {
         const qtyIndex = activeColumns.findIndex(c => c.id === 'quantity');
         if (qtyIndex !== -1) {
             activeColumns.splice(qtyIndex + 1, 0, 
-                { id: 'length' as any, label: 'Long.', visible: true, order: 2.1 },
-                { id: 'height' as any, label: 'Haut.', visible: true, order: 2.2 }
+                { id: 'length' as any, label: lang === 'es' ? 'Largo' : (lang === 'en' ? 'Length' : 'Long.'), visible: true, order: 2.1 },
+                { id: 'height' as any, label: lang === 'es' ? 'Alto' : (lang === 'en' ? 'Height' : 'Haut.'), visible: true, order: 2.2 },
+                { id: 'm2' as any, label: 'M²', visible: true, order: 2.3 }
+            );
+        }
+    } else if (isML) {
+        const qtyIndex = activeColumns.findIndex(c => c.id === 'quantity');
+        if (qtyIndex !== -1) {
+            activeColumns.splice(qtyIndex + 1, 0, 
+                { id: 'length' as any, label: lang === 'es' ? 'Largo' : (lang === 'en' ? 'Length' : 'Long.'), visible: true, order: 2.1 },
+                { id: 'ml' as any, label: 'ML', visible: true, order: 2.2 }
             );
         }
     }
@@ -240,6 +272,10 @@ const generateDocumentHTML = (
     // --- Override labels for Language context ---
     activeColumns = activeColumns.map(col => {
         let label = col.label;
+        if (isDeliveryNote && !showPrices) {
+            if (col.id === 'unitPrice' || col.id === 'vat' || col.id === 'total') return null;
+        }
+        
         if (lang === 'es') {
             if (col.id === 'unitPrice') label = isModeTTC ? 'P.U. Total' : 'P.U. Base';
             if (col.id === 'total') label = isModeTTC ? 'Total con IVA' : 'Base imponible';
@@ -257,7 +293,7 @@ const generateDocumentHTML = (
             if (col.id === 'total' && (col.label === 'Total HT' || col.label === 'Total')) label = 'Total TTC';
         }
         return { ...col, label };
-    });
+    }).filter(Boolean) as DocumentColumn[];
 
     let extraDateLabel = '';
     let extraDateValue = '';
@@ -297,11 +333,13 @@ const generateDocumentHTML = (
         else if (col.id === 'quantity') { align = 'center'; width = 'width: 11%;'; }
         else if (col.id === 'length' as any) { align = 'center'; width = 'width: 10%;'; }
         else if (col.id === 'height' as any) { align = 'center'; width = 'width: 10%;'; }
+        else if (col.id === 'm2' as any) { align = 'center'; width = 'width: 10%;'; }
+        else if (col.id === 'ml' as any) { align = 'center'; width = 'width: 10%;'; }
         else if (col.id === 'vat') { align = 'center'; width = 'width: 11%;'; }
         else if (col.id === 'unitPrice') { align = 'right'; width = 'width: 18%;'; }
         else if (col.id === 'total') { align = 'right'; width = 'width: 18%;'; }
         
-        return `<th style="padding: 10px 12px; text-align: ${align}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${width}">${col.label}</th>`;
+        return `<th style="padding: 6px 12px 16px 12px; text-align: ${align}; vertical-align: middle; line-height: 1.2; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${width}">${col.label}</th>`;
     }).join('');
 
     const rowsHtml = doc.lineItems.map((item, index) => {
@@ -311,7 +349,7 @@ const generateDocumentHTML = (
             let style = '';
 
             const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
-            const totalTTC = (item.quantity * (item.length || 1) * (item.height || 1) * item.unitPrice) * (1 + item.vat / 100);
+            const totalTTC = (item.quantity * getLineMultiplier(item) * item.unitPrice) * (1 + item.vat / 100);
 
             switch (col.id) {
                 case 'reference':
@@ -341,6 +379,16 @@ const generateDocumentHTML = (
                     align = 'center';
                     style = 'font-size: 12.3px;';
                     break;
+                case 'm2' as any:
+                    content = ((item.quantity * (item.length || 1) * (item.height || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
+                    align = 'center';
+                    style = 'font-size: 12.3px; font-weight: 500;';
+                    break;
+                case 'ml' as any:
+                    content = ((item.quantity * (item.length || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
+                    align = 'center';
+                    style = 'font-size: 12.3px; font-weight: 500;';
+                    break;
                 case 'unitPrice':
                     content = (isModeTTC ? unitPriceTTC : item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
                     align = 'right';
@@ -352,13 +400,13 @@ const generateDocumentHTML = (
                     style = 'font-size: 12.3px;';
                     break;
                 case 'total':
-                    content = (isModeTTC ? totalTTC : (item.quantity * (item.length || 1) * (item.height || 1) * item.unitPrice)).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
+                    content = (isModeTTC ? totalTTC : (item.quantity * getLineMultiplier(item) * item.unitPrice)).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
                     align = 'right';
                     style = 'font-weight: 700; font-size: 12.3px;';
                     break;
             }
 
-            return `<td style="padding: 12px 12px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; ${style}">${content}</td>`;
+            return `<td style="padding: 8px 12px 16px 12px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
         }).join('');
 
         return `<tr class="item-row" style="background-color: ${index % 2 === 0 ? '#fff' : '#f9fafb'};">${cellsHtml}</tr>`;
@@ -439,9 +487,9 @@ const generateDocumentHTML = (
         <div class="totals-section" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
             <div style="width: 55%; padding-top: 10px;">
                 ${showAmountInWords ? `
-                    <div style="background-color: #f3f4f6; padding: 10px; border-radius: 4px; border-left: 3px solid ${primaryColor};">
-                        <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">${txtAmountInWords}</div>
-                        <div style="font-size: 13px; color: #111827; font-weight: 600; font-style: italic;">
+                    <div style="background-color: #f3f4f6; padding: 6px 10px 14px 10px; border-radius: 4px; border-left: 3px solid ${primaryColor};">
+                        <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: bold; margin-bottom: 4px; line-height: 1.2;">${txtAmountInWords}</div>
+                        <div style="font-size: 13px; color: #111827; font-weight: 600; font-style: italic; line-height: 1.2;">
                             ${amountInLetters}
                         </div>
                     </div>
@@ -458,21 +506,21 @@ const generateDocumentHTML = (
                 ` : ''}
             </div>
             <div style="width: 40%;">
-                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #e5e7eb;">
+                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb;">
                     <span>${txtTotalHt}</span>
                     <span style="font-weight: 600;">${subTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                 </div>
                 ${discountAmount > 0 ? `
-                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #e5e7eb;">
-                    <span>${dict.exceptionalDiscount || 'Remise exceptionnelle'} ${doc.discountType === 'percentage' ? `(-${doc.discountValue}%)` : ''}</span>
+                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb;">
+                    <span>${dict.globalDiscount || 'Remise exceptionnelle'} ${doc.discountType === 'percentage' ? `(-${doc.discountValue}%)` : ''}</span>
                     <span style="font-weight: 600; color: #dc2626;">- ${discountAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                 </div>
                 ` : ''}
-                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #e5e7eb;">
+                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb;">
                     <span>${txtTotalTax}</span>
                     <span>${vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; padding: 10px 0; font-size: 16px; color: #000000; font-weight: bold; margin-top: 5px;">
+                <div style="display: flex; justify-content: space-between; padding: 12px 0 4px 0; font-size: 16px; color: #000000; font-weight: bold; margin-top: 4px;">
                     <span>${txtTotalNet}</span>
                     <span>${totalAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                 </div>
@@ -488,10 +536,15 @@ const generateDocumentHTML = (
     ` : '';
 
     const signaturesHtml = `
-        <div class="totals-section" style="display: flex; justify-content: flex-end; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-            <div style="width: 45%; text-align: right;">
-                <div style="font-weight: bold; margin-bottom: 5px;">${txtSigRecipient}</div>
-                ${settings.showSignatureRecipient && settings.stamp ? `<img src="${settings.stamp}" style="max-height: 80px; max-width: 200px; object-fit: contain; margin-left: auto;" />` : settings.showSignatureRecipient ? '<div style="height: 80px;"></div>' : ''}
+        <div class="totals-section" style="display: flex; justify-content: space-between; margin-top: 40px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+            <div style="width: 45%; text-align: center;">
+                <div style="font-weight: bold; margin-bottom: 60px; text-decoration: underline;">${txtSigSender}</div>
+                <div style="border-bottom: 1px dashed #ccc; width: 80%; margin: 0 auto;"></div>
+            </div>
+            <div style="width: 45%; text-align: center;">
+                <div style="font-weight: bold; margin-bottom: 60px; text-decoration: underline;">${txtSigRecipient}</div>
+                ${settings.showSignatureRecipient && settings.stamp ? `<img src="${settings.stamp}" style="max-height: 80px; max-width: 200px; object-fit: contain; margin-top: 10px;" />` : settings.showSignatureRecipient ? '<div style="height: 80px;"></div>' : ''}
+                <div style="border-bottom: 1px dashed #ccc; width: 80%; margin: 0 auto;"></div>
             </div>
         </div>
     `;
@@ -506,9 +559,9 @@ const generateDocumentHTML = (
     }
 
     const footerHtml = `
-        <div style="text-align: center;">
-            ${settings.footerNotes ? `<div style="font-size: 12px; color: #000000; margin-bottom: 5px; white-space: pre-wrap;">${settings.footerNotes}</div>` : ''}
-            <div style="font-size: 10px; color: #000000; font-weight: normal;">
+        <div style="text-align: center; padding-top: 5px; margin-top: auto;">
+            ${settings.footerNotes ? `<div style="font-size: 11px; color: #000000; margin-bottom: 8px; white-space: pre-wrap; font-style: normal;">${settings.footerNotes}</div>` : ''}
+            <div style="font-size: 10px; color: #000000; font-weight: normal; letter-spacing: 0.02em;">
                 ${legalIds}
             </div>
         </div>
@@ -544,7 +597,7 @@ const generateDocumentHTML = (
             ${totalsHtml}
         </div>
 
-        <div style="margin-top: auto; padding-top: 10px; border-top: 1px solid #000000; position: relative; z-index: 2;">
+        <div style="margin-top: auto; padding-top: 5px; border-top: 1px solid #000000; position: relative; z-index: 2;">
             ${footerHtml}
         </div>
     </div>
@@ -558,10 +611,6 @@ export const generatePDF = async (
     recipient: Client | Supplier | undefined,
     options?: PDFOptions
 ): Promise<void> => {
-    if (typeof (window as any).html2pdf === 'undefined') {
-        throw new Error("Le module de génération PDF n'est pas encore chargé. Veuillez vérifier votre connexion internet et rafraîchir la page.");
-    }
-
     const template = generateDocumentHTML(docType, doc, settings, recipient, options);
     const displayId = doc.documentId || doc.id;
 
@@ -576,7 +625,7 @@ export const generatePDF = async (
     try {
         const contentElement = container.firstElementChild;
         
-        const opt = {
+        const opt: any = {
             margin: 0,
             filename: `${docType.toLowerCase()}_${displayId}.pdf`,
             image: { type: 'jpeg', quality: 1 },
@@ -585,12 +634,26 @@ export const generatePDF = async (
                 scale: 2, 
                 useCORS: true, 
                 logging: false,
-                letterRendering: true
+                letterRendering: true,
+                onclone: (clonedDoc: Document) => {
+                    // Remove all oklch color references from styles to prevent html2canvas crash
+                    const styleTags = clonedDoc.getElementsByTagName('style');
+                    for (let i = 0; i < styleTags.length; i++) {
+                        styleTags[i].innerHTML = styleTags[i].innerHTML.replace(/oklch\([^)]+\)/g, '#000000');
+                    }
+                    // Also check for link tags that might contain oklch
+                    const linkTags = clonedDoc.getElementsByTagName('link');
+                    for (let i = linkTags.length - 1; i >= 0; i--) {
+                        if (linkTags[i].rel === 'stylesheet') {
+                            linkTags[i].parentNode?.removeChild(linkTags[i]);
+                        }
+                    }
+                }
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
-        await (window as any).html2pdf().set(opt).from(contentElement).toPdf().get('pdf').then((pdf: any) => {
+        await (html2pdf() as any).set(opt).from(contentElement).toPdf().get('pdf').then((pdf: any) => {
             const totalPages = pdf.internal.getNumberOfPages();
             for (let i = 1; i <= totalPages; i++) {
                 pdf.setPage(i);
@@ -650,4 +713,110 @@ export const printDocument = (
     } else {
         alert("Veuillez autoriser les pop-ups pour utiliser la fonction d'impression directe.");
     }
+};
+
+// --- English Number to Words ---
+const numberToWordsEn = (amount: number): string => {
+    const units = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+    const teens = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+    const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+    const scales = ['', 'thousand', 'million', 'billion'];
+
+    const convertGroup = (n: number): string => {
+        if (n === 0) return '';
+        let res = '';
+        if (n >= 100) {
+            res += units[Math.floor(n / 100)] + ' hundred ';
+            n %= 100;
+        }
+        if (n >= 20) {
+            res += tens[Math.floor(n / 10)] + (n % 10 !== 0 ? '-' + units[n % 10] : '');
+        } else if (n >= 10) {
+            res += teens[n - 10];
+        } else if (n > 0) {
+            res += units[n];
+        }
+        return res.trim();
+    };
+
+    if (amount === 0) return 'Zero dirhams';
+    const integerPart = Math.floor(Math.abs(amount));
+    const decimalPart = Math.round((Math.abs(amount) - integerPart) * 100);
+
+    let words = '';
+    let num = integerPart;
+    let scaleIdx = 0;
+
+    while (num > 0) {
+        const group = num % 1000;
+        if (group > 0) {
+            words = convertGroup(group) + (scales[scaleIdx] ? ' ' + scales[scaleIdx] : '') + (words ? ' ' + words : '');
+        }
+        num = Math.floor(num / 1000);
+        scaleIdx++;
+    }
+
+    let result = words.trim() + (integerPart === 1 ? ' dirham' : ' dirhams');
+    if (decimalPart > 0) {
+        result += ' and ' + convertGroup(decimalPart) + ' centimes';
+    }
+
+    return result.charAt(0).toUpperCase() + result.slice(1);
+};
+
+// --- Spanish Number to Words ---
+const numberToWordsEs = (amount: number): string => {
+    const units = ['', 'un', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
+    const tens = ['', 'diez', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
+    const special = {
+        11: 'once', 12: 'doce', 13: 'trece', 14: 'catorce', 15: 'quince',
+        21: 'veintiuno', 22: 'veintidós', 23: 'veintitrés', 24: 'veinticuatro', 25: 'veinticinco'
+    };
+
+    const convertGroup = (n: number): string => {
+        if (n === 0) return '';
+        if (n === 100) return 'cien';
+        let res = '';
+        if (n >= 100) {
+            const h = Math.floor(n / 100);
+            if (h === 1) res += 'ciento ';
+            else if (h === 5) res += 'quinientos ';
+            else if (h === 7) res += 'setecientos ';
+            else if (h === 9) res += 'novecientos ';
+            else res += units[h] + 'cientos ';
+            n %= 100;
+        }
+        if (n > 0) {
+            if ((special as any)[n]) res += (special as any)[n];
+            else if (n >= 10 && n < 20) res += 'dieci' + units[n - 10];
+            else if (n >= 20 && n < 30) res += 'veinti' + units[n - 20];
+            else if (n >= 30) {
+                res += tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' y ' + units[n % 10] : '');
+            } else {
+                res += units[n];
+            }
+        }
+        return res.trim();
+    };
+
+    if (amount === 0) return 'Cero dirhams';
+    const integerPart = Math.floor(Math.abs(amount));
+    const decimalPart = Math.round((Math.abs(amount) - integerPart) * 100);
+
+    let words = '';
+    if (integerPart === 0) words = 'cero';
+    else if (integerPart === 1) words = 'un';
+    else if (integerPart < 1000) words = convertGroup(integerPart);
+    else {
+        const thousands = Math.floor(integerPart / 1000);
+        const remainder = integerPart % 1000;
+        words = (thousands === 1 ? 'mil' : convertGroup(thousands) + ' mil') + ' ' + convertGroup(remainder);
+    }
+
+    let result = words.trim() + (integerPart === 1 ? ' dirham' : ' dirhams');
+    if (decimalPart > 0) {
+        result += ' con ' + convertGroup(decimalPart) + ' céntimos';
+    }
+
+    return result.charAt(0).toUpperCase() + result.slice(1);
 };
