@@ -16,7 +16,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
     const [name, setName] = useState('');
     const [productCode, setProductCode] = useState('');
     const [salePrice, setSalePrice] = useState(0);
+    const [salePriceTTC, setSalePriceTTC] = useState(0);
     const [purchasePrice, setPurchasePrice] = useState(0);
+    const [purchasePriceTTC, setPurchasePriceTTC] = useState(0);
     const [vat, setVat] = useState(20);
 
     const isEditMode = productToEdit !== null;
@@ -27,21 +29,51 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                 setName(productToEdit.name);
                 setProductCode(productToEdit.productCode || '');
                 setSalePrice(productToEdit.salePrice);
+                setSalePriceTTC(productToEdit.salePrice * (1 + productToEdit.vat / 100));
                 setPurchasePrice(productToEdit.purchasePrice);
+                setPurchasePriceTTC(productToEdit.purchasePrice * (1 + productToEdit.vat / 100));
                 setVat(productToEdit.vat);
             } else {
                 setName('');
                 setProductCode('');
                 setSalePrice(0);
+                setSalePriceTTC(0);
                 setPurchasePrice(0);
+                setPurchasePriceTTC(0);
                 setVat(20);
             }
         }
     }, [productToEdit, isOpen]);
 
+    const handleSalePriceHTChange = (val: number) => {
+        setSalePrice(val);
+        setSalePriceTTC(val * (1 + vat / 100));
+    };
+
+    const handleSalePriceTTCChange = (val: number) => {
+        setSalePriceTTC(val);
+        setSalePrice(val / (1 + vat / 100));
+    };
+
+    const handlePurchasePriceHTChange = (val: number) => {
+        setPurchasePrice(val);
+        setPurchasePriceTTC(val * (1 + vat / 100));
+    };
+
+    const handlePurchasePriceTTCChange = (val: number) => {
+        setPurchasePriceTTC(val);
+        setPurchasePrice(val / (1 + vat / 100));
+    };
+
+    const handleVatChange = (newVat: number) => {
+        setVat(newVat);
+        setSalePriceTTC(salePrice * (1 + newVat / 100));
+        setPurchasePriceTTC(purchasePrice * (1 + newVat / 100));
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || salePrice <= 0) {
+        if (!name || salePrice < 0) {
             alert(t('name') + ' & ' + t('unitPrice'));
             return;
         }
@@ -83,22 +115,32 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <label htmlFor="salePrice" className="block text-sm font-medium text-slate-700">{t('unitPrice')}</label>
-                            <input type="number" id="salePrice" value={salePrice} onChange={(e) => setSalePrice(parseFloat(e.target.value) || 0)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            <label htmlFor="salePrice" className="block text-sm font-medium text-slate-700">{t('unitPrice')} (HT)</label>
+                            <input type="number" id="salePrice" value={salePrice} onChange={(e) => handleSalePriceHTChange(parseFloat(e.target.value) || 0)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                        </div>
+                        <div>
+                            <label htmlFor="salePriceTTC" className="block text-sm font-medium text-slate-700">{t('unitPrice')} (TTC)</label>
+                            <input type="number" id="salePriceTTC" value={salePriceTTC} onChange={(e) => handleSalePriceTTCChange(parseFloat(e.target.value) || 0)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                         <div>
+                            <label htmlFor="purchasePrice" className="block text-sm font-medium text-slate-700">{t('unitPrice')} (Achat HT)</label>
+                            <input type="number" id="purchasePrice" value={purchasePrice} onChange={(e) => handlePurchasePriceHTChange(parseFloat(e.target.value) || 0)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                         </div>
                          <div>
-                            <label htmlFor="purchasePrice" className="block text-sm font-medium text-slate-700">{t('unitPrice')} (Achat)</label>
-                            <input type="number" id="purchasePrice" value={purchasePrice} onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            <label htmlFor="purchasePriceTTC" className="block text-sm font-medium text-slate-700">{t('unitPrice')} (Achat TTC)</label>
+                            <input type="number" id="purchasePriceTTC" value={purchasePriceTTC} onChange={(e) => handlePurchasePriceTTCChange(parseFloat(e.target.value) || 0)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
                         </div>
                     </div>
                      <div>
                         <label htmlFor="vat" className="block text-sm font-medium text-slate-700">{t('vat')}</label>
-                        <select id="vat" value={vat} onChange={(e) => setVat(parseInt(e.target.value))} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
-                            <option>20</option>
-                            <option>14</option>
-                            <option>10</option>
-                            <option>7</option>
-                            <option>0</option>
+                        <select id="vat" value={vat} onChange={(e) => handleVatChange(parseInt(e.target.value))} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
+                            <option value={20}>20%</option>
+                            <option value={14}>14%</option>
+                            <option value={10}>10%</option>
+                            <option value={7}>7%</option>
+                            <option value={0}>0%</option>
                         </select>
                     </div>
                     <div className="flex justify-end pt-4 space-x-2 border-t">

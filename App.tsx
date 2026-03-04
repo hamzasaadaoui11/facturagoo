@@ -675,20 +675,31 @@ const MainContent: React.FC = () => {
             <div className="hidden md:flex md:w-64 md:flex-col md:shrink-0 transition-all duration-300"><Sidebar /></div>
             {isSidebarOpen && (
                 <div className="fixed inset-0 z-50 flex md:hidden">
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out" onClick={() => setSidebarOpen(false)}></div>
-                    <div className="relative flex w-64 max-w-xs flex-1 flex-col bg-emerald-600 shadow-2xl transition-transform duration-300 ease-in-out transform translate-x-0">
-                        <div className="absolute top-0 right-0 -mr-12 pt-2"><button type="button" className="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white" onClick={() => setSidebarOpen(false)}><X className="h-6 w-6 text-white" /></button></div>
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out" onClick={() => setSidebarOpen(false)}></div>
+                    <div className="relative flex w-72 max-w-[80%] flex-1 flex-col bg-emerald-600 shadow-2xl animate-slide-in">
+                        <div className="absolute top-0 right-0 -mr-12 pt-4">
+                            <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 focus:outline-none ring-1 ring-white/20" onClick={() => setSidebarOpen(false)}>
+                                <X className="h-6 w-6" />
+                            </button>
+                        </div>
                         <Sidebar />
                     </div>
                 </div>
             )}
-            <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
-                <div className="flex-1 overflow-y-auto bg-slate-50">
-                    <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md px-4 py-3 md:hidden border-b border-slate-200 shadow-sm flex items-center justify-between">
-                        <h1 className="text-lg font-bold text-emerald-700">Facturago</h1>
-                        <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-neutral-600 hover:bg-neutral-100 focus:outline-none" onClick={() => setSidebarOpen(true)}><Menu className="h-6 w-6" /></button>
+            <div className="flex flex-1 flex-col min-h-0 overflow-hidden w-full">
+                <div className="flex-1 overflow-y-auto bg-slate-50 w-full">
+                    <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md px-4 py-3 md:hidden border-b border-slate-200 shadow-sm flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white shadow-sm">
+                                <Files size={18} />
+                            </div>
+                            <h1 className="text-lg font-bold text-emerald-700 tracking-tight">Facturago</h1>
+                        </div>
+                        <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-neutral-600 hover:bg-neutral-100 focus:outline-none" onClick={() => setSidebarOpen(true)}>
+                            <Menu className="h-6 w-6" />
+                        </button>
                     </div>
-                    <main className="p-4 sm:p-6 lg:p-8 flex-1">
+                    <main className="p-4 sm:p-6 lg:p-8 w-full">
                         <Routes>
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
                             <Route path="/dashboard" element={<Dashboard invoices={invoices} clients={clients} products={products} companySettings={companySettings} creditNotes={creditNotes} />} />
@@ -724,18 +735,31 @@ const App: React.FC = () => {
                 const { data: { session }, error } = await supabase.auth.getSession();
                 if (error) {
                     console.error("Session initialization error:", error.message);
-                    // If it's a refresh token error or failed fetch, we should clear the local session to allow re-login
-                    if (error.message.includes('Refresh Token Not Found') || 
+                    // If it's a refresh token error or invalid grant, we MUST clear the local session to allow re-login
+                    if (error.message.includes('Refresh Token') || 
                         error.message.includes('invalid_grant') ||
-                        error.message.includes('Failed to fetch')) {
-                        await supabase.auth.signOut({ scope: 'local' }).catch(console.error);
+                        error.message.includes('Failed to fetch') ||
+                        error.message.includes('not found')) {
+                        console.warn("Clearing stale session due to auth error...");
+                        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+                        // Force clear localStorage just in case
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const key = localStorage.key(i);
+                            if (key && key.includes('supabase.auth.token')) {
+                                localStorage.removeItem(key);
+                            }
+                        }
                     }
                     setSession(null);
                 } else {
                     setSession(session);
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Auth initialization exception:", err);
+                // If the exception is a refresh token error, clear local session
+                if (err.message?.includes('Refresh Token') || err.message?.includes('not found')) {
+                    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+                }
                 setSession(null);
             } finally {
                 setLoading(false);
@@ -750,7 +774,14 @@ const App: React.FC = () => {
                 setSession(null);
             } else if ((event as any) === 'TOKEN_REFRESH_FAILED') {
                 console.error('Token refresh failed, clearing local session...');
-                await supabase.auth.signOut({ scope: 'local' }).catch(console.error);
+                await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+                // Force clear localStorage just in case
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.includes('supabase.auth.token')) {
+                        localStorage.removeItem(key);
+                    }
+                }
                 setSession(null);
             } else if (event === 'INITIAL_SESSION' && !session) {
                 // No session found, ensure we are logged out
