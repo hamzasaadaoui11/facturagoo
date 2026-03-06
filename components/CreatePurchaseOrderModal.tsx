@@ -4,6 +4,7 @@ import { X, Plus, Trash2, ScanLine, FileText, Loader2 } from 'lucide-react';
 import { Supplier, Product, PurchaseOrder, LineItem, PurchaseOrderStatus, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
+import SearchableProductSelect from './SearchableProductSelect';
 
 interface CreatePurchaseOrderModalProps {
     isOpen: boolean;
@@ -26,6 +27,8 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const [supplierId, setSupplierId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [expectedDate, setExpectedDate] = useState('');
+    const [subject, setSubject] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('');
     const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -52,6 +55,8 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setSupplierId(orderToEdit.supplierId);
                 setDate(orderToEdit.date);
                 setExpectedDate(orderToEdit.expectedDate || '');
+                setSubject(orderToEdit.subject || orderToEdit.lineItems[0]?.subject || '');
+                setPaymentMethod(orderToEdit.paymentMethod || orderToEdit.lineItems[0]?.paymentMethod || '');
                 setNotes(orderToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(orderToEdit.lineItems[0]?.calculationMode || 'piece');
@@ -65,6 +70,8 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 const nextWeek = new Date();
                 nextWeek.setDate(nextWeek.getDate() + 7);
                 setExpectedDate(nextWeek.toISOString().split('T')[0]);
+                setSubject('');
+                setPaymentMethod('');
                 setNotes('');
                 setLineItems([]);
                 setTempVat(language === 'es' ? 21 : 20);
@@ -192,14 +199,19 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
         const fallbackName = language === 'es' ? 'Proveedor desconocido' : 'Fournisseur inconnu';
         const supplierNameDisplay = supplier ? (supplier.company || supplier.name) : fallbackName;
         
-        // Store calculationMode in the first line item to avoid schema changes
+        // Store metadata in the first line item to avoid schema changes
         const updatedLineItems = [...lineItems];
         if (updatedLineItems.length > 0) {
-            updatedLineItems[0] = { ...updatedLineItems[0], calculationMode };
+            updatedLineItems[0] = { 
+                ...updatedLineItems[0], 
+                calculationMode,
+                subject,
+                paymentMethod
+            };
         }
 
         const orderData = {
-            supplierId, supplierName: supplierNameDisplay, date, expectedDate, notes, lineItems: updatedLineItems,
+            supplierId, supplierName: supplierNameDisplay, date, expectedDate, subject, paymentMethod, notes, lineItems: updatedLineItems,
             status: orderToEdit ? orderToEdit.status : PurchaseOrderStatus.Draft,
             subTotal: totals.subTotal, vatAmount: totals.vatAmount, totalAmount: totals.totalAmount,
             discountType: isDiscountEnabled ? discountType : undefined,
@@ -249,6 +261,20 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('expectedDelivery')}</label>
                             <input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
+                            <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('paymentMethod')}</label>
+                            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12">
+                                <option value="">-- {t('select')} --</option>
+                                <option value="Virement">Virement</option>
+                                <option value="Chèque">Chèque</option>
+                                <option value="Espèces">Espèces</option>
+                                <option value="Carte Bancaire">Carte Bancaire</option>
+                            </select>
+                        </div>
                         <div className="sm:col-span-3 flex items-center gap-6 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                             <div className="flex items-center gap-2">
                                 <label htmlFor="calculation-mode" className="text-sm font-bold text-slate-700">Mode de calcul</label>
@@ -280,10 +306,12 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                             </div>
                             <div className="col-span-12 lg:col-span-4">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('productAutoLabel')}</label>
-                                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 bg-white">
-                                    <option value="">-- {t('select')} --</option>
-                                    {products.map(product => (<option key={product.id} value={product.id}>{product.name}</option>))}
-                                </select>
+                                <SearchableProductSelect 
+                                    products={products}
+                                    selectedProductId={selectedProductId}
+                                    onSelect={setSelectedProductId}
+                                    placeholder={`-- ${t('select')} --`}
+                                />
                             </div>
                             <div className="col-span-24 lg:col-span-6">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('designationLabel')} *</label>

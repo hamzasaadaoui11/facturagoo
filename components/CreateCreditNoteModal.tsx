@@ -4,6 +4,7 @@ import { X, Plus, Trash2, ScanLine, Calculator, FileText, Loader2, AlertCircle }
 import { Client, Product, CreditNote, LineItem, CreditNoteStatus, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
+import SearchableProductSelect from './SearchableProductSelect';
 
 interface CreateCreditNoteModalProps {
     isOpen: boolean;
@@ -27,6 +28,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [reason, setReason] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
@@ -52,7 +54,8 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
             if (creditNoteToEdit) {
                 setClientId(creditNoteToEdit.clientId);
                 setDate(creditNoteToEdit.date);
-                setReason(creditNoteToEdit.subject || '');
+                setReason(creditNoteToEdit.subject || creditNoteToEdit.lineItems[0]?.subject || '');
+                setPaymentMethod(creditNoteToEdit.paymentMethod || creditNoteToEdit.lineItems[0]?.paymentMethod || '');
                 // Read calculationMode from first line item
                 setCalculationMode(creditNoteToEdit.lineItems[0]?.calculationMode || 'piece');
                 setLineItems(JSON.parse(JSON.stringify(creditNoteToEdit.lineItems)));
@@ -63,6 +66,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
                 setReason('');
+                setPaymentMethod('');
                 setLineItems([]);
                 setTempVat(language === 'es' ? 21 : 20);
                 setIsDiscountEnabled(false);
@@ -185,14 +189,19 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
         const client = clients.find(c => c.id === clientId);
         const clientNameDisplay = client ? (client.company || client.name) : (language === 'es' ? 'Cliente desconocido' : 'Client inconnu');
 
-        // Store calculationMode in the first line item to avoid schema changes
+        // Store metadata in the first line item to avoid schema changes
         const updatedLineItems = [...lineItems];
         if (updatedLineItems.length > 0) {
-            updatedLineItems[0] = { ...updatedLineItems[0], calculationMode };
+            updatedLineItems[0] = { 
+                ...updatedLineItems[0], 
+                calculationMode,
+                subject: reason,
+                paymentMethod
+            };
         }
 
         const creditNoteData: Omit<CreditNote, 'id'> = {
-            clientId, clientName: clientNameDisplay, date, subject: reason, lineItems: updatedLineItems,
+            clientId, clientName: clientNameDisplay, date, subject: reason, paymentMethod, lineItems: updatedLineItems,
             status: creditNoteToEdit ? creditNoteToEdit.status : CreditNoteStatus.Draft,
             subTotal: totals.subTotal, vatAmount: totals.vatAmount, amount: totals.totalTTC, invoiceId: creditNoteToEdit?.invoiceId,
             discountType: isDiscountEnabled ? discountType : undefined,
@@ -242,7 +251,17 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                         </div>
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('reasonLabel')}</label>
-                            <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={language === 'es' ? 'Ej: Devolución de producto' : 'Ex: Retour produit'} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
+                            <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={language === 'es' ? 'Ej: Devolución de produit' : 'Ex: Retour produit'} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('paymentMethod')}</label>
+                            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12">
+                                <option value="">-- {t('select')} --</option>
+                                <option value="Virement">Virement</option>
+                                <option value="Chèque">Chèque</option>
+                                <option value="Espèces">Espèces</option>
+                                <option value="Carte Bancaire">Carte Bancaire</option>
+                            </select>
                         </div>
                         <div className="sm:col-span-3 flex items-center gap-6 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                             <div className="flex items-center gap-2">
@@ -275,10 +294,12 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                             </div>
                             <div className="col-span-12 lg:col-span-4">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('productAutoLabel')}</label>
-                                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 bg-white">
-                                    <option value="">-- {t('select')} --</option>
-                                    {products.map(product => (<option key={product.id} value={product.id}>{product.name}</option>))}
-                                </select>
+                                <SearchableProductSelect 
+                                    products={products}
+                                    selectedProductId={selectedProductId}
+                                    onSelect={setSelectedProductId}
+                                    placeholder={`-- ${t('select')} --`}
+                                />
                             </div>
                             <div className="col-span-24 lg:col-span-6">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('designationLabel')} *</label>

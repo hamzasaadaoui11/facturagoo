@@ -16,6 +16,7 @@ interface DocumentData {
     paymentAmount?: number; 
     notes?: string;
     subject?: string;
+    paymentMethod?: string;
     reference?: string;
     dueDate?: string; 
     expiryDate?: string; 
@@ -470,8 +471,6 @@ const generateDocumentHTML = (
         </div>
     `;
 
-    const subjectHtml = doc.subject ? `<div style="margin-bottom: 15px; font-weight: 600;">${dict.pdfSubject || 'Objet'} : <span style="font-weight: normal;">${doc.subject}</span></div>` : '';
-
     const itemsTableHtml = `
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
             <thead>
@@ -587,7 +586,10 @@ const generateDocumentHTML = (
         <div style="position: relative; z-index: 2;">
             ${topHeaderHtml}
             ${clientInfoHtml}
-            ${subjectHtml}
+            <div style="display: flex; gap: 40px; margin-bottom: 15px;">
+                ${doc.subject ? `<div style="font-weight: 600;">${dict.pdfSubject || 'Objet'} : <span style="font-weight: normal;">${doc.subject}</span></div>` : ''}
+                ${doc.paymentMethod ? `<div style="font-weight: 600;">${dict.paymentMethod || 'Mode de paiement'} : <span style="font-weight: normal;">${doc.paymentMethod}</span></div>` : ''}
+            </div>
         </div>
 
         <div class="content-grow">

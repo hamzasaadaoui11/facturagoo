@@ -302,6 +302,7 @@ export const translations = {
     height: 'Hauteur',
     lengthLabel: 'Long.',
     heightLabel: 'Haut.',
+    noResults: 'Aucun résultat',
   },
   es: {
     // Navigation
@@ -603,6 +604,7 @@ export const translations = {
     height: 'Altura',
     lengthLabel: 'Long.',
     heightLabel: 'Alt.',
+    noResults: 'No hay resultados',
   },
   en: {
     // Navigation
@@ -904,6 +906,7 @@ export const translations = {
     height: 'Height',
     lengthLabel: 'Len.',
     heightLabel: 'Hei.',
+    noResults: 'No results',
   },
   ar: {
     // Navigation
@@ -1196,5 +1199,6 @@ export const translations = {
     height: 'الارتفاع',
     lengthLabel: 'طول',
     heightLabel: 'ارتفاع',
+    noResults: 'لا توجد نتائج',
   }
 };

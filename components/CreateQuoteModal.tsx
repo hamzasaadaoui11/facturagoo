@@ -4,6 +4,7 @@ import { X, Plus, Trash2, ScanLine, Calculator, FileText } from 'lucide-react';
 import { Client, Product, Quote, LineItem, QuoteStatus, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
+import SearchableProductSelect from './SearchableProductSelect';
 
 interface CreateQuoteModalProps {
     isOpen: boolean;
@@ -25,6 +26,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [subject, setSubject] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('');
     const [reference, setReference] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -50,7 +52,8 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
             if (quoteToEdit) {
                 setClientId(quoteToEdit.clientId);
                 setDate(quoteToEdit.date);
-                setSubject(quoteToEdit.subject || '');
+                setSubject(quoteToEdit.subject || quoteToEdit.lineItems[0]?.subject || '');
+                setPaymentMethod(quoteToEdit.paymentMethod || quoteToEdit.lineItems[0]?.paymentMethod || '');
                 setReference(quoteToEdit.reference || '');
                 // Read calculationMode from first line item
                 setCalculationMode(quoteToEdit.lineItems[0]?.calculationMode || 'piece');
@@ -62,6 +65,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
                 setSubject('');
+                setPaymentMethod('');
                 setReference('');
                 setLineItems([]);
                 setTempVat(language === 'es' ? 21 : 20);
@@ -187,14 +191,21 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
         const client = clients.find(c => c.id === clientId);
         const clientNameDisplay = client ? (client.company || client.name) : 'Client inconnu';
 
-        // Store calculationMode in the first line item to avoid schema changes
+        // Store metadata in the first line item to avoid schema changes
         const updatedLineItems = [...lineItems];
         if (updatedLineItems.length > 0) {
-            updatedLineItems[0] = { ...updatedLineItems[0], calculationMode };
+            updatedLineItems[0] = { 
+                ...updatedLineItems[0], 
+                calculationMode,
+                subject,
+                paymentMethod
+            };
         }
 
         const quoteData = {
-            clientId, clientName: clientNameDisplay, date, expiryDate: date, subject, reference, lineItems: updatedLineItems,
+            clientId, clientName: clientNameDisplay, date, expiryDate: date, subject, 
+            paymentMethod,
+            reference, lineItems: updatedLineItems,
             status: quoteToEdit ? quoteToEdit.status : QuoteStatus.Draft,
             subTotal: totals.subTotal, 
             vatAmount: totals.vatAmount,
@@ -238,9 +249,19 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('date')} *</label>
                             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
-                        <div className="md:col-span-2 space-y-1">
+                        <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
                             <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('paymentMethod')}</label>
+                            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12">
+                                <option value="">-- {t('select')} --</option>
+                                <option value="Virement">Virement</option>
+                                <option value="Chèque">Chèque</option>
+                                <option value="Espèces">Espèces</option>
+                                <option value="Carte Bancaire">Carte Bancaire</option>
+                            </select>
                         </div>
                         <div className="md:col-span-2 flex items-center gap-6 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                             <div className="flex items-center gap-2">
@@ -273,10 +294,12 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             </div>
                             <div className="col-span-12 lg:col-span-4">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('productAutoLabel')}</label>
-                                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 bg-white">
-                                    <option value="">-- {t('select')} --</option>
-                                    {products.map(product => (<option key={product.id} value={product.id}>{product.name}</option>))}
-                                </select>
+                                <SearchableProductSelect 
+                                    products={products}
+                                    selectedProductId={selectedProductId}
+                                    onSelect={setSelectedProductId}
+                                    placeholder={`-- ${t('select')} --`}
+                                />
                             </div>
                             <div className="col-span-24 lg:col-span-6">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('designationLabel')} *</label>

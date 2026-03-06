@@ -25,8 +25,17 @@ export const initDB = async (): Promise<any> => {
 };
 
 const getCurrentUserId = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.user?.id;
+    try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+            console.warn("Auth session error in db.ts:", error.message);
+            return null;
+        }
+        return data.session?.user?.id;
+    } catch (err) {
+        console.error("Exception getting session in db.ts:", err);
+        return null;
+    }
 };
 
 const getAll = async <T>(storeName: string): Promise<T[]> => {
@@ -51,7 +60,8 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
     const userId = await getCurrentUserId();
     if (!userId) throw new Error("User not authenticated");
 
-    const itemWithUser = { ...item, user_id: userId };
+    const { paymentMethod, ...itemToSave } = item as any;
+    const itemWithUser = { ...itemToSave, user_id: userId };
 
     const { data, error } = await supabase
         .from(tableName)
@@ -70,9 +80,11 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
+    const { paymentMethod, ...itemToSave } = item as any;
+
     const { data, error } = await supabase
         .from(tableName)
-        .update(item)
+        .update(itemToSave)
         .eq('id', item.id)
         .select()
         .single();

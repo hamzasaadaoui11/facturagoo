@@ -4,6 +4,7 @@ import { X, Plus, Trash2, ScanLine, Calculator, FileText, CreditCard, Loader2 } 
 import { Client, Product, Invoice, LineItem, InvoiceStatus, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
+import SearchableProductSelect from './SearchableProductSelect';
 
 interface CreateInvoiceModalProps {
     isOpen: boolean;
@@ -26,6 +27,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [subject, setSubject] = useState('');
+    const [invoicePaymentMethod, setInvoicePaymentMethod] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
@@ -54,7 +56,8 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             if (invoiceToEdit) {
                 setClientId(invoiceToEdit.clientId);
                 setDate(invoiceToEdit.date);
-                setSubject(invoiceToEdit.subject || '');
+                setSubject(invoiceToEdit.subject || invoiceToEdit.lineItems[0]?.subject || '');
+                setInvoicePaymentMethod(invoiceToEdit.paymentMethod || invoiceToEdit.lineItems[0]?.paymentMethod || '');
                 // Read calculationMode from first line item
                 setCalculationMode(invoiceToEdit.lineItems[0]?.calculationMode || 'piece');
                 setLineItems(JSON.parse(JSON.stringify(invoiceToEdit.lineItems)));
@@ -67,6 +70,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
                 setSubject('');
+                setInvoicePaymentMethod('');
                 setLineItems([]);
                 setExistingAmountPaid(0);
                 setNewPaymentAmount(0);
@@ -243,14 +247,21 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             }
         }
 
-        // Store calculationMode in the first line item to avoid schema changes
+        // Store metadata in the first line item to avoid schema changes
         const updatedLineItems = [...lineItems];
         if (updatedLineItems.length > 0) {
-            updatedLineItems[0] = { ...updatedLineItems[0], calculationMode };
+            updatedLineItems[0] = { 
+                ...updatedLineItems[0], 
+                calculationMode,
+                subject,
+                paymentMethod: invoicePaymentMethod
+            };
         }
 
         const invoiceData = {
-            clientId, clientName: clientNameDisplay, date, dueDate: date, subject, lineItems: updatedLineItems, status,
+            clientId, clientName: clientNameDisplay, date, dueDate: date, subject, 
+            paymentMethod: invoicePaymentMethod,
+            lineItems: updatedLineItems, status,
             subTotal: totals.subTotal, 
             vatAmount: totals.vatAmount, 
             amount: totals.totalTTC, 
@@ -299,9 +310,19 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('date')} *</label>
                             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
-                        <div className="md:col-span-2 space-y-1">
+                        <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
                             <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('paymentMethod')}</label>
+                            <select value={invoicePaymentMethod} onChange={(e) => setInvoicePaymentMethod(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12">
+                                <option value="">-- {t('select')} --</option>
+                                <option value="Virement">Virement</option>
+                                <option value="Chèque">Chèque</option>
+                                <option value="Espèces">Espèces</option>
+                                <option value="Carte Bancaire">Carte Bancaire</option>
+                            </select>
                         </div>
                         <div className="md:col-span-2 flex items-center gap-6 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                             <div className="flex items-center gap-2">
@@ -334,10 +355,12 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                             </div>
                             <div className="col-span-12 lg:col-span-4">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('productAutoLabel')}</label>
-                                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 bg-white">
-                                    <option value="">-- {t('select')} --</option>
-                                    {products.map(product => (<option key={product.id} value={product.id}>{product.name}</option>))}
-                                </select>
+                                <SearchableProductSelect 
+                                    products={products}
+                                    selectedProductId={selectedProductId}
+                                    onSelect={setSelectedProductId}
+                                    placeholder={`-- ${t('select')} --`}
+                                />
                             </div>
                             <div className="col-span-24 lg:col-span-6">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('designationLabel')} *</label>

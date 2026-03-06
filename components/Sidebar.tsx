@@ -78,8 +78,20 @@ const Sidebar: React.FC = () => {
     };
 
     const handleLogout = async () => {
-        await supabase.auth.signOut();
-        navigate('/'); 
+        try {
+            await supabase.auth.signOut();
+            // Clear all Supabase related local storage
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('supabase.auth.token') || key.includes('sb-'))) {
+                    localStorage.removeItem(key);
+                }
+            }
+        } catch (error) {
+            console.error("Error during logout:", error);
+        } finally {
+            navigate('/');
+        }
     };
 
     const handleLanguageChange = (lang: Language) => {

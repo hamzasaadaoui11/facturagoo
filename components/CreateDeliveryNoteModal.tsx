@@ -4,6 +4,7 @@ import { X, Plus, Trash2, ScanLine, Calculator, CreditCard, Loader2 } from 'luci
 import { Client, Product, DeliveryNote, LineItem, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
+import SearchableProductSelect from './SearchableProductSelect';
 
 interface CreateDeliveryNoteModalProps {
     isOpen: boolean;
@@ -49,12 +50,12 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
             if (noteToEdit) {
                 setClientId(noteToEdit.clientId);
                 setDate(noteToEdit.date);
-                setSubject(noteToEdit.subject || '');
+                setSubject(noteToEdit.subject || noteToEdit.lineItems[0]?.subject || '');
                 // Read calculationMode from first line item
                 setCalculationMode(noteToEdit.lineItems[0]?.calculationMode || 'piece');
                 setLineItems(JSON.parse(JSON.stringify(noteToEdit.lineItems)));
                 setPaymentAmount(noteToEdit.paymentAmount || 0);
-                setPaymentMethod(noteToEdit.paymentMethod || 'Espèces');
+                setPaymentMethod(noteToEdit.paymentMethod || noteToEdit.lineItems[0]?.paymentMethod || 'Espèces');
             } else {
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
@@ -159,10 +160,15 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         if (!clientId || lineItems.length === 0) return;
         const client = clients.find(c => c.id === clientId);
         const clientNameDisplay = client ? (client.company || client.name) : 'Client inconnu';
-        // Store calculationMode in the first line item to avoid schema changes
+        // Store metadata in the first line item to avoid schema changes
         const updatedLineItems = [...lineItems];
         if (updatedLineItems.length > 0) {
-            updatedLineItems[0] = { ...updatedLineItems[0], calculationMode };
+            updatedLineItems[0] = { 
+                ...updatedLineItems[0], 
+                calculationMode,
+                subject,
+                paymentMethod
+            };
         }
 
         setIsSubmitting(true);
@@ -205,9 +211,19 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('date')} *</label>
                             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
-                        <div className="md:col-span-2 space-y-1">
+                        <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
                             <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('paymentMethod')}</label>
+                            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12">
+                                <option value="">-- {t('select')} --</option>
+                                <option value="Virement">Virement</option>
+                                <option value="Chèque">Chèque</option>
+                                <option value="Espèces">Espèces</option>
+                                <option value="Carte Bancaire">Carte Bancaire</option>
+                            </select>
                         </div>
                         <div className="md:col-span-2 flex items-center gap-6 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                             <div className="flex items-center gap-2">
@@ -240,10 +256,12 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                             </div>
                             <div className="col-span-12 lg:col-span-4">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('productAutoLabel')}</label>
-                                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 bg-white">
-                                    <option value="">-- {t('select')} --</option>
-                                    {products.map(product => (<option key={product.id} value={product.id}>{product.name}</option>))}
-                                </select>
+                                <SearchableProductSelect 
+                                    products={products}
+                                    selectedProductId={selectedProductId}
+                                    onSelect={setSelectedProductId}
+                                    placeholder={`-- ${t('select')} --`}
+                                />
                             </div>
                             <div className="col-span-24 lg:col-span-6">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('designationLabel')} *</label>
@@ -400,15 +418,6 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                         <input type="number" step="any" value={paymentAmount} onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)} className={`block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm font-bold h-11 ${isRTL ? 'pl-12 pr-3' : 'pl-3 pr-12'}`} placeholder="0.00"/>
                                         <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'left-0 pl-3' : 'right-0 pr-3'}`}><span className="text-slate-400 font-bold text-xs">MAD</span></div>
                                     </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">{t('paymentMethod')}</label>
-                                    <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-11">
-                                        <option value="Espèces">{language === 'es' ? 'Efectivo' : 'Espèces'}</option>
-                                        <option value="Chèque">{language === 'es' ? 'Cheque' : 'Chèque'}</option>
-                                        <option value="Virement">{language === 'es' ? 'Transferencia' : 'Virement'}</option>
-                                        <option value="Carte Bancaire">{language === 'es' ? 'Tarjeta' : 'Carte Bancaire'}</option>
-                                    </select>
                                 </div>
                             </div>
                         </div>

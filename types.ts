@@ -83,6 +83,8 @@ export interface LineItem {
   vat: number;
   showDimensions?: boolean; // Persisted here to avoid schema changes
   calculationMode?: 'piece' | 'm2' | 'ml' | 'kg';
+  subject?: string; // Metadata for document
+  paymentMethod?: string; // Metadata for document
 }
 
 export interface Quote {
@@ -95,6 +97,7 @@ export interface Quote {
     amount: number;
     status: QuoteStatus;
     subject?: string;
+    paymentMethod?: string;
     reference?: string;
     showDimensions?: boolean;
     lineItems: LineItem[];
@@ -112,6 +115,8 @@ export interface PurchaseOrder {
     date: string;
     expectedDate?: string;
     status: PurchaseOrderStatus;
+    subject?: string;
+    paymentMethod?: string;
     lineItems: LineItem[];
     subTotal: number;
     vatAmount: number;
@@ -135,6 +140,7 @@ export interface Invoice {
     amountPaid: number; // Track received payments
     status: InvoiceStatus;
     subject?: string;
+    paymentMethod?: string;
     reference?: string;
     showDimensions?: boolean;
     lineItems: LineItem[];
@@ -154,6 +160,7 @@ export interface CreditNote {
     amount: number;
     status: CreditNoteStatus;
     subject?: string; // Reason
+    paymentMethod?: string;
     reference?: string;
     showDimensions?: boolean;
     lineItems: LineItem[];
@@ -194,6 +201,7 @@ export interface DeliveryNote {
     clientName: string;
     date: string;
     subject?: string; // Champ ajouté
+    paymentMethod?: string;
     showDimensions?: boolean;
     lineItems: LineItem[];
     status: string; // Changed from fixed union to string to support computed statuses like 'Payé'
@@ -202,7 +210,6 @@ export interface DeliveryNote {
     vatAmount?: number;
     totalAmount?: number;
     paymentAmount?: number;
-    paymentMethod?: string;
 }
 
 export interface DocumentColumn {
