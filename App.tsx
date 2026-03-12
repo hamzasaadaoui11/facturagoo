@@ -68,8 +68,11 @@ const MainContent: React.FC = () => {
 
     useEffect(() => {
         const loadData = async () => {
+            setIsLoading(true);
+            setError(null);
             try {
                 await initDB();
+                
                 const [clientsData, productsData, suppliersData, quotesData, invoicesData, creditNotesData, settingsData, paymentsData, movementsData, deliveryData, purchaseOrdersData] = await Promise.all([
                     dbService.clients.getAll(),
                     dbService.products.getAll(),
@@ -97,7 +100,7 @@ const MainContent: React.FC = () => {
                 setCompanySettings(settingsData);
             } catch (err: any) {
                 console.error("Failed to load data:", err);
-                setError(`Impossible de charger les données. Erreur: ${err.message || err}.`);
+                setError(err.message || "Impossible de charger les données.");
             } finally {
                 setIsLoading(false);
             }
@@ -262,8 +265,13 @@ const MainContent: React.FC = () => {
         }
     };
     const updateQuote = async (updatedQuote: Quote) => {
-        await dbService.quotes.update(updatedQuote);
-        setQuotes(prev => prev.map(q => q.id === updatedQuote.id ? updatedQuote : q));
+        try {
+            const savedQuote = await dbService.quotes.update(updatedQuote);
+            setQuotes(prev => prev.map(q => q.id === updatedQuote.id ? savedQuote : q));
+        } catch (e: any) {
+            console.error("Error updating quote", e);
+            alert("Erreur mise à jour devis: " + e.message);
+        }
     };
     const updateQuoteStatus = async (quoteId: string, newStatus: QuoteStatus) => {
         const quoteToUpdate = quotes.find(q => q.id === quoteId);
@@ -359,8 +367,8 @@ const MainContent: React.FC = () => {
                 }
             }
 
-            await dbService.invoices.update(updatedInvoice);
-            setInvoices(prev => prev.map(inv => inv.id === id ? updatedInvoice : inv));
+            const savedInvoice = await dbService.invoices.update(updatedInvoice);
+            setInvoices(prev => prev.map(inv => inv.id === id ? savedInvoice : inv));
             if (initialPayment && initialPayment.amount > 0) {
                  const newPayment: Payment = { id: crypto.randomUUID(), invoiceId: id, invoiceNumber: updatedInvoice.documentId || updatedInvoice.id, clientId: updatedInvoice.clientId, clientName: updatedInvoice.clientName, date: initialPayment.date, amount: initialPayment.amount, method: initialPayment.method, notes: 'Règlement ajouté lors de la modification' };
                 await dbService.payments.add(newPayment);
@@ -512,8 +520,13 @@ const MainContent: React.FC = () => {
         }
     };
     const updateCreditNote = async (updatedCreditNote: CreditNote) => {
-        await dbService.creditNotes.update(updatedCreditNote);
-        setCreditNotes(prev => prev.map(cn => cn.id === updatedCreditNote.id ? updatedCreditNote : cn));
+        try {
+            const savedCreditNote = await dbService.creditNotes.update(updatedCreditNote);
+            setCreditNotes(prev => prev.map(cn => cn.id === updatedCreditNote.id ? savedCreditNote : cn));
+        } catch (e: any) {
+            console.error("Error updating credit note", e);
+            alert("Erreur mise à jour avoir: " + e.message);
+        }
     };
     const deleteCreditNote = async (id: string) => {
         try {
@@ -563,8 +576,13 @@ const MainContent: React.FC = () => {
         }
     };
     const updateDeliveryNote = async (updatedNote: DeliveryNote) => {
-        await dbService.deliveryNotes.update(updatedNote); 
-        setDeliveryNotes(prev => prev.map(n => n.id === updatedNote.id ? updatedNote : n));
+        try {
+            const savedNote = await dbService.deliveryNotes.update(updatedNote); 
+            setDeliveryNotes(prev => prev.map(n => n.id === updatedNote.id ? savedNote : n));
+        } catch (e: any) {
+            console.error("Error updating delivery note", e);
+            alert("Erreur mise à jour BL: " + e.message);
+        }
     };
     const deleteDeliveryNote = async (noteId: string) => {
         await dbService.deliveryNotes.delete(noteId);
@@ -630,8 +648,13 @@ const MainContent: React.FC = () => {
         }
     };
     const updatePurchaseOrder = async (updatedOrder: PurchaseOrder) => {
-        await dbService.purchaseOrders.update(updatedOrder);
-        setPurchaseOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+        try {
+            const savedOrder = await dbService.purchaseOrders.update(updatedOrder);
+            setPurchaseOrders(prev => prev.map(o => o.id === updatedOrder.id ? savedOrder : o));
+        } catch (e: any) {
+            console.error("Error updating purchase order", e);
+            alert("Erreur mise à jour commande: " + e.message);
+        }
     };
     const updatePurchaseOrderStatus = async (orderId: string, newStatus: PurchaseOrderStatus) => {
         const order = purchaseOrders.find(o => o.id === orderId);
@@ -730,54 +753,12 @@ const App: React.FC = () => {
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
     useEffect(() => {
-        const clearAuthAndReload = async () => {
-            console.warn("Force clearing auth state due to invalid session...");
-            try {
-                // Try to sign out locally
-                await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-                
-                // Clear all Supabase related local storage
-                const keysToRemove = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && (key.includes('supabase.auth.token') || key.includes('sb-'))) {
-                        keysToRemove.push(key);
-                    }
-                }
-                keysToRemove.forEach(key => localStorage.removeItem(key));
-                
-                setSession(null);
-            } catch (err) {
-                console.error("Error during auth cleanup:", err);
-            }
-        };
-
         const initSession = async () => {
             try {
-                const { data: { session }, error } = await supabase.auth.getSession();
-                if (error) {
-                    console.error("Session initialization error:", error.message);
-                    
-                    // Specific handling for refresh token errors
-                    if (error.message.includes('Refresh Token') || 
-                        error.message.includes('invalid_grant') ||
-                        error.message.includes('not found') ||
-                        error.message.includes('Failed to fetch')) {
-                        await clearAuthAndReload();
-                    } else {
-                        setSession(null);
-                    }
-                } else {
-                    setSession(session);
-                }
-            } catch (err: any) {
+                const { data: { session } } = await supabase.auth.getSession();
+                setSession(session);
+            } catch (err) {
                 console.error("Auth initialization exception:", err);
-                const msg = err.message || '';
-                if (msg.includes('Refresh Token') || msg.includes('not found') || msg.includes('invalid_grant')) {
-                    await clearAuthAndReload();
-                } else {
-                    setSession(null);
-                }
             } finally {
                 setLoading(false);
             }
@@ -785,21 +766,9 @@ const App: React.FC = () => {
 
         initSession();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log("Auth event:", event);
-            
-            if (event === 'SIGNED_OUT') {
-                setSession(null);
-            } else if ((event as any) === 'TOKEN_REFRESH_FAILED') {
-                console.error('Token refresh failed, clearing local session...');
-                await clearAuthAndReload();
-            } else if (event === 'INITIAL_SESSION' && !session) {
-                setSession(null);
-            } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-                setSession(session);
-            } else {
-                setSession(session);
-            }
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+            setLoading(false);
         });
 
         return () => subscription.unsubscribe();

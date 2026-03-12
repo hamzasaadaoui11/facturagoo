@@ -17,16 +17,13 @@ const Login: React.FC = () => {
         setError(null);
 
         try {
-            // Clear any stale local session state before attempting a new login
-            await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-            
-            const { data, error } = await supabase.auth.signInWithPassword({
+            const { error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             });
 
             if (error) throw error;
-            navigate('/dashboard'); // Will be handled by App.tsx wrapper
+            navigate('/dashboard');
         } catch (err: any) {
             setError(err.message || 'Une erreur est survenue lors de la connexion.');
         } finally {
@@ -62,8 +59,24 @@ const Login: React.FC = () => {
                                     <div className="ml-3">
                                         <h3 className="text-sm font-medium text-red-800">Erreur de connexion</h3>
                                         <div className="mt-2 text-sm text-red-700">
-                                            <p>{error === 'Invalid login credentials' ? 'Email ou mot de passe incorrect.' : error}</p>
+                                            <p>
+                                                {error === 'Invalid login credentials' 
+                                                    ? 'Email ou mot de passe incorrect.' 
+                                                    : error.includes('Email not confirmed')
+                                                    ? 'Veuillez confirmer votre adresse email avant de vous connecter.'
+                                                    : error}
+                                            </p>
                                         </div>
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                localStorage.clear();
+                                                window.location.reload();
+                                            }}
+                                            className="mt-3 text-xs font-medium text-red-600 hover:text-red-500 underline"
+                                        >
+                                            Effacer le cache et réessayer
+                                        </button>
                                     </div>
                                 </div>
                             </div>

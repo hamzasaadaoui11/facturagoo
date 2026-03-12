@@ -26,19 +26,25 @@ export const initDB = async (): Promise<any> => {
     return Promise.resolve(true);
 };
 
+let cachedUserId: string | null = null;
+
 const getCurrentUserId = async () => {
+    if (cachedUserId) return cachedUserId;
+
     try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-            console.warn("Auth session error in db.ts:", error.message);
-            return null;
-        }
-        return data.session?.user?.id;
+        const { data: { session } } = await supabase.auth.getSession();
+        cachedUserId = session?.user?.id || null;
+        return cachedUserId;
     } catch (err) {
-        console.error("Exception getting session in db.ts:", err);
+        console.error("Error getting user ID in db.ts:", err);
         return null;
     }
 };
+
+// Listen for auth changes to update the cache
+supabase.auth.onAuthStateChange((_event, session) => {
+    cachedUserId = session?.user?.id || null;
+});
 
 const getAll = async <T>(storeName: string): Promise<T[]> => {
     const tableName = TABLE_MAP[storeName];
@@ -54,18 +60,19 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
     }
 
     // Restore metadata fields from first line item if missing
-    if (['quotes', 'invoices', 'purchase_orders'].includes(tableName)) {
+    if (['quotes', 'invoices', 'purchase_orders', 'credit_notes', 'delivery_notes'].includes(tableName)) {
         return (data as any[]).map(item => {
             const firstItem = item.lineItems?.[0];
             if (firstItem) {
                 return {
                     ...item,
-                    subject: item.subject || firstItem.subject,
-                    paymentMethod: item.paymentMethod || firstItem.paymentMethod,
-                    dueDate: item.dueDate || firstItem.dueDate,
-                    expiryDate: item.expiryDate || firstItem.expiryDate,
-                    expectedDate: item.expectedDate || firstItem.expectedDate,
-                    calculationMode: item.calculationMode || firstItem.calculationMode
+                    subject: firstItem.subject || item.subject,
+                    paymentMethod: firstItem.paymentMethod || item.paymentMethod,
+                    dueDate: firstItem.dueDate || item.dueDate,
+                    expiryDate: firstItem.expiryDate || item.expiryDate,
+                    expectedDate: firstItem.expectedDate || item.expectedDate,
+                    calculationMode: firstItem.calculationMode || item.calculationMode,
+                    showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : item.showDimensions
                 };
             }
             return item;
@@ -82,14 +89,10 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
     const userId = await getCurrentUserId();
     if (!userId) throw new Error("User not authenticated");
 
-    const { paymentMethod, ...itemToSave } = item as any;
+    const { paymentMethod, subject, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, ...itemToSave } = item as any;
     
-    // Strip fields that might be missing in Supabase schema
-    delete itemToSave.subject;
-    delete itemToSave.dueDate;
-    delete itemToSave.expiryDate;
-    delete itemToSave.expectedDate;
-
+    // Strip fields that might be missing in Supabase schema to avoid errors
+    // These are stored in lineItems[0] by the UI components
     const itemWithUser = { ...itemToSave, user_id: userId };
 
     const { data, error } = await supabase
@@ -108,12 +111,13 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
     if (firstItem) {
         return {
             ...savedItem,
-            subject: savedItem.subject || firstItem.subject,
-            paymentMethod: savedItem.paymentMethod || firstItem.paymentMethod,
-            dueDate: savedItem.dueDate || firstItem.dueDate,
-            expiryDate: savedItem.expiryDate || firstItem.expiryDate,
-            expectedDate: savedItem.expectedDate || firstItem.expectedDate,
-            calculationMode: savedItem.calculationMode || firstItem.calculationMode
+            subject: firstItem.subject || savedItem.subject,
+            paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod,
+            dueDate: firstItem.dueDate || savedItem.dueDate,
+            expiryDate: firstItem.expiryDate || savedItem.expiryDate,
+            expectedDate: firstItem.expectedDate || savedItem.expectedDate,
+            calculationMode: firstItem.calculationMode || savedItem.calculationMode,
+            showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : savedItem.showDimensions
         } as T;
     }
 
@@ -124,18 +128,14 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
-    const { paymentMethod, ...itemToSave } = item as any;
-
-    // Strip fields that might be missing in Supabase schema
-    delete itemToSave.subject;
-    delete itemToSave.dueDate;
-    delete itemToSave.expiryDate;
-    delete itemToSave.expectedDate;
+    // Destructure to remove fields that might not be in the Supabase schema
+    // and to remove 'id' from the update payload itself
+    const { id, paymentMethod, subject, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, created_at, ...itemToSave } = item as any;
 
     const { data, error } = await supabase
         .from(tableName)
         .update(itemToSave)
-        .eq('id', item.id)
+        .eq('id', id)
         .select()
         .single();
 
@@ -149,12 +149,13 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
     if (firstItem) {
         return {
             ...savedItem,
-            subject: savedItem.subject || firstItem.subject,
-            paymentMethod: savedItem.paymentMethod || firstItem.paymentMethod,
-            dueDate: savedItem.dueDate || firstItem.dueDate,
-            expiryDate: savedItem.expiryDate || firstItem.expiryDate,
-            expectedDate: savedItem.expectedDate || firstItem.expectedDate,
-            calculationMode: savedItem.calculationMode || firstItem.calculationMode
+            subject: firstItem.subject || savedItem.subject,
+            paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod,
+            dueDate: firstItem.dueDate || savedItem.dueDate,
+            expiryDate: firstItem.expiryDate || savedItem.expiryDate,
+            expectedDate: firstItem.expectedDate || savedItem.expectedDate,
+            calculationMode: firstItem.calculationMode || savedItem.calculationMode,
+            showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : savedItem.showDimensions
         } as T;
     }
 
