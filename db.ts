@@ -62,7 +62,8 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
     // Restore metadata fields from first line item if missing
     if (['quotes', 'invoices', 'purchase_orders', 'credit_notes', 'delivery_notes'].includes(tableName)) {
         return (data as any[]).map(item => {
-            const firstItem = item.lineItems?.[0];
+            const lineItems = item.lineItems || item.line_items;
+            const firstItem = lineItems?.[0];
             if (firstItem) {
                 return {
                     ...item,
@@ -107,7 +108,8 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
     }
 
     const savedItem = data as any;
-    const firstItem = savedItem.lineItems?.[0];
+    const lineItems = savedItem.lineItems || savedItem.line_items;
+    const firstItem = lineItems?.[0];
     if (firstItem) {
         return {
             ...savedItem,
@@ -128,6 +130,9 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
+    const userId = await getCurrentUserId();
+    if (!userId) throw new Error("User not authenticated");
+
     // Destructure to remove fields that might not be in the Supabase schema
     // and to remove 'id' from the update payload itself
     const { id, paymentMethod, subject, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, created_at, ...itemToSave } = item as any;
@@ -136,6 +141,7 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
         .from(tableName)
         .update(itemToSave)
         .eq('id', id)
+        .eq('user_id', userId)
         .select()
         .single();
 
@@ -145,7 +151,8 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
     }
 
     const savedItem = data as any;
-    const firstItem = savedItem.lineItems?.[0];
+    const lineItems = savedItem.lineItems || savedItem.line_items;
+    const firstItem = lineItems?.[0];
     if (firstItem) {
         return {
             ...savedItem,
@@ -291,25 +298,33 @@ export const dbService = {
 
             const settings = data as CompanySettings | null;
             if (settings) {
-                const localShowAmount = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS);
-                if (localShowAmount !== null) {
-                    settings.showAmountInWords = localShowAmount === 'true';
-                } else if (settings.showAmountInWords === undefined) {
-                    settings.showAmountInWords = true;
-                }
+                try {
+                    const localShowAmount = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS);
+                    if (localShowAmount !== null) {
+                        settings.showAmountInWords = localShowAmount === 'true';
+                    } else if (settings.showAmountInWords === undefined) {
+                        settings.showAmountInWords = true;
+                    }
 
-                const localInfoPos = localStorage.getItem(LOCAL_STORAGE_KEYS.DOCUMENT_INFO_POSITION);
-                if (localInfoPos !== null) {
-                    settings.documentInfoPosition = localInfoPos as 'right' | 'left';
-                } else if (settings.documentInfoPosition === undefined) {
-                    settings.documentInfoPosition = 'right';
-                }
+                    const localInfoPos = localStorage.getItem(LOCAL_STORAGE_KEYS.DOCUMENT_INFO_POSITION);
+                    if (localInfoPos !== null) {
+                        settings.documentInfoPosition = localInfoPos as 'right' | 'left';
+                    } else if (settings.documentInfoPosition === undefined) {
+                        settings.documentInfoPosition = 'right';
+                    }
 
-                const localShowExpiry = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_EXPIRY_DATE);
-                if (localShowExpiry !== null) {
-                    settings.showExpiryDate = localShowExpiry === 'true';
-                } else if (settings.showExpiryDate === undefined) {
-                    settings.showExpiryDate = true;
+                    const localShowExpiry = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_EXPIRY_DATE);
+                    if (localShowExpiry !== null) {
+                        settings.showExpiryDate = localShowExpiry === 'true';
+                    } else if (settings.showExpiryDate === undefined) {
+                        settings.showExpiryDate = true;
+                    }
+                } catch (e) {
+                    console.error("Error accessing localStorage in db.ts:", e);
+                    // Fallback to defaults if localStorage fails
+                    settings.showAmountInWords = settings.showAmountInWords ?? true;
+                    settings.documentInfoPosition = settings.documentInfoPosition ?? 'right';
+                    settings.showExpiryDate = settings.showExpiryDate ?? true;
                 }
             }
 
@@ -319,19 +334,21 @@ export const dbService = {
             const userId = await getCurrentUserId();
             if (!userId) throw new Error("Utilisateur non connecté");
             
-            // Save showAmountInWords to localStorage
-            if (settings.showAmountInWords !== undefined) {
-                localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS, String(settings.showAmountInWords));
-            }
+            // Save to localStorage with safety
+            try {
+                if (settings.showAmountInWords !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS, String(settings.showAmountInWords));
+                }
 
-            // Save documentInfoPosition to localStorage
-            if (settings.documentInfoPosition !== undefined) {
-                localStorage.setItem(LOCAL_STORAGE_KEYS.DOCUMENT_INFO_POSITION, settings.documentInfoPosition);
-            }
+                if (settings.documentInfoPosition !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.DOCUMENT_INFO_POSITION, settings.documentInfoPosition);
+                }
 
-            // Save showExpiryDate to localStorage
-            if (settings.showExpiryDate !== undefined) {
-                localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_EXPIRY_DATE, String(settings.showExpiryDate));
+                if (settings.showExpiryDate !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_EXPIRY_DATE, String(settings.showExpiryDate));
+                }
+            } catch (e) {
+                console.error("Error saving to localStorage in db.ts:", e);
             }
             
             const { data: existingRow, error: fetchError } = await supabase

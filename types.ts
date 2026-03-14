@@ -120,6 +120,7 @@ export interface PurchaseOrder {
     status: PurchaseOrderStatus;
     subject?: string;
     paymentMethod?: string;
+    reference?: string;
     lineItems: LineItem[];
     subTotal: number;
     vatAmount: number;
@@ -205,6 +206,7 @@ export interface DeliveryNote {
     date: string;
     subject?: string; // Champ ajouté
     paymentMethod?: string;
+    reference?: string;
     showDimensions?: boolean;
     lineItems: LineItem[];
     status: string; // Changed from fixed union to string to support computed statuses like 'Payé'

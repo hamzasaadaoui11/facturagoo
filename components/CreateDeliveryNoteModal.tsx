@@ -120,29 +120,35 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     };
 
     const handleAddItem = () => {
-        if (!tempName) return;
-        const qty = parseDecimalInput(itemQuantity);
-        const inputPrice = parseDecimalInput(tempPrice);
-        const price = isModeTTC ? (inputPrice / (1 + tempVat / 100)) : inputPrice;
-        const length = showLengthColumn ? parseDecimalInput(tempLength) : 1;
-        const height = showHeightColumn ? parseDecimalInput(tempHeight) : 1;
-        const weight = isKg ? parseDecimalInput(tempWeight) : 1;
+        try {
+            if (!tempName) return;
+            const qty = parseDecimalInput(itemQuantity);
+            const inputPrice = parseDecimalInput(tempPrice);
+            const vatValue = typeof tempVat === 'number' ? tempVat : 20;
+            const price = isModeTTC ? (inputPrice / (1 + vatValue / 100)) : inputPrice;
+            const length = showLengthColumn ? parseDecimalInput(tempLength) : 1;
+            const height = showHeightColumn ? parseDecimalInput(tempHeight) : 1;
+            const weight = isKg ? parseDecimalInput(tempWeight) : 1;
 
-        const newItem: LineItem = {
-            id: `temp-${Date.now()}`,
-            productId: selectedProductId || null,
-            productCode: tempProductCode,
-            name: tempName,
-            description: tempDesc,
-            quantity: qty,
-            length: length || 1,
-            height: height || 1,
-            weight: weight || 1,
-            unitPrice: price,
-            vat: tempVat
-        };
-        setLineItems(prev => [...prev, newItem]);
-        resetItemForm();
+            const newItem: LineItem = {
+                id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                productId: selectedProductId || null,
+                productCode: tempProductCode || '',
+                name: tempName,
+                description: tempDesc || '',
+                quantity: qty || 1,
+                length: length || 1,
+                height: height || 1,
+                weight: weight || 1,
+                unitPrice: price || 0,
+                vat: vatValue
+            };
+            setLineItems(prev => [...(prev || []), newItem]);
+            resetItemForm();
+        } catch (error) {
+            console.error("Error in handleAddItem:", error);
+            alert("Erreur lors de l'ajout de l'article. Veuillez vérifier les données saisies.");
+        }
     };
 
     const handleRemoveItem = (id: string) => {
@@ -331,9 +337,10 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-slate-100">
-                                    {lineItems.map(item => {
-                                        const displayPrice = isModeTTC ? (item.unitPrice * (1 + item.vat/100)) : item.unitPrice;
-                                        const displayLineTotal = item.quantity * getLineMultiplier(item) * displayPrice;
+                                    {(lineItems || []).map(item => {
+                                        const itemVat = typeof item.vat === 'number' ? item.vat : 20;
+                                        const displayPrice = isModeTTC ? (item.unitPrice * (1 + itemVat/100)) : item.unitPrice;
+                                        const displayLineTotal = (item.quantity || 0) * getLineMultiplier(item) * (displayPrice || 0);
                                         
                                         return (
                                         <tr key={item.id} className="hover:bg-slate-50 transition-colors">

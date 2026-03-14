@@ -133,51 +133,57 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     };
 
     const handleAddItem = () => {
-        if (!tempName) return;
-        const qty = parseDecimalInput(itemQuantity);
+        try {
+            if (!tempName) return;
+            const qty = parseDecimalInput(itemQuantity);
 
-        // Stock check
-        if (selectedProductId) {
-            const product = products.find(p => p.id === selectedProductId);
-            if (product && product.productType === 'Produit') {
-                const currentQtyInInvoice = lineItems
-                    .filter(li => li.productId === selectedProductId)
-                    .reduce((sum, li) => sum + li.quantity, 0);
-                const totalRequestedQty = currentQtyInInvoice + qty;
-                
-                const savedItem = invoiceToEdit?.lineItems.find(li => li.productId === selectedProductId);
-                const savedQty = (savedItem && invoiceToEdit?.status !== InvoiceStatus.Draft) ? savedItem.quantity : 0;
-                
-                const availableStock = (product.stockQuantity || 0) + savedQty;
-                
-                if (totalRequestedQty > availableStock) {
-                    alert(`Stock insuffisant pour ${product.name}. Stock disponible: ${availableStock}`);
-                    return;
+            // Stock check
+            if (selectedProductId) {
+                const product = products.find(p => p.id === selectedProductId);
+                if (product && product.productType === 'Produit') {
+                    const currentQtyInInvoice = lineItems
+                        .filter(li => li.productId === selectedProductId)
+                        .reduce((sum, li) => sum + li.quantity, 0);
+                    const totalRequestedQty = currentQtyInInvoice + qty;
+                    
+                    const savedItem = invoiceToEdit?.lineItems?.find(li => li.productId === selectedProductId);
+                    const savedQty = (savedItem && invoiceToEdit?.status !== InvoiceStatus.Draft) ? savedItem.quantity : 0;
+                    
+                    const availableStock = (product.stockQuantity || 0) + savedQty;
+                    
+                    if (totalRequestedQty > availableStock) {
+                        alert(`Stock insuffisant pour ${product.name}. Stock disponible: ${availableStock}`);
+                        return;
+                    }
                 }
             }
-        }
 
-        const inputPrice = parseDecimalInput(tempPrice);
-        const price = isModeTTC ? (inputPrice / (1 + tempVat / 100)) : inputPrice;
-        const length = showLengthColumn ? parseDecimalInput(tempLength) : 1;
-        const height = showHeightColumn ? parseDecimalInput(tempHeight) : 1;
-        const weight = isKg ? parseDecimalInput(tempWeight) : 1;
-        
-        const newItem: LineItem = {
-            id: `temp-${Date.now()}`,
-            productId: selectedProductId || null,
-            productCode: tempProductCode,
-            name: tempName,
-            description: tempDesc,
-            quantity: qty,
-            length: length || 1,
-            height: height || 1,
-            weight: weight || 1,
-            unitPrice: price,
-            vat: tempVat
-        };
-        setLineItems(prev => [...prev, newItem]);
-        resetItemForm();
+            const inputPrice = parseDecimalInput(tempPrice);
+            const vatValue = typeof tempVat === 'number' ? tempVat : 20;
+            const price = isModeTTC ? (inputPrice / (1 + vatValue / 100)) : inputPrice;
+            const length = showLengthColumn ? parseDecimalInput(tempLength) : 1;
+            const height = showHeightColumn ? parseDecimalInput(tempHeight) : 1;
+            const weight = isKg ? parseDecimalInput(tempWeight) : 1;
+            
+            const newItem: LineItem = {
+                id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                productId: selectedProductId || null,
+                productCode: tempProductCode || '',
+                name: tempName,
+                description: tempDesc || '',
+                quantity: qty || 1,
+                length: length || 1,
+                height: height || 1,
+                weight: weight || 1,
+                unitPrice: price || 0,
+                vat: vatValue
+            };
+            setLineItems(prev => [...(prev || []), newItem]);
+            resetItemForm();
+        } catch (error) {
+            console.error("Error in handleAddItem:", error);
+            alert("Erreur lors de l'ajout de l'article. Veuillez vérifier les données saisies.");
+        }
     };
 
     const handleRemoveItem = (id: string) => {
@@ -438,9 +444,10 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-slate-100">
-                                    {lineItems.map(item => {
-                                        const displayPrice = isModeTTC ? (item.unitPrice * (1 + item.vat/100)) : item.unitPrice;
-                                        const displayLineTotal = item.quantity * getLineMultiplier(item) * displayPrice;
+                                    {(lineItems || []).map(item => {
+                                        const itemVat = typeof item.vat === 'number' ? item.vat : 20;
+                                        const displayPrice = isModeTTC ? (item.unitPrice * (1 + itemVat/100)) : item.unitPrice;
+                                        const displayLineTotal = (item.quantity || 0) * getLineMultiplier(item) * (displayPrice || 0);
                                         
                                         return (
                                         <tr key={item.id} className="hover:bg-slate-50 transition-colors">

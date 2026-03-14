@@ -7,6 +7,7 @@ import { dbService, initDB } from './db';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { generateUUID } from './src/utils/uuid';
 
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -187,7 +188,7 @@ const MainContent: React.FC = () => {
     };
 
     const addClient = async (client: Omit<Client, 'id' | 'clientCode'>) => {
-        const newClient = { id: crypto.randomUUID(), clientCode: getNextCode('C', clients), ...client };
+        const newClient = { id: generateUUID(), clientCode: getNextCode('C', clients), ...client };
         await dbService.clients.add(newClient);
         setClients(prev => [newClient, ...prev].sort((a,b) => (b.clientCode || '').localeCompare(a.clientCode || '')));
     };
@@ -209,13 +210,13 @@ const MainContent: React.FC = () => {
         }
     };
     const addStockMovement = async (movement: Omit<StockMovement, 'id'>) => {
-        const newMovement = { id: crypto.randomUUID(), ...movement };
+        const newMovement = { id: generateUUID(), ...movement };
         await dbService.stockMovements.add(newMovement);
         setStockMovements(prev => [newMovement, ...prev]);
         await updateProductStock(movement.productId, movement.quantity);
     };
     const addProduct = async (product: Omit<Product, 'id'>) => {
-        const newProduct: Product = { id: crypto.randomUUID(), productCode: product.productCode || getNextCode('P', products), ...product };
+        const newProduct: Product = { id: generateUUID(), productCode: product.productCode || getNextCode('P', products), ...product };
         await dbService.products.add(newProduct);
         setProducts(prev => [newProduct, ...prev].sort((a,b) => (b.productCode || '').localeCompare(a.productCode || '')));
         if(product.stockQuantity && product.stockQuantity > 0) {
@@ -239,7 +240,7 @@ const MainContent: React.FC = () => {
     };
 
     const addSupplier = async (supplier: Omit<Supplier, 'id' | 'supplierCode'>) => {
-        const newSupplier = { id: crypto.randomUUID(), supplierCode: getNextCode('F', suppliers), ...supplier };
+        const newSupplier = { id: generateUUID(), supplierCode: getNextCode('F', suppliers), ...supplier };
         await dbService.suppliers.add(newSupplier);
         setSuppliers(prev => [newSupplier, ...prev].sort((a,b) => (b.supplierCode || '').localeCompare(a.supplierCode || '')));
     };
@@ -255,7 +256,7 @@ const MainContent: React.FC = () => {
     const addQuote = async (quoteData: Omit<Quote, 'id' | 'amount'>) => {
         try {
             const documentId = generateDocumentId('quote', quotes);
-            const newQuote: Quote = { id: crypto.randomUUID(), documentId: documentId, amount: quoteData.subTotal + quoteData.vatAmount, ...quoteData };
+            const newQuote: Quote = { id: generateUUID(), documentId: documentId, amount: quoteData.subTotal + quoteData.vatAmount, ...quoteData };
             await dbService.quotes.add(newQuote);
             setQuotes(prev => [newQuote, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
         } catch (e: any) {
@@ -294,7 +295,7 @@ const MainContent: React.FC = () => {
         try {
             const { initialPayment, ...invoiceFields } = invoiceData;
             const documentId = generateDocumentId('invoice', invoices);
-            const newInvoice: Invoice = { id: crypto.randomUUID(), documentId: documentId, amount: invoiceFields.subTotal + invoiceFields.vatAmount, amountPaid: initialPayment ? initialPayment.amount : 0, ...invoiceFields };
+            const newInvoice: Invoice = { id: generateUUID(), documentId: documentId, amount: invoiceFields.subTotal + invoiceFields.vatAmount, amountPaid: initialPayment ? initialPayment.amount : 0, ...invoiceFields };
             
             // Update stock if not draft
             if (newInvoice.status !== InvoiceStatus.Draft) {
@@ -315,7 +316,7 @@ const MainContent: React.FC = () => {
             await dbService.invoices.add(newInvoice);
             setInvoices(prev => [newInvoice, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
             if (initialPayment && initialPayment.amount > 0) {
-                 const newPayment: Payment = { id: crypto.randomUUID(), invoiceId: newInvoice.id, invoiceNumber: newInvoice.documentId || newInvoice.id, clientId: newInvoice.clientId, clientName: newInvoice.clientName, date: initialPayment.date, amount: initialPayment.amount, method: initialPayment.method, notes: 'Règlement à la création' };
+                 const newPayment: Payment = { id: generateUUID(), invoiceId: newInvoice.id, invoiceNumber: newInvoice.documentId || newInvoice.id, clientId: newInvoice.clientId, clientName: newInvoice.clientName, date: initialPayment.date, amount: initialPayment.amount, method: initialPayment.method, notes: 'Règlement à la création' };
                 await dbService.payments.add(newPayment);
                 setPayments(prev => [newPayment, ...prev]);
             }
@@ -370,7 +371,7 @@ const MainContent: React.FC = () => {
             const savedInvoice = await dbService.invoices.update(updatedInvoice);
             setInvoices(prev => prev.map(inv => inv.id === id ? savedInvoice : inv));
             if (initialPayment && initialPayment.amount > 0) {
-                 const newPayment: Payment = { id: crypto.randomUUID(), invoiceId: id, invoiceNumber: updatedInvoice.documentId || updatedInvoice.id, clientId: updatedInvoice.clientId, clientName: updatedInvoice.clientName, date: initialPayment.date, amount: initialPayment.amount, method: initialPayment.method, notes: 'Règlement ajouté lors de la modification' };
+                 const newPayment: Payment = { id: generateUUID(), invoiceId: id, invoiceNumber: updatedInvoice.documentId || updatedInvoice.id, clientId: updatedInvoice.clientId, clientName: updatedInvoice.clientName, date: initialPayment.date, amount: initialPayment.amount, method: initialPayment.method, notes: 'Règlement ajouté lors de la modification' };
                 await dbService.payments.add(newPayment);
                 setPayments(prev => [newPayment, ...prev]);
             }
@@ -413,7 +414,7 @@ const MainContent: React.FC = () => {
 
     const addPayment = async (paymentData: Omit<Payment, 'id'>) => {
         try {
-            const newPayment = { id: crypto.randomUUID(), ...paymentData };
+            const newPayment = { id: generateUUID(), ...paymentData };
             await dbService.payments.add(newPayment);
             setPayments(prev => [newPayment, ...prev]);
             const invoice = invoices.find(inv => inv.id === paymentData.invoiceId);
@@ -481,7 +482,7 @@ const MainContent: React.FC = () => {
         if (!quote) return;
         try {
             const documentId = generateDocumentId('invoice', invoices);
-            const newInvoiceData: Invoice = { id: crypto.randomUUID(), documentId: documentId, quoteId: quote.id, clientId: quote.clientId, clientName: quote.clientName, date: new Date().toISOString().split('T')[0], dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: InvoiceStatus.Pending, subject: quote.subject, reference: quote.reference, lineItems: quote.lineItems, subTotal: quote.subTotal, vatAmount: quote.vatAmount, amount: quote.amount, amountPaid: 0 };
+            const newInvoiceData: Invoice = { id: generateUUID(), documentId: documentId, quoteId: quote.id, clientId: quote.clientId, clientName: quote.clientName, date: new Date().toISOString().split('T')[0], dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: InvoiceStatus.Pending, subject: quote.subject, reference: quote.reference, lineItems: quote.lineItems, subTotal: quote.subTotal, vatAmount: quote.vatAmount, amount: quote.amount, amountPaid: 0 };
             
             // Deduct stock if not draft
             if (newInvoiceData.status !== InvoiceStatus.Draft) {
@@ -510,7 +511,7 @@ const MainContent: React.FC = () => {
     const addCreditNote = async (creditNoteData: Omit<CreditNote, 'id'>) => {
         try {
             const documentId = generateDocumentId('creditNote', creditNotes);
-            const newCreditNote: CreditNote = { id: crypto.randomUUID(), documentId: documentId, ...creditNoteData };
+            const newCreditNote: CreditNote = { id: generateUUID(), documentId: documentId, ...creditNoteData };
             await dbService.creditNotes.add(newCreditNote);
             setCreditNotes(prev => [newCreditNote, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
         } catch (e: any) {
@@ -549,7 +550,7 @@ const MainContent: React.FC = () => {
         if (!invoice) return;
         try {
             const documentId = generateDocumentId('creditNote', creditNotes);
-            const newCreditNote: CreditNote = { id: crypto.randomUUID(), documentId: documentId, invoiceId: invoice.documentId || invoice.id, clientId: invoice.clientId, clientName: invoice.clientName, date: new Date().toISOString().split('T')[0], status: CreditNoteStatus.Draft, subject: `Avoir sur facture ${invoice.documentId || invoice.id}`, reference: invoice.reference, lineItems: invoice.lineItems, subTotal: invoice.subTotal, vatAmount: invoice.vatAmount, amount: invoice.amount };
+            const newCreditNote: CreditNote = { id: generateUUID(), documentId: documentId, invoiceId: invoice.documentId || invoice.id, clientId: invoice.clientId, clientName: invoice.clientName, date: new Date().toISOString().split('T')[0], status: CreditNoteStatus.Draft, subject: `Avoir sur facture ${invoice.documentId || invoice.id}`, reference: invoice.reference, lineItems: invoice.lineItems, subTotal: invoice.subTotal, vatAmount: invoice.vatAmount, amount: invoice.amount };
             await dbService.creditNotes.add(newCreditNote);
             setCreditNotes(prev => [newCreditNote, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
             navigate('/sales/credit-notes');
@@ -561,7 +562,7 @@ const MainContent: React.FC = () => {
     const createDeliveryNote = async (noteData: Omit<DeliveryNote, 'id'>) => {
         try {
             const documentId = generateDocumentId('deliveryNote', deliveryNotes);
-            const newNote: DeliveryNote = { id: crypto.randomUUID(), documentId: documentId, ...noteData };
+            const newNote: DeliveryNote = { id: generateUUID(), documentId: documentId, ...noteData };
             await dbService.deliveryNotes.add(newNote);
             setDeliveryNotes(prev => [newNote, ...prev]);
             for (const item of noteData.lineItems) {
@@ -594,7 +595,7 @@ const MainContent: React.FC = () => {
             if (!note) return;
             if (note.invoiceId) return; 
             const documentId = generateDocumentId('invoice', invoices);
-            const invoiceId = crypto.randomUUID();
+            const invoiceId = generateUUID();
             const subTotal = note.subTotal ?? note.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity), 0);
             const vatAmount = note.vatAmount ?? note.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * (item.vat / 100)), 0);
             const totalAmount = subTotal + vatAmount;
@@ -622,7 +623,7 @@ const MainContent: React.FC = () => {
             await dbService.invoices.add(newInvoice);
             setInvoices(prev => [newInvoice, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
             if (paidAmount > 0) {
-                 const newPayment: Payment = { id: crypto.randomUUID(), invoiceId: invoiceId, invoiceNumber: documentId, clientId: note.clientId, clientName: note.clientName, date: note.date, amount: paidAmount, method: (note.paymentMethod as any) || 'Espèces', notes: 'Règlement initial via Bon de Livraison' };
+                 const newPayment: Payment = { id: generateUUID(), invoiceId: invoiceId, invoiceNumber: documentId, clientId: note.clientId, clientName: note.clientName, date: note.date, amount: paidAmount, method: (note.paymentMethod as any) || 'Espèces', notes: 'Règlement initial via Bon de Livraison' };
                 await dbService.payments.add(newPayment);
                 setPayments(prev => [newPayment, ...prev]);
             }
@@ -638,7 +639,7 @@ const MainContent: React.FC = () => {
     const addPurchaseOrder = async (orderData: Omit<PurchaseOrder, 'id'>) => {
         try {
             const documentId = generateDocumentId('purchaseOrder', purchaseOrders);
-            const newOrder: PurchaseOrder = { id: crypto.randomUUID(), documentId: documentId, ...orderData };
+            const newOrder: PurchaseOrder = { id: generateUUID(), documentId: documentId, ...orderData };
             await dbService.purchaseOrders.add(newOrder);
             setPurchaseOrders(prev => [newOrder, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
         } catch (e: any) {

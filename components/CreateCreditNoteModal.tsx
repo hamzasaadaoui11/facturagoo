@@ -124,27 +124,34 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     };
 
     const handleAddItem = () => {
-        if (!tempName) return;
-        const qty = parseDecimalInput(itemQuantity);
-        const length = showLengthColumn ? parseDecimalInput(tempLength) : 1;
-        const height = showHeightColumn ? parseDecimalInput(tempHeight) : 1;
-        const weight = isKg ? parseDecimalInput(tempWeight) : 1;
+        try {
+            if (!tempName) return;
+            const qty = parseDecimalInput(itemQuantity);
+            const vatValue = typeof tempVat === 'number' ? tempVat : 20;
+            const price = isModeTTC ? (tempPrice / (1 + vatValue / 100)) : tempPrice;
+            const length = showLengthColumn ? parseDecimalInput(tempLength) : 1;
+            const height = showHeightColumn ? parseDecimalInput(tempHeight) : 1;
+            const weight = isKg ? parseDecimalInput(tempWeight) : 1;
 
-        const newItem: LineItem = {
-            id: `temp-${Date.now()}`,
-            productId: selectedProductId || null,
-            productCode: selectedProductId ? tempProductCode : undefined,
-            name: tempName,
-            description: tempDesc,
-            quantity: qty,
-            length: length || 1,
-            height: height || 1,
-            weight: weight || 1,
-            unitPrice: isModeTTC ? (tempPrice / (1 + tempVat / 100)) : tempPrice,
-            vat: tempVat
-        };
-        setLineItems(prev => [...prev, newItem]);
-        resetItemForm();
+            const newItem: LineItem = {
+                id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                productId: selectedProductId || null,
+                productCode: tempProductCode || '',
+                name: tempName,
+                description: tempDesc || '',
+                quantity: qty || 1,
+                length: length || 1,
+                height: height || 1,
+                weight: weight || 1,
+                unitPrice: price || 0,
+                vat: vatValue
+            };
+            setLineItems(prev => [...(prev || []), newItem]);
+            resetItemForm();
+        } catch (error) {
+            console.error("Error in handleAddItem:", error);
+            alert("Erreur lors de l'ajout de l'article. Veuillez vérifier les données saisies.");
+        }
     };
 
     const handleRemoveItem = (id: string) => {
@@ -363,7 +370,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-slate-100">
-                                    {lineItems.map(item => (
+                                    {(lineItems || []).map(item => (
                                         <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-4 py-3">
                                                 <div className="text-[11px] font-bold text-slate-900 leading-tight">{item.name}</div>
