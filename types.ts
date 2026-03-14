@@ -85,6 +85,7 @@ export interface LineItem {
   calculationMode?: 'piece' | 'm2' | 'ml' | 'kg';
   subject?: string; // Metadata for document
   paymentMethod?: string; // Metadata for document
+  purchaseOrderNumber?: string; // Metadata for document
   dueDate?: string;
   expiryDate?: string;
   expectedDate?: string;
@@ -102,6 +103,7 @@ export interface Quote {
     subject?: string;
     paymentMethod?: string;
     reference?: string;
+    purchaseOrderNumber?: string;
     showDimensions?: boolean;
     lineItems: LineItem[];
     subTotal: number;
@@ -146,6 +148,7 @@ export interface Invoice {
     subject?: string;
     paymentMethod?: string;
     reference?: string;
+    purchaseOrderNumber?: string;
     showDimensions?: boolean;
     lineItems: LineItem[];
     subTotal: number;
@@ -207,6 +210,7 @@ export interface DeliveryNote {
     subject?: string; // Champ ajouté
     paymentMethod?: string;
     reference?: string;
+    purchaseOrderNumber?: string;
     showDimensions?: boolean;
     lineItems: LineItem[];
     status: string; // Changed from fixed union to string to support computed statuses like 'Payé'

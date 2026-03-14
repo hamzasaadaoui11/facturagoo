@@ -482,7 +482,7 @@ const MainContent: React.FC = () => {
         if (!quote) return;
         try {
             const documentId = generateDocumentId('invoice', invoices);
-            const newInvoiceData: Invoice = { id: generateUUID(), documentId: documentId, quoteId: quote.id, clientId: quote.clientId, clientName: quote.clientName, date: new Date().toISOString().split('T')[0], dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: InvoiceStatus.Pending, subject: quote.subject, reference: quote.reference, lineItems: quote.lineItems, subTotal: quote.subTotal, vatAmount: quote.vatAmount, amount: quote.amount, amountPaid: 0 };
+            const newInvoiceData: Invoice = { id: generateUUID(), documentId: documentId, quoteId: quote.id, clientId: quote.clientId, clientName: quote.clientName, date: new Date().toISOString().split('T')[0], dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: InvoiceStatus.Pending, subject: quote.subject, reference: quote.reference, purchaseOrderNumber: quote.purchaseOrderNumber, lineItems: quote.lineItems, subTotal: quote.subTotal, vatAmount: quote.vatAmount, amount: quote.amount, amountPaid: 0 };
             
             // Deduct stock if not draft
             if (newInvoiceData.status !== InvoiceStatus.Draft) {
@@ -602,7 +602,7 @@ const MainContent: React.FC = () => {
             const paidAmount = note.paymentAmount || 0;
             let status = InvoiceStatus.Pending;
             if (paidAmount >= totalAmount && totalAmount > 0) { status = InvoiceStatus.Paid; } else if (paidAmount > 0) { status = InvoiceStatus.Partial; }
-            const newInvoice: Invoice = { id: invoiceId, documentId: documentId, clientId: note.clientId, clientName: note.clientName, date: new Date().toISOString().split('T')[0], dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: status, subject: `Facture issue du ${note.documentId || note.id}`, reference: note.documentId || note.id, lineItems: note.lineItems, subTotal: subTotal, vatAmount: vatAmount, amount: totalAmount, amountPaid: paidAmount, paymentDate: status === InvoiceStatus.Paid ? note.date : undefined };
+            const newInvoice: Invoice = { id: invoiceId, documentId: documentId, clientId: note.clientId, clientName: note.clientName, date: new Date().toISOString().split('T')[0], dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: status, subject: `Facture issue du ${note.documentId || note.id}`, reference: note.documentId || note.id, purchaseOrderNumber: note.purchaseOrderNumber, lineItems: note.lineItems, subTotal: subTotal, vatAmount: vatAmount, amount: totalAmount, amountPaid: paidAmount, paymentDate: status === InvoiceStatus.Paid ? note.date : undefined };
             
             // Deduct stock if not draft
             if (newInvoice.status !== InvoiceStatus.Draft) {
@@ -733,7 +733,7 @@ const MainContent: React.FC = () => {
                             <Route path="/sales/credit-notes" element={<CreditNotesComponent creditNotes={creditNotes} onUpdateCreditNoteStatus={updateCreditNoteStatus} onCreateCreditNote={addCreditNote} onUpdateCreditNote={updateCreditNote} onDeleteCreditNote={deleteCreditNote} clients={clients} products={products} companySettings={companySettings} />} />
                             <Route path="/sales/payments" element={<PaymentTracking invoices={invoices} payments={payments} onAddPayment={addPayment} clients={clients} />} />
                             <Route path="/sales/delivery" element={<DeliveryNotesComponent deliveryNotes={deliveryNotes} invoices={invoices} onCreateDeliveryNote={createDeliveryNote} onUpdateDeliveryNote={updateDeliveryNote} onDeleteDeliveryNote={deleteDeliveryNote} onCreateInvoice={createInvoiceFromDeliveryNote} clients={clients} products={products} companySettings={companySettings} />} />
-                            <Route path="/purchases/orders" element={<PurchaseOrders orders={purchaseOrders} suppliers={suppliers} products={products} onAddOrder={addPurchaseOrder} onUpdateOrder={updatePurchaseOrder} onUpdateStatus={updatePurchaseOrderStatus} onDeleteOrder={deletePurchaseOrder} companySettings={companySettings} />} />
+                            <Route path="/purchases/orders" element={<PurchaseOrders orders={purchaseOrders} suppliers={suppliers} products={products} onAddOrder={addPurchaseOrder} onUpdateOrder={updatePurchaseOrder} onUpdateStatus={updatePurchaseOrderStatus} onDeleteOrder={deletePurchaseOrder} onConvertToInvoice={(order) => navigate('/sales/invoices', { state: { prefilledPO: order.documentId || order.id } })} companySettings={companySettings} />} />
                             <Route path="/stock" element={<StockManagement products={products} movements={stockMovements} onAddMovement={addStockMovement} />} />
                             <Route path="/clients" element={<ClientsComponent clients={clients} onAddClient={addClient} onUpdateClient={updateClient} onDeleteClient={deleteClient} />} />
                             <Route path="/suppliers" element={<SuppliersComponent suppliers={suppliers} onAddSupplier={addSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} />} />

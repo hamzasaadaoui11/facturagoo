@@ -29,6 +29,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
     const [subject, setSubject] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
     const [reference, setReference] = useState('');
+    const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
@@ -57,6 +58,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setSubject(quoteToEdit.subject || quoteToEdit.lineItems[0]?.subject || '');
                 setPaymentMethod(quoteToEdit.paymentMethod || quoteToEdit.lineItems[0]?.paymentMethod || '');
                 setReference(quoteToEdit.reference || '');
+                setPurchaseOrderNumber(quoteToEdit.purchaseOrderNumber || '');
                 // Read calculationMode from first line item
                 setCalculationMode(quoteToEdit.lineItems[0]?.calculationMode || 'piece');
                 setLineItems(JSON.parse(JSON.stringify(quoteToEdit.lineItems)));
@@ -70,6 +72,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setSubject('');
                 setPaymentMethod('');
                 setReference('');
+                setPurchaseOrderNumber('');
                 setLineItems([]);
                 setTempVat(language === 'es' ? 21 : 20);
                 setIsDiscountEnabled(false);
@@ -215,7 +218,9 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
         const quoteData = {
             clientId, clientName: clientNameDisplay, date, expiryDate, subject, 
             paymentMethod,
-            reference, lineItems: updatedLineItems,
+            reference, 
+            purchaseOrderNumber,
+            lineItems: updatedLineItems,
             status: quoteToEdit ? quoteToEdit.status : QuoteStatus.Draft,
             subTotal: totals.subTotal, 
             vatAmount: totals.vatAmount,
@@ -266,6 +271,10 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
                             <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('purchaseOrderNumber')}</label>
+                            <input type="text" value={purchaseOrderNumber} onChange={(e) => setPurchaseOrderNumber(e.target.value)} placeholder={t('purchaseOrderNumber')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('paymentMethod')}</label>

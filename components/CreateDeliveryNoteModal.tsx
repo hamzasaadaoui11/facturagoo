@@ -27,6 +27,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [subject, setSubject] = useState('');
+    const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
@@ -51,6 +52,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setClientId(noteToEdit.clientId);
                 setDate(noteToEdit.date);
                 setSubject(noteToEdit.subject || noteToEdit.lineItems[0]?.subject || '');
+                setPurchaseOrderNumber(noteToEdit.purchaseOrderNumber || '');
                 // Read calculationMode from first line item
                 setCalculationMode(noteToEdit.lineItems[0]?.calculationMode || 'piece');
                 setLineItems(JSON.parse(JSON.stringify(noteToEdit.lineItems)));
@@ -60,6 +62,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
                 setSubject('');
+                setPurchaseOrderNumber('');
                 setLineItems([]);
                 setPaymentAmount(0);
                 setTempVat(language === 'es' ? 21 : 20);
@@ -173,14 +176,15 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 ...updatedLineItems[0], 
                 calculationMode,
                 subject,
-                paymentMethod
+                paymentMethod,
+                purchaseOrderNumber
             };
         }
 
         setIsSubmitting(true);
         try {
             await onSave({
-                clientId, clientName: clientNameDisplay, date, subject, lineItems: updatedLineItems, status: 'Livré',
+                clientId, clientName: clientNameDisplay, date, subject, purchaseOrderNumber, lineItems: updatedLineItems, status: 'Livré',
                 subTotal: totals.subTotal, vatAmount: totals.vatAmount, totalAmount: totals.totalTTC,
                 paymentAmount, paymentMethod, invoiceId: noteToEdit?.invoiceId
             }, noteToEdit?.id);
@@ -220,6 +224,10 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
                             <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('purchaseOrderNumber')}</label>
+                            <input type="text" value={purchaseOrderNumber} onChange={(e) => setPurchaseOrderNumber(e.target.value)} placeholder={t('purchaseOrderNumber')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('paymentMethod')}</label>

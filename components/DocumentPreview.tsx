@@ -144,6 +144,9 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                     )}
                                 </>
                             )}
+                            {('purchaseOrderNumber' in document && document.purchaseOrderNumber) && (
+                                <p>{t('purchaseOrderNumber')} : <span className="font-medium text-neutral-900">{document.purchaseOrderNumber}</span></p>
+                            )}
                             {document.reference && <p>{t('reference')} : <span className="font-medium text-neutral-900">{document.reference}</span></p>}
                         </div>
                     </div>

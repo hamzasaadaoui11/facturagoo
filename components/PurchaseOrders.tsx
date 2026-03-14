@@ -24,6 +24,7 @@ interface PurchaseOrdersProps {
     onUpdateOrder: (order: PurchaseOrder) => void;
     onUpdateStatus: (id: string, status: PurchaseOrderStatus) => void;
     onDeleteOrder?: (id: string) => void;
+    onConvertToInvoice?: (order: PurchaseOrder) => void;
     companySettings?: CompanySettings | null;
 }
 
@@ -35,6 +36,7 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
     onUpdateOrder,
     onUpdateStatus,
     onDeleteOrder,
+    onConvertToInvoice,
     companySettings
 }) => {
     const { t, isRTL } = useLanguage();
@@ -363,6 +365,15 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                         >
                             <Pencil size={16} className={`text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('edit')}
                         </button>
+
+                        {onConvertToInvoice && (
+                            <button 
+                                onClick={() => { onConvertToInvoice(activeOrder); setActiveMenuId(null); }} 
+                                className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
+                            >
+                                <FileText size={16} className={`text-blue-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('convertToInvoice')}
+                            </button>
+                        )}
                         
                         <div className="border-t border-slate-100 my-1 mx-2"></div>
 

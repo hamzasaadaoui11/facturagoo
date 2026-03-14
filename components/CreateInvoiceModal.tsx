@@ -13,10 +13,11 @@ interface CreateInvoiceModalProps {
     clients: Client[];
     products: Product[];
     invoiceToEdit?: Invoice | null;
+    prefilledPO?: string;
     companySettings?: CompanySettings | null;
 }
 
-const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose, onSave, clients, products, invoiceToEdit, companySettings }) => {
+const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose, onSave, clients, products, invoiceToEdit, prefilledPO, companySettings }) => {
     const { t, isRTL, language } = useLanguage();
     const [isVisible, setIsVisible] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,6 +29,8 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [dueDate, setDueDate] = useState(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
     const [subject, setSubject] = useState('');
+    const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
+    const [showPOField, setShowPOField] = useState(false);
     const [invoicePaymentMethod, setInvoicePaymentMethod] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -59,6 +62,9 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setDate(invoiceToEdit.date);
                 setDueDate(invoiceToEdit.dueDate || invoiceToEdit.lineItems[0]?.dueDate || new Date(new Date(invoiceToEdit.date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
                 setSubject(invoiceToEdit.subject || invoiceToEdit.lineItems[0]?.subject || '');
+                const po = invoiceToEdit.purchaseOrderNumber || invoiceToEdit.lineItems[0]?.purchaseOrderNumber || '';
+                setPurchaseOrderNumber(po);
+                setShowPOField(!!po);
                 setInvoicePaymentMethod(invoiceToEdit.paymentMethod || invoiceToEdit.lineItems[0]?.paymentMethod || '');
                 // Read calculationMode from first line item
                 setCalculationMode(invoiceToEdit.lineItems[0]?.calculationMode || 'piece');
@@ -73,6 +79,8 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setDate(new Date().toISOString().split('T')[0]);
                 setDueDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
                 setSubject('');
+                setPurchaseOrderNumber('');
+                setShowPOField(!!prefilledPO);
                 setInvoicePaymentMethod('');
                 setLineItems([]);
                 setExistingAmountPaid(0);
@@ -81,6 +89,9 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setIsDiscountEnabled(false);
                 setDiscountType('percentage');
                 setDiscountValue('0');
+                if (prefilledPO) {
+                    setPurchaseOrderNumber(prefilledPO);
+                }
             }
             resetItemForm();
         } else {
@@ -263,6 +274,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 ...updatedLineItems[0], 
                 calculationMode,
                 subject,
+                purchaseOrderNumber,
                 dueDate,
                 paymentMethod: invoicePaymentMethod
             };
@@ -270,6 +282,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
 
         const invoiceData = {
             clientId, clientName: clientNameDisplay, date, dueDate, subject, 
+            purchaseOrderNumber,
             paymentMethod: invoicePaymentMethod,
             lineItems: updatedLineItems, status,
             subTotal: totals.subTotal, 
@@ -328,6 +341,37 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
                             <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
+                        {showPOField ? (
+                            <div className="space-y-1">
+                                <label className="block text-sm font-bold text-slate-700 ml-1">{t('purchaseOrderNumber')}</label>
+                                <div className="relative">
+                                    <input 
+                                        type="text" 
+                                        value={purchaseOrderNumber} 
+                                        onChange={(e) => setPurchaseOrderNumber(e.target.value)} 
+                                        placeholder={t('purchaseOrderNumber')} 
+                                        className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 pr-10"
+                                    />
+                                    <button 
+                                        type="button"
+                                        onClick={() => { setPurchaseOrderNumber(''); setShowPOField(false); }}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-end pb-2">
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowPOField(true)}
+                                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                >
+                                    <Plus size={14} /> {t('addPurchaseOrderNumber')}
+                                </button>
+                            </div>
+                        )}
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('paymentMethod')}</label>
                             <select value={invoicePaymentMethod} onChange={(e) => setInvoicePaymentMethod(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12">

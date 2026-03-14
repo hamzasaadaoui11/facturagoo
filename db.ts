@@ -69,6 +69,7 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
                     ...item,
                     subject: firstItem.subject || item.subject,
                     paymentMethod: firstItem.paymentMethod || item.paymentMethod,
+                    purchaseOrderNumber: firstItem.purchaseOrderNumber || item.purchaseOrderNumber,
                     dueDate: firstItem.dueDate || item.dueDate,
                     expiryDate: firstItem.expiryDate || item.expiryDate,
                     expectedDate: firstItem.expectedDate || item.expectedDate,
@@ -90,7 +91,7 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
     const userId = await getCurrentUserId();
     if (!userId) throw new Error("User not authenticated");
 
-    const { paymentMethod, subject, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, ...itemToSave } = item as any;
+    const { paymentMethod, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, ...itemToSave } = item as any;
     
     // Strip fields that might be missing in Supabase schema to avoid errors
     // These are stored in lineItems[0] by the UI components
@@ -115,6 +116,7 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
             ...savedItem,
             subject: firstItem.subject || savedItem.subject,
             paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod,
+            purchaseOrderNumber: firstItem.purchaseOrderNumber || savedItem.purchaseOrderNumber,
             dueDate: firstItem.dueDate || savedItem.dueDate,
             expiryDate: firstItem.expiryDate || savedItem.expiryDate,
             expectedDate: firstItem.expectedDate || savedItem.expectedDate,
@@ -135,7 +137,7 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
 
     // Destructure to remove fields that might not be in the Supabase schema
     // and to remove 'id' from the update payload itself
-    const { id, paymentMethod, subject, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, created_at, ...itemToSave } = item as any;
+    const { id, paymentMethod, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, created_at, ...itemToSave } = item as any;
 
     const { data, error } = await supabase
         .from(tableName)
@@ -158,6 +160,7 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
             ...savedItem,
             subject: firstItem.subject || savedItem.subject,
             paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod,
+            purchaseOrderNumber: firstItem.purchaseOrderNumber || savedItem.purchaseOrderNumber,
             dueDate: firstItem.dueDate || savedItem.dueDate,
             expiryDate: firstItem.expiryDate || savedItem.expiryDate,
             expectedDate: firstItem.expectedDate || savedItem.expectedDate,

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import Header from './Header';
 import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical, Trash2, ArrowLeftRight, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -32,12 +33,24 @@ interface InvoicesProps {
 
 const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, onAddPayment, onCreateInvoice, onUpdateInvoice, onDeleteInvoice, onCreateCreditNote, clients = [], products = [], companySettings }) => {
     const { t, isRTL, language } = useLanguage();
+    const location = useLocation();
     const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
     const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState<'Virement' | 'Chèque' | 'Espèces' | 'Carte Bancaire'>('Virement');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [prefilledPO, setPrefilledPO] = useState<string | undefined>(undefined);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (location.state && (location.state as any).prefilledPO) {
+            setPrefilledPO((location.state as any).prefilledPO);
+            setIsCreateModalOpen(true);
+            // Clear state to avoid reopening on refresh if possible, 
+            // though HashRouter state persistence varies.
+            window.history.replaceState({}, document.title);
+        }
+    }, [location]);
 
     // Responsive items per page
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -216,11 +229,12 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
             
             <CreateInvoiceModal 
                 isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
+                onClose={() => { setIsCreateModalOpen(false); setPrefilledPO(undefined); }}
                 onSave={handleSaveInvoice}
                 clients={clients}
                 products={products}
                 invoiceToEdit={invoiceToEdit}
+                prefilledPO={prefilledPO}
                 companySettings={companySettings}
             />
 

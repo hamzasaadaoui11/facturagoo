@@ -18,6 +18,7 @@ interface DocumentData {
     subject?: string;
     paymentMethod?: string;
     reference?: string;
+    purchaseOrderNumber?: string;
     dueDate?: string; 
     expiryDate?: string; 
     expectedDate?: string; 
@@ -449,6 +450,7 @@ const generateDocumentHTML = (
         <div style="margin-top: 10px; font-size: 12px;">
             <div>${dict.date || 'Date'} : <b>${dateStr}</b></div>
             ${extraDateLabel ? `<div>${extraDateLabel} : <b>${extraDateValue}</b></div>` : ''}
+            ${doc.purchaseOrderNumber ? `<div>${dict.purchaseOrderNumber || 'N° BC'} : <b>${doc.purchaseOrderNumber}</b></div>` : ''}
             ${doc.reference ? `<div>${dict.reference || 'Réf'} : <b>${doc.reference}</b></div>` : ''}
             ${doc.invoiceId ? `<div>${lang === 'es' ? 'Ref. Factura' : (lang === 'en' ? 'Invoice Ref' : 'Réf. Facture')} : <b>${doc.invoiceId}</b></div>` : ''}
         </div>
