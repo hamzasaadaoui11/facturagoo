@@ -29,6 +29,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [reason, setReason] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
+    const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
@@ -56,6 +57,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 setDate(creditNoteToEdit.date);
                 setReason(creditNoteToEdit.subject || creditNoteToEdit.lineItems[0]?.subject || '');
                 setPaymentMethod(creditNoteToEdit.paymentMethod || creditNoteToEdit.lineItems[0]?.paymentMethod || '');
+                setNotes(creditNoteToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(creditNoteToEdit.lineItems[0]?.calculationMode || 'piece');
                 setLineItems(JSON.parse(JSON.stringify(creditNoteToEdit.lineItems)));
@@ -67,6 +69,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 setDate(new Date().toISOString().split('T')[0]);
                 setReason('');
                 setPaymentMethod('');
+                setNotes('');
                 setLineItems([]);
                 setTempVat(language === 'es' ? 21 : 20);
                 setIsDiscountEnabled(false);
@@ -203,12 +206,13 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 ...updatedLineItems[0], 
                 calculationMode,
                 subject: reason,
+                notes,
                 paymentMethod
             };
         }
 
         const creditNoteData: Omit<CreditNote, 'id'> = {
-            clientId, clientName: clientNameDisplay, date, subject: reason, paymentMethod, lineItems: updatedLineItems,
+            clientId, clientName: clientNameDisplay, date, subject: reason, paymentMethod, notes, lineItems: updatedLineItems,
             status: creditNoteToEdit ? creditNoteToEdit.status : CreditNoteStatus.Draft,
             subTotal: totals.subTotal, vatAmount: totals.vatAmount, amount: totals.totalTTC, invoiceId: creditNoteToEdit?.invoiceId,
             discountType: isDiscountEnabled ? discountType : undefined,
@@ -430,8 +434,18 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                         </div>
                     )}
 
-                    <div className="flex justify-end border-t border-slate-100 pt-6">
-                        <div className="w-full max-w-sm space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 pt-6">
+                        <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">{t('remarque')}</label>
+                            <textarea 
+                                value={notes} 
+                                onChange={(e) => setNotes(e.target.value)} 
+                                placeholder={t('remarque')} 
+                                className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs min-h-[60px] py-2 px-3"
+                            />
+                        </div>
+                        <div className="flex justify-end">
+                            <div className="w-full max-w-sm space-y-3">
                             <div className="flex justify-between text-sm text-slate-500"><span>{t('totalHT')}</span><span>{totals.subTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}</span></div>
                             
                             <div className="flex items-center justify-between text-sm">
@@ -479,6 +493,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                             <div className="h-px bg-slate-200 my-1"></div>
                             <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100"><span className="text-base font-bold text-slate-900">{t('totalTTC')}</span><span className="text-xl font-black text-emerald-700">{totals.totalTTC.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}</span></div>
                         </div>
+                    </div>
                     </div>
                 </div>
 

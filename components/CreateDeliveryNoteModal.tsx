@@ -28,6 +28,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [subject, setSubject] = useState('');
     const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
+    const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
@@ -53,6 +54,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setDate(noteToEdit.date);
                 setSubject(noteToEdit.subject || noteToEdit.lineItems[0]?.subject || '');
                 setPurchaseOrderNumber(noteToEdit.purchaseOrderNumber || '');
+                setNotes(noteToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(noteToEdit.lineItems[0]?.calculationMode || 'piece');
                 setLineItems(JSON.parse(JSON.stringify(noteToEdit.lineItems)));
@@ -63,6 +65,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setDate(new Date().toISOString().split('T')[0]);
                 setSubject('');
                 setPurchaseOrderNumber('');
+                setNotes('');
                 setLineItems([]);
                 setPaymentAmount(0);
                 setTempVat(language === 'es' ? 21 : 20);
@@ -177,6 +180,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 calculationMode,
                 subject,
                 paymentMethod,
+                notes,
                 purchaseOrderNumber
             };
         }
@@ -184,7 +188,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         setIsSubmitting(true);
         try {
             await onSave({
-                clientId, clientName: clientNameDisplay, date, subject, purchaseOrderNumber, lineItems: updatedLineItems, status: 'Livré',
+                clientId, clientName: clientNameDisplay, date, subject, purchaseOrderNumber, notes, lineItems: updatedLineItems, status: 'Livré',
                 subTotal: totals.subTotal, vatAmount: totals.vatAmount, totalAmount: totals.totalTTC,
                 paymentAmount, paymentMethod, invoiceId: noteToEdit?.invoiceId
             }, noteToEdit?.id);
@@ -425,7 +429,6 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 pt-6">
                         <div className="space-y-4">
-                            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 uppercase tracking-widest"><CreditCard size={16} className="text-emerald-600"/> {t('paymentMethod')}</h4>
                             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                                 <div className="space-y-1">
                                     <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">{t('paymentAmount')}</label>
@@ -433,6 +436,15 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                         <input type="number" step="any" value={paymentAmount} onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)} className={`block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm font-bold h-11 ${isRTL ? 'pl-12 pr-3' : 'pl-3 pr-12'}`} placeholder="0.00"/>
                                         <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'left-0 pl-3' : 'right-0 pr-3'}`}><span className="text-slate-400 font-bold text-xs">MAD</span></div>
                                     </div>
+                                </div>
+                                <div className="mt-4 space-y-1">
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">{t('remarque')}</label>
+                                    <textarea 
+                                        value={notes} 
+                                        onChange={(e) => setNotes(e.target.value)} 
+                                        placeholder={t('remarque')} 
+                                        className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs min-h-[60px] py-2 px-3"
+                                    />
                                 </div>
                             </div>
                         </div>

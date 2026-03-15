@@ -89,6 +89,7 @@ export interface LineItem {
   dueDate?: string;
   expiryDate?: string;
   expectedDate?: string;
+  notes?: string;
 }
 
 export interface Quote {
@@ -110,6 +111,7 @@ export interface Quote {
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
+    notes?: string;
 }
 
 export interface PurchaseOrder {
@@ -155,6 +157,7 @@ export interface Invoice {
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
+    notes?: string;
 }
 
 export interface CreditNote {
@@ -175,6 +178,7 @@ export interface CreditNote {
     vatAmount: number;
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
+    notes?: string;
 }
 
 export interface Payment {
@@ -219,6 +223,7 @@ export interface DeliveryNote {
     vatAmount?: number;
     totalAmount?: number;
     paymentAmount?: number;
+    notes?: string;
 }
 
 export interface DocumentColumn {

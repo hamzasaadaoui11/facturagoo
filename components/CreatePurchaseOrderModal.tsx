@@ -213,6 +213,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 calculationMode,
                 subject,
                 expectedDate,
+                notes,
                 paymentMethod
             };
         }
@@ -466,8 +467,18 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                         </div>
                     )}
 
-                    <div className="flex justify-end border-t border-slate-100 pt-6">
-                        <div className="w-full max-w-sm space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 pt-6">
+                        <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">{t('remarque')}</label>
+                            <textarea 
+                                value={notes} 
+                                onChange={(e) => setNotes(e.target.value)} 
+                                placeholder={t('remarque')} 
+                                className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs min-h-[60px] py-2 px-3"
+                            />
+                        </div>
+                        <div className="flex justify-end">
+                            <div className="w-full max-w-sm space-y-3">
                             <div className="flex justify-between text-sm text-slate-500"><span>{t('totalHT')}</span><span>{totals.subTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}</span></div>
                             
                             <div className="flex items-center justify-between text-sm">
@@ -515,6 +526,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                             <div className="h-px bg-slate-200 my-1"></div>
                             <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100"><span className="text-base font-bold text-slate-900">{t('totalTTC')}</span><span className="text-xl font-black text-emerald-700">{totals.totalAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}</span></div>
                         </div>
+                    </div>
                     </div>
                 </div>
 

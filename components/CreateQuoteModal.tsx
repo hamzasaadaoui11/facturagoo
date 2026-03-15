@@ -30,6 +30,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
     const [paymentMethod, setPaymentMethod] = useState('');
     const [reference, setReference] = useState('');
     const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
+    const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
@@ -59,6 +60,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setPaymentMethod(quoteToEdit.paymentMethod || quoteToEdit.lineItems[0]?.paymentMethod || '');
                 setReference(quoteToEdit.reference || '');
                 setPurchaseOrderNumber(quoteToEdit.purchaseOrderNumber || '');
+                setNotes(quoteToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(quoteToEdit.lineItems[0]?.calculationMode || 'piece');
                 setLineItems(JSON.parse(JSON.stringify(quoteToEdit.lineItems)));
@@ -73,6 +75,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setPaymentMethod('');
                 setReference('');
                 setPurchaseOrderNumber('');
+                setNotes('');
                 setLineItems([]);
                 setTempVat(language === 'es' ? 21 : 20);
                 setIsDiscountEnabled(false);
@@ -211,6 +214,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 calculationMode,
                 subject,
                 expiryDate,
+                notes,
                 paymentMethod
             };
         }
@@ -220,6 +224,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
             paymentMethod,
             reference, 
             purchaseOrderNumber,
+            notes,
             lineItems: updatedLineItems,
             status: quoteToEdit ? quoteToEdit.status : QuoteStatus.Draft,
             subTotal: totals.subTotal, 
@@ -470,8 +475,18 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                         </div>
                     )}
 
-                    <div className="flex justify-end border-t border-slate-100 pt-6">
-                        <div className="w-full max-w-sm space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 pt-6">
+                        <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">{t('remarque')}</label>
+                            <textarea 
+                                value={notes} 
+                                onChange={(e) => setNotes(e.target.value)} 
+                                placeholder={t('remarque')} 
+                                className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs min-h-[60px] py-2 px-3"
+                            />
+                        </div>
+                        <div className="flex justify-end">
+                            <div className="w-full max-w-sm space-y-3">
                             <div className="flex justify-between text-sm text-slate-500"><span>{t('totalHT')}</span><span>{totals.subTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}</span></div>
                             
                             <div className="flex items-center justify-between text-sm">
@@ -519,6 +534,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             <div className="h-px bg-slate-200 my-1"></div>
                             <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100"><span className="text-base font-bold text-slate-900">{t('totalTTC')}</span><span className="text-xl font-black text-emerald-700">{totals.totalTTC.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { style: 'currency', currency: 'MAD' })}</span></div>
                         </div>
+                    </div>
                     </div>
                 </div>
 

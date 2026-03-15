@@ -32,12 +32,12 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
     const [showPOField, setShowPOField] = useState(false);
     const [invoicePaymentMethod, setInvoicePaymentMethod] = useState('');
+    const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
     
     const [existingAmountPaid, setExistingAmountPaid] = useState<number>(0); 
     const [newPaymentAmount, setNewPaymentAmount] = useState<number>(0); 
-    const [paymentMethod, setPaymentMethod] = useState('Virement');
     
     const [selectedProductId, setSelectedProductId] = useState('');
     const [tempName, setTempName] = useState('');
@@ -66,6 +66,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setPurchaseOrderNumber(po);
                 setShowPOField(!!po);
                 setInvoicePaymentMethod(invoiceToEdit.paymentMethod || invoiceToEdit.lineItems[0]?.paymentMethod || '');
+                setNotes(invoiceToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(invoiceToEdit.lineItems[0]?.calculationMode || 'piece');
                 setLineItems(JSON.parse(JSON.stringify(invoiceToEdit.lineItems)));
@@ -82,6 +83,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setPurchaseOrderNumber('');
                 setShowPOField(!!prefilledPO);
                 setInvoicePaymentMethod('');
+                setNotes('');
                 setLineItems([]);
                 setExistingAmountPaid(0);
                 setNewPaymentAmount(0);
@@ -276,6 +278,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 subject,
                 purchaseOrderNumber,
                 dueDate,
+                notes,
                 paymentMethod: invoicePaymentMethod
             };
         }
@@ -284,6 +287,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             clientId, clientName: clientNameDisplay, date, dueDate, subject, 
             purchaseOrderNumber,
             paymentMethod: invoicePaymentMethod,
+            notes,
             lineItems: updatedLineItems, status,
             subTotal: totals.subTotal, 
             vatAmount: totals.vatAmount, 
@@ -291,7 +295,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             amountPaid: totalPaid,
             discountType: isDiscountEnabled ? discountType : undefined,
             discountValue: isDiscountEnabled ? parseDecimalInput(discountValue) : undefined,
-            initialPayment: newPaymentAmount > 0 ? { amount: newPaymentAmount, method: paymentMethod, date: new Date().toISOString().split('T')[0] } : undefined
+            initialPayment: newPaymentAmount > 0 ? { amount: newPaymentAmount, method: invoicePaymentMethod, date: new Date().toISOString().split('T')[0] } : undefined
         };
         setIsSubmitting(true);
         try { 
@@ -568,7 +572,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 pt-6">
                         <div className="space-y-4">
-                            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2 uppercase tracking-widest"><CreditCard size={16} className="text-emerald-600"/> {t('paymentMethod')}</h4>
                             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                                 {invoiceToEdit && existingAmountPaid > 0 && (
                                     <div className="text-xs text-emerald-700 bg-emerald-50 p-2 rounded flex justify-between">
@@ -583,14 +586,14 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                         <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'left-0 pl-3' : 'right-0 pr-3'}`}><span className="text-slate-400 font-bold text-xs">MAD</span></div>
                                     </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">{t('paymentMethod')}</label>
-                                    <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-11">
-                                        <option value="Virement">Virement</option>
-                                        <option value="Chèque">Chèque</option>
-                                        <option value="Espèces">Espèces</option>
-                                        <option value="Carte Bancaire">Carte Bancaire</option>
-                                    </select>
+                                <div className="mt-4 space-y-1">
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase ml-1">{t('remarque')}</label>
+                                    <textarea 
+                                        value={notes} 
+                                        onChange={(e) => setNotes(e.target.value)} 
+                                        placeholder={t('remarque')} 
+                                        className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs min-h-[60px] py-2 px-3"
+                                    />
                                 </div>
                             </div>
                         </div>
