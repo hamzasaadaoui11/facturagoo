@@ -302,20 +302,18 @@ const generateDocumentHTML = (
 
     let extraDateLabel = '';
     let extraDateValue = '';
-    if (settings.showExpiryDate !== false) {
-        if (docType === 'Bon de Commande' && (doc.expectedDate || doc.lineItems[0]?.expectedDate)) {
-            const dateVal = doc.expectedDate || doc.lineItems[0]?.expectedDate;
-            extraDateLabel = lang === 'es' ? 'Entrega prevista' : (lang === 'en' ? 'Expected delivery' : 'Livraison prévue');
-            extraDateValue = new Date(dateVal).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
-        } else if (docType === 'Devis' && (doc.expiryDate || doc.lineItems[0]?.expiryDate)) {
-            const dateVal = doc.expiryDate || doc.lineItems[0]?.expiryDate;
-            extraDateLabel = lang === 'es' ? 'Válido hasta' : (lang === 'en' ? 'Valid until' : 'Valable jusqu\'au');
-            extraDateValue = new Date(dateVal).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
-        } else if (docType === 'Facture' && (doc.dueDate || doc.lineItems[0]?.dueDate)) {
-            const dateVal = doc.dueDate || doc.lineItems[0]?.dueDate;
-            extraDateLabel = lang === 'es' ? 'Vencimiento' : (lang === 'en' ? 'Due date' : 'Échéance');
-            extraDateValue = new Date(dateVal).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
-        }
+    if (docType === 'Bon de Commande' && (doc.expectedDate || doc.lineItems[0]?.expectedDate)) {
+        const dateVal = doc.expectedDate || doc.lineItems[0]?.expectedDate;
+        extraDateLabel = lang === 'es' ? 'Entrega prevista' : (lang === 'en' ? 'Expected delivery' : 'Livraison prévue');
+        extraDateValue = new Date(dateVal).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
+    } else if (docType === 'Devis' && (doc.expiryDate || doc.lineItems[0]?.expiryDate)) {
+        const dateVal = doc.expiryDate || doc.lineItems[0]?.expiryDate;
+        extraDateLabel = lang === 'es' ? 'Válido hasta' : (lang === 'en' ? 'Valid until' : 'Valable jusqu\'au');
+        extraDateValue = new Date(dateVal).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
+    } else if (docType === 'Facture' && (doc.dueDate || doc.lineItems[0]?.dueDate)) {
+        const dateVal = doc.dueDate || doc.lineItems[0]?.dueDate;
+        extraDateLabel = lang === 'es' ? 'Vencimiento' : (lang === 'en' ? 'Due date' : 'Échéance');
+        extraDateValue = new Date(dateVal).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
     }
 
     const logoHtml = settings.logo 

@@ -685,24 +685,6 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                     </button>
                                 </div>
 
-                                <div className="mt-4 flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-white rounded-lg shadow-sm text-slate-600">
-                                            <Eye size={20}/>
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-slate-900">{language === 'es' ? 'Fecha de vencimiento' : "Date d'échéance"}</div>
-                                            <div className="text-xs text-slate-500">{language === 'es' ? 'Muestra la fecha de vencimiento en el PDF.' : "Affiche la date d'échéance ou de validité sur le document PDF."}</div>
-                                        </div>
-                                    </div>
-                                    <button 
-                                        onClick={() => setLocalSettings(prev => ({ ...prev, showExpiryDate: !prev.showExpiryDate }))}
-                                        className={`w-12 h-7 rounded-full flex items-center transition-colors duration-300 px-1 ${localSettings.showExpiryDate ? 'bg-emerald-500 justify-end' : 'bg-neutral-300 justify-start'}`}
-                                    >
-                                        <div className="w-5 h-5 rounded-full bg-white shadow-md" />
-                                    </button>
-                                </div>
-
                                 <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
                                     <div className="flex items-center gap-3 mb-4">
                                         <div className="p-2 bg-white rounded-lg shadow-sm text-slate-600">

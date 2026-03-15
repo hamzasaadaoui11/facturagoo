@@ -129,22 +129,18 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                     <div className="text-right">
                         <h2 className="text-3xl font-bold uppercase tracking-widest" style={{ color: primaryColor }}>{documentType}</h2>
                         <p className="font-semibold mt-2 text-lg text-neutral-700">#{document.documentId || document.id}</p>
-                        <div className="text-xs mt-4 text-neutral-600 space-y-1">
-                            <p>{t('date')} : <span className="font-medium text-neutral-900">{new Date(document.date).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
-                            {settings.showExpiryDate !== false && (
-                                <>
-                                    {'dueDate' in document && document.dueDate && (
-                                        <p>{t('dueDate')} : <span className="font-medium text-neutral-900">{new Date(document.dueDate).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
-                                    )}
-                                    {'expiryDate' in document && document.expiryDate && (
-                                        <p>{t('expiryDate')} : <span className="font-medium text-neutral-900">{new Date(document.expiryDate).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
-                                    )}
-                                    {'expectedDate' in document && document.expectedDate && (
-                                        <p>{t('expectedDelivery')} : <span className="font-medium text-neutral-900">{new Date(document.expectedDate).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
-                                    )}
-                                </>
-                            )}
-                            {('purchaseOrderNumber' in document && document.purchaseOrderNumber) && (
+                            <div className="text-xs mt-4 text-neutral-600 space-y-1">
+                                <p>{t('date')} : <span className="font-medium text-neutral-900">{new Date(document.date).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
+                                {'dueDate' in document && document.dueDate && (
+                                    <p>{t('dueDate')} : <span className="font-medium text-neutral-900">{new Date(document.dueDate).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
+                                )}
+                                {'expiryDate' in document && document.expiryDate && (
+                                    <p>{t('expiryDate')} : <span className="font-medium text-neutral-900">{new Date(document.expiryDate).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
+                                )}
+                                {'expectedDate' in document && document.expectedDate && (
+                                    <p>{t('expectedDelivery')} : <span className="font-medium text-neutral-900">{new Date(document.expectedDate).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
+                                )}
+                                {('purchaseOrderNumber' in document && document.purchaseOrderNumber) && (
                                 <p>{t('purchaseOrderNumber')} : <span className="font-medium text-neutral-900">{document.purchaseOrderNumber}</span></p>
                             )}
                             {document.reference && <p>{t('reference')} : <span className="font-medium text-neutral-900">{document.reference}</span></p>}

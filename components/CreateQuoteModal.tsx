@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Trash2, ScanLine, Calculator, FileText } from 'lucide-react';
+import { X, Plus, Trash2, ScanLine, Calculator, FileText, Package, Square, Ruler, Weight } from 'lucide-react';
 import { Client, Product, Quote, LineItem, QuoteStatus, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
@@ -33,6 +33,11 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
     const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
+
+    const [showSubjectField, setShowSubjectField] = useState(false);
+    const [showExpiryDateField, setShowExpiryDateField] = useState(false);
+    const [showPurchaseOrderField, setShowPurchaseOrderField] = useState(false);
+    const [showPaymentMethodField, setShowPaymentMethodField] = useState(false);
     
     const [selectedProductId, setSelectedProductId] = useState('');
     const [tempName, setTempName] = useState('');
@@ -55,11 +60,24 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
             if (quoteToEdit) {
                 setClientId(quoteToEdit.clientId);
                 setDate(quoteToEdit.date);
-                setExpiryDate(quoteToEdit.expiryDate || quoteToEdit.lineItems[0]?.expiryDate || new Date(new Date(quoteToEdit.date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-                setSubject(quoteToEdit.subject || quoteToEdit.lineItems[0]?.subject || '');
-                setPaymentMethod(quoteToEdit.paymentMethod || quoteToEdit.lineItems[0]?.paymentMethod || '');
+                const initialExpiryDate = quoteToEdit.expiryDate || quoteToEdit.lineItems[0]?.expiryDate || '';
+                setExpiryDate(initialExpiryDate || new Date(new Date(quoteToEdit.date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+                setShowExpiryDateField(!!initialExpiryDate);
+                
+                const initialSubject = quoteToEdit.subject || quoteToEdit.lineItems[0]?.subject || '';
+                setSubject(initialSubject);
+                setShowSubjectField(!!initialSubject);
+                
+                const initialPaymentMethod = quoteToEdit.paymentMethod || quoteToEdit.lineItems[0]?.paymentMethod || '';
+                setPaymentMethod(initialPaymentMethod);
+                setShowPaymentMethodField(!!initialPaymentMethod);
+
                 setReference(quoteToEdit.reference || '');
-                setPurchaseOrderNumber(quoteToEdit.purchaseOrderNumber || '');
+                
+                const initialPO = quoteToEdit.purchaseOrderNumber || '';
+                setPurchaseOrderNumber(initialPO);
+                setShowPurchaseOrderField(!!initialPO);
+
                 setNotes(quoteToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(quoteToEdit.lineItems[0]?.calculationMode || 'piece');
@@ -71,10 +89,14 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
                 setExpiryDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+                setShowExpiryDateField(false);
                 setSubject('');
+                setShowSubjectField(false);
                 setPaymentMethod('');
+                setShowPaymentMethodField(false);
                 setReference('');
                 setPurchaseOrderNumber('');
+                setShowPurchaseOrderField(false);
                 setNotes('');
                 setLineItems([]);
                 setTempVat(language === 'es' ? 21 : 20);
@@ -220,7 +242,9 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
         }
 
         const quoteData = {
-            clientId, clientName: clientNameDisplay, date, expiryDate, subject, 
+            clientId, clientName: clientNameDisplay, date, 
+            expiryDate: showExpiryDateField ? expiryDate : undefined, 
+            subject, 
             paymentMethod,
             reference, 
             purchaseOrderNumber,
@@ -269,42 +293,145 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('date')} *</label>
                             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
                         </div>
-                        <div className="space-y-1">
-                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('expiryDate')}</label>
-                            <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
-                        </div>
-                        <div className="space-y-1">
-                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
-                            <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
-                        </div>
-                        <div className="space-y-1">
-                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('purchaseOrderNumber')}</label>
-                            <input type="text" value={purchaseOrderNumber} onChange={(e) => setPurchaseOrderNumber(e.target.value)} placeholder={t('purchaseOrderNumber')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
-                        </div>
-                        <div className="space-y-1">
-                            <label className="block text-sm font-bold text-slate-700 ml-1">{t('paymentMethod')}</label>
-                            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12">
-                                <option value="">-- {t('select')} --</option>
-                                <option value="Virement">Virement</option>
-                                <option value="Chèque">Chèque</option>
-                                <option value="Espèces">Espèces</option>
-                                <option value="Carte Bancaire">Carte Bancaire</option>
-                            </select>
-                        </div>
-                        <div className="md:col-span-2 flex items-center gap-6 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                            <div className="flex items-center gap-2">
-                                <label htmlFor="calculation-mode" className="text-sm font-bold text-slate-700">Mode de calcul</label>
-                                <select 
-                                    id="calculation-mode"
-                                    value={calculationMode}
-                                    onChange={(e) => setCalculationMode(e.target.value as 'piece' | 'm2' | 'ml' | 'kg')}
-                                    className="rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm py-1.5"
+                        
+                        {showExpiryDateField ? (
+                            <div className="space-y-1">
+                                <label className="block text-sm font-bold text-slate-700 ml-1">{t('expiryDate')}</label>
+                                <div className="relative">
+                                    <input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 pr-10"/>
+                                    <button 
+                                        type="button"
+                                        onClick={() => { setExpiryDate(''); setShowExpiryDateField(false); }}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-end pb-2">
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        if (!expiryDate) {
+                                            setExpiryDate(new Date(new Date(date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+                                        }
+                                        setShowExpiryDateField(true);
+                                    }}
+                                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 transition-all hover:scale-[1.02] active:scale-[0.98]"
                                 >
-                                    <option value="piece">Par pièce</option>
-                                    <option value="m2">Par m²</option>
-                                    <option value="ml">Par mètre linéaire</option>
-                                    <option value="kg">Par kg</option>
-                                </select>
+                                    <Plus size={14} /> {t('addExpiryDate')}
+                                </button>
+                            </div>
+                        )}
+
+                        {showSubjectField ? (
+                            <div className="space-y-1">
+                                <label className="block text-sm font-bold text-slate-700 ml-1">{t('subject')}</label>
+                                <div className="relative">
+                                    <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subject')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 pr-10"/>
+                                    <button 
+                                        type="button"
+                                        onClick={() => { setSubject(''); setShowSubjectField(false); }}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-end pb-2">
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowSubjectField(true)}
+                                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                >
+                                    <Plus size={14} /> {t('addSubject')}
+                                </button>
+                            </div>
+                        )}
+
+                        {showPurchaseOrderField ? (
+                            <div className="space-y-1">
+                                <label className="block text-sm font-bold text-slate-700 ml-1">{t('purchaseOrderNumber')}</label>
+                                <div className="relative">
+                                    <input type="text" value={purchaseOrderNumber} onChange={(e) => setPurchaseOrderNumber(e.target.value)} placeholder={t('purchaseOrderNumber')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 pr-10"/>
+                                    <button 
+                                        type="button"
+                                        onClick={() => { setPurchaseOrderNumber(''); setShowPurchaseOrderField(false); }}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-end pb-2">
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowPurchaseOrderField(true)}
+                                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                >
+                                    <Plus size={14} /> {t('addPurchaseOrderNumber')}
+                                </button>
+                            </div>
+                        )}
+
+                        {showPaymentMethodField ? (
+                            <div className="space-y-1">
+                                <label className="block text-sm font-bold text-slate-700 ml-1">{t('paymentMethod')}</label>
+                                <div className="relative">
+                                    <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 pr-10">
+                                        <option value="">-- {t('select')} --</option>
+                                        <option value="Virement">Virement</option>
+                                        <option value="Chèque">Chèque</option>
+                                        <option value="Espèces">Espèces</option>
+                                        <option value="Carte Bancaire">Carte Bancaire</option>
+                                    </select>
+                                    <button 
+                                        type="button"
+                                        onClick={() => { setPaymentMethod(''); setShowPaymentMethodField(false); }}
+                                        className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-end pb-2">
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowPaymentMethodField(true)}
+                                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                >
+                                    <Plus size={14} /> {t('addPaymentMethod')}
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="md:col-span-2 space-y-2">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">Mode de calcul</label>
+                            <div className="flex flex-wrap gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200 w-fit">
+                                {[
+                                    { id: 'piece', label: 'Par pièce', icon: Package },
+                                    { id: 'm2', label: 'Par m²', icon: Square },
+                                    { id: 'ml', label: 'Par mètre linéaire', icon: Ruler },
+                                    { id: 'kg', label: 'Par kg', icon: Weight }
+                                ].map((mode) => (
+                                    <button
+                                        key={mode.id}
+                                        type="button"
+                                        onClick={() => setCalculationMode(mode.id as any)}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                                            calculationMode === mode.id 
+                                            ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200' 
+                                            : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                                        }`}
+                                    >
+                                        <mode.icon size={14} />
+                                        {mode.label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </div>
