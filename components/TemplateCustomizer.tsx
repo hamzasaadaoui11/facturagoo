@@ -80,6 +80,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
         if (!mergedSettings.priceDisplayMode) mergedSettings.priceDisplayMode = 'HT';
         if (!mergedSettings.documentInfoPosition) mergedSettings.documentInfoPosition = 'right';
         if (mergedSettings.showExpiryDate === undefined) mergedSettings.showExpiryDate = true;
+        if (!mergedSettings.logoWidth) mergedSettings.logoWidth = 200;
 
         setLocalSettings(mergedSettings); 
         
@@ -335,8 +336,13 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                         <div className="group relative w-full h-48 border-2 border-dashed border-neutral-300 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden">
                                             <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/png, image/jpeg, image/svg+xml" onChange={handleLogoChange} />
                                             {localSettings.logo ? (
-                                                <div className="relative w-full h-full p-4 flex items-center justify-center">
-                                                    <img src={localSettings.logo} alt="Logo" className="max-w-full max-h-full object-contain" />
+                                                <div className="relative w-full h-full p-4 flex items-center justify-center overflow-hidden">
+                                                    <img 
+                                                        src={localSettings.logo} 
+                                                        alt="Logo" 
+                                                        className="object-contain transition-all duration-150" 
+                                                        style={{ width: `${localSettings.logoWidth || 200}px`, maxWidth: '100%', maxHeight: '100%' }}
+                                                    />
                                                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <span className="text-white font-medium flex items-center gap-2"><Upload size={18}/> {language === 'es' ? 'Cambiar' : 'Changer'}</span>
                                                     </div>
@@ -351,6 +357,31 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                                 </div>
                                             )}
                                         </div>
+                                        {localSettings.logo && (
+                                            <div className="mt-4 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+                                                        {language === 'es' ? 'Tamaño del logo' : 'Taille du logo'}
+                                                    </label>
+                                                    <span className="text-xs font-mono font-bold text-emerald-600 bg-white px-2 py-1 rounded border border-neutral-200">
+                                                        {localSettings.logoWidth || 200}px
+                                                    </span>
+                                                </div>
+                                                <input 
+                                                    type="range" 
+                                                    min="50" 
+                                                    max="500" 
+                                                    step="10"
+                                                    value={localSettings.logoWidth || 200} 
+                                                    onChange={(e) => setLocalSettings(prev => ({ ...prev, logoWidth: parseInt(e.target.value) }))}
+                                                    className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                                                />
+                                                <div className="flex justify-between mt-1">
+                                                    <span className="text-[10px] text-neutral-400">Min</span>
+                                                    <span className="text-[10px] text-neutral-400">Max</span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-neutral-700 mb-3">Cachet de l'entreprise</label>

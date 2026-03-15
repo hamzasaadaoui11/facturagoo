@@ -19,7 +19,8 @@ const TABLE_MAP: Record<string, string> = {
 const LOCAL_STORAGE_KEYS = {
     SHOW_AMOUNT_IN_WORDS: 'facturago_show_amount_in_words',
     DOCUMENT_INFO_POSITION: 'facturago_document_info_position',
-    SHOW_EXPIRY_DATE: 'facturago_show_expiry_date'
+    SHOW_EXPIRY_DATE: 'facturago_show_expiry_date',
+    LOGO_WIDTH: 'facturago_logo_width'
 };
 
 export const initDB = async (): Promise<any> => {
@@ -322,6 +323,13 @@ export const dbService = {
                     } else if (settings.showExpiryDate === undefined) {
                         settings.showExpiryDate = true;
                     }
+
+                    const localLogoWidth = localStorage.getItem(LOCAL_STORAGE_KEYS.LOGO_WIDTH);
+                    if (localLogoWidth !== null) {
+                        settings.logoWidth = parseInt(localLogoWidth, 10);
+                    } else if (settings.logoWidth === undefined) {
+                        settings.logoWidth = 200;
+                    }
                 } catch (e) {
                     console.error("Error accessing localStorage in db.ts:", e);
                     // Fallback to defaults if localStorage fails
@@ -350,6 +358,10 @@ export const dbService = {
                 if (settings.showExpiryDate !== undefined) {
                     localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_EXPIRY_DATE, String(settings.showExpiryDate));
                 }
+
+                if (settings.logoWidth !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.LOGO_WIDTH, String(settings.logoWidth));
+                }
             } catch (e) {
                 console.error("Error saving to localStorage in db.ts:", e);
             }
@@ -371,6 +383,7 @@ export const dbService = {
             delete (cleanData as any).showAmountInWords; // Remove to avoid Supabase schema error
             delete (cleanData as any).documentInfoPosition; // Remove to avoid Supabase schema error
             delete (cleanData as any).showExpiryDate; // Remove to avoid Supabase schema error
+            delete (cleanData as any).logoWidth; // Remove to avoid Supabase schema error
 
             let resultData, resultError;
 
@@ -403,7 +416,8 @@ export const dbService = {
                 ...(resultData as CompanySettings),
                 showAmountInWords: settings.showAmountInWords,
                 documentInfoPosition: settings.documentInfoPosition,
-                showExpiryDate: settings.showExpiryDate
+                showExpiryDate: settings.showExpiryDate,
+                logoWidth: settings.logoWidth
             };
             return finalResult;
         }

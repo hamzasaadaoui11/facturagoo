@@ -319,7 +319,7 @@ const generateDocumentHTML = (
     }
 
     const logoHtml = settings.logo 
-        ? `<img src="${settings.logo}" style="max-height: 80px; max-width: 200px; object-fit: contain;" />` 
+        ? `<img src="${settings.logo}" style="max-height: 120px; max-width: ${settings.logoWidth || 200}px; object-fit: contain;" />` 
         : `<h1 style="font-size: 24px; font-weight: bold; color: ${primaryColor}; margin: 0;">${settings.companyName}</h1>`;
 
     const recipientName = recipient.name;

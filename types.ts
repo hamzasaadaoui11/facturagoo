@@ -260,6 +260,7 @@ export interface CompanySettings {
     cnss?: string;     
     capital?: string;  
     logo?: string;
+    logoWidth?: number;
     stamp?: string;
     primaryColor?: string;
     footerNotes?: string;

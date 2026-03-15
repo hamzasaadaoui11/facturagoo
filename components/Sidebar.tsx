@@ -80,11 +80,18 @@ const Sidebar: React.FC = () => {
     const handleLogout = async () => {
         try {
             await supabase.auth.signOut();
-            navigate('/');
+            // Clear all supabase related items from localStorage
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('supabase') || key.includes('sb-'))) {
+                    localStorage.removeItem(key);
+                }
+            }
+            window.location.href = '/';
         } catch (error) {
             console.error("Error during logout:", error);
             // Fallback redirect
-            navigate('/');
+            window.location.href = '/';
         }
     };
 
