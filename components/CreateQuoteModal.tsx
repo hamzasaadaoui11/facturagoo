@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Trash2, ScanLine, Calculator, FileText, Package, Square, Ruler, Weight } from 'lucide-react';
+import { X, Plus, Trash2, ScanLine, Calculator, FileText, Package, Square, Ruler, Weight, Hash, Tag, Coins, Layers } from 'lucide-react';
 import { Client, Product, Quote, LineItem, QuoteStatus, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
@@ -436,19 +436,34 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                         </div>
                     </div>
 
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 shadow-inner space-y-4">
-                        <div className="flex items-center gap-3">
-                            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><ScanLine size={14}/> {t('items')}</h4>
-                            <div className="h-px bg-slate-200 flex-1"></div>
+                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                    <Layers size={18} />
+                                </div>
+                                <h4 className="text-sm font-bold text-slate-800 tracking-tight">{t('items')}</h4>
+                            </div>
+                            <div className="h-px bg-slate-100 flex-1 mx-6 hidden md:block"></div>
                         </div>
                         
-                        <div className="grid grid-cols-24 gap-3 items-end">
+                        <div className="grid grid-cols-24 gap-4 items-end">
                             <div className="col-span-12 lg:col-span-2">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('refLabel')}</label>
-                                <input type="text" value={tempProductCode} onChange={(e) => setTempProductCode(e.target.value)} placeholder={t('reference')} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
+                                    <Hash size={10} /> {t('refLabel')}
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={tempProductCode} 
+                                    onChange={(e) => setTempProductCode(e.target.value)} 
+                                    placeholder={t('reference')} 
+                                    className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all"
+                                />
                             </div>
                             <div className="col-span-12 lg:col-span-4">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('productAutoLabel')}</label>
+                                <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
+                                    <Package size={10} /> {t('productAutoLabel')}
+                                </label>
                                 <SearchableProductSelect 
                                     products={products}
                                     selectedProductId={selectedProductId}
@@ -457,48 +472,87 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 />
                             </div>
                             <div className="col-span-24 lg:col-span-6">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('designationLabel')} *</label>
-                                <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} placeholder={t('description')} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-[11px] h-11 font-medium"/>
+                                <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
+                                    <Tag size={10} /> {t('designationLabel')} *
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={tempName} 
+                                    onChange={(e) => setTempName(e.target.value)} 
+                                    placeholder={t('description')} 
+                                    className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-[11px] h-12 font-medium transition-all"
+                                />
                             </div>
                             <div className="col-span-12 lg:col-span-3">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</label>
+                                <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
+                                    <Coins size={10} /> {isModeTTC ? t('puTTCLabel') : t('puHTLabel')}
+                                </label>
                                 <input 
                                     type="text" 
                                     value={tempPrice} 
                                     onChange={(e) => setTempPrice(e.target.value)} 
-                                    className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"
+                                    className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all font-mono"
                                 />
                             </div>
                             <div className="col-span-12 lg:col-span-3">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('quantity')}</label>
-                                <input type="text" value={itemQuantity} onChange={(e) => setItemQuantity(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
+                                    <Calculator size={10} /> {t('quantity')}
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={itemQuantity} 
+                                    onChange={(e) => setItemQuantity(e.target.value)} 
+                                    className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all"
+                                />
                             </div>
                             {showLengthColumn && (
                                 <div className="col-span-12 lg:col-span-2">
-                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Long.</label>
-                                    <input type="text" value={tempLength} onChange={(e) => setTempLength(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Long.</label>
+                                    <input 
+                                        type="text" 
+                                        value={tempLength} 
+                                        onChange={(e) => setTempLength(e.target.value)} 
+                                        className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all"
+                                    />
                                 </div>
                             )}
                             {showHeightColumn && (
                                 <div className="col-span-12 lg:col-span-2">
-                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Haut.</label>
-                                    <input type="text" value={tempHeight} onChange={(e) => setTempHeight(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Haut.</label>
+                                    <input 
+                                        type="text" 
+                                        value={tempHeight} 
+                                        onChange={(e) => setTempHeight(e.target.value)} 
+                                        className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all"
+                                    />
                                 </div>
                             )}
                             {isKg && (
                                 <div className="col-span-12 lg:col-span-2">
-                                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Poids (kg)</label>
-                                    <input type="text" value={tempWeight} onChange={(e) => setTempWeight(e.target.value)} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11"/>
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Poids (kg)</label>
+                                    <input 
+                                        type="text" 
+                                        value={tempWeight} 
+                                        onChange={(e) => setTempWeight(e.target.value)} 
+                                        className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all"
+                                    />
                                 </div>
                             )}
                             <div className="col-span-12 lg:col-span-3">
-                                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">{t('vat')}</label>
-                                <select value={tempVat} onChange={(e) => setTempVat(parseInt(e.target.value))} className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11">
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">{t('vat')}</label>
+                                <select 
+                                    value={tempVat} 
+                                    onChange={(e) => setTempVat(parseInt(e.target.value))} 
+                                    className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all"
+                                >
                                     {vatOptions.map(v => <option key={v} value={v}>{v}%</option>)}
                                 </select>
                             </div>
                             <div className="col-span-24 lg:col-span-3">
-                                <button onClick={handleAddItem} className="w-full inline-flex items-center justify-center h-11 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-md active:scale-95 text-sm font-bold gap-2">
+                                <button 
+                                    onClick={handleAddItem} 
+                                    className="w-full inline-flex items-center justify-center h-12 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-200 transition-all active:scale-[0.98] text-sm font-bold gap-2"
+                                >
                                     <Plus size={18} /> {t('add')}
                                 </button>
                             </div>

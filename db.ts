@@ -28,32 +28,67 @@ export const initDB = async (): Promise<any> => {
 };
 
 let cachedUserId: string | null = null;
+let cachedCompanyId: string | null = null;
+let pendingCompanyPromise: Promise<{ userId: string | null, companyId: string | null }> | null = null;
 
-const getCurrentUserId = async () => {
-    if (cachedUserId) return cachedUserId;
+export const resetDBCache = () => {
+    cachedUserId = null;
+    cachedCompanyId = null;
+    pendingCompanyPromise = null;
+};
 
-    try {
-        const { data: { session } } = await supabase.auth.getSession();
-        cachedUserId = session?.user?.id || null;
-        return cachedUserId;
-    } catch (err) {
-        console.error("Error getting user ID in db.ts:", err);
-        return null;
+export const getCurrentUserAndCompany = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const currentUserId = session?.user?.id || null;
+
+    // Clear cache if user changed
+    if (currentUserId !== cachedUserId) {
+        cachedUserId = currentUserId;
+        cachedCompanyId = null;
+        pendingCompanyPromise = null;
     }
+
+    if (!currentUserId) return { userId: null, companyId: null };
+    if (cachedCompanyId) return { userId: currentUserId, companyId: cachedCompanyId };
+
+    if (pendingCompanyPromise) return pendingCompanyPromise;
+
+    pendingCompanyPromise = (async () => {
+        // Fallback: The user is the owner, userId is the companyId
+        cachedCompanyId = currentUserId;
+        return { userId: currentUserId, companyId: currentUserId };
+    })();
+
+    return pendingCompanyPromise;
 };
 
 // Listen for auth changes to update the cache
 supabase.auth.onAuthStateChange((_event, session) => {
     cachedUserId = session?.user?.id || null;
+    cachedCompanyId = null; // Reset company cache to force re-fetch
 });
+
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number = 8000): Promise<T> => {
+    const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error("La requête a expiré. Cela est souvent dû à un problème de permissions (RLS recursion).")), timeoutMs)
+    );
+    return Promise.race([promise, timeoutPromise]);
+};
 
 const getAll = async <T>(storeName: string): Promise<T[]> => {
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
-    const { data, error } = await supabase
+    const { companyId } = await getCurrentUserAndCompany();
+    if (!companyId) return [];
+
+    const fetchPromise = supabase
         .from(tableName)
-        .select('*');
+        .select('*')
+        .eq('company_id', companyId);
+
+    const result: any = await withTimeout(fetchPromise as any);
+    const { data, error } = result;
 
     if (error) {
         console.error(`Error fetching ${storeName}:`, error);
@@ -90,20 +125,23 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
-    const userId = await getCurrentUserId();
-    if (!userId) throw new Error("User not authenticated");
+    const { userId, companyId } = await getCurrentUserAndCompany();
+    if (!userId || !companyId) throw new Error("User not authenticated");
 
-    const { paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, ...itemToSave } = item as any;
+    const { paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, userId: _, ...itemToSave } = item as any;
     
     // Strip fields that might be missing in Supabase schema to avoid errors
     // These are stored in lineItems[0] by the UI components
-    const itemWithUser = { ...itemToSave, user_id: userId };
+    const itemWithUser = { ...itemToSave, user_id: userId, company_id: companyId };
 
-    const { data, error } = await supabase
+    const insertPromise = supabase
         .from(tableName)
         .insert(itemWithUser)
         .select()
         .single();
+
+    const result: any = await withTimeout(insertPromise as any);
+    const { data, error } = result;
 
     if (error) {
         console.error(`Error adding to ${storeName}:`, error);
@@ -135,20 +173,23 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
-    const userId = await getCurrentUserId();
-    if (!userId) throw new Error("User not authenticated");
+    const { companyId } = await getCurrentUserAndCompany();
+    if (!companyId) throw new Error("User not authenticated");
 
     // Destructure to remove fields that might not be in the Supabase schema
     // and to remove 'id' from the update payload itself
-    const { id, paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, created_at, ...itemToSave } = item as any;
+    const { id, paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, userId: _, created_at, ...itemToSave } = item as any;
 
-    const { data, error } = await supabase
+    const updatePromise = supabase
         .from(tableName)
         .update(itemToSave)
         .eq('id', id)
-        .eq('user_id', userId)
+        .eq('company_id', companyId)
         .select()
         .single();
+
+    const result: any = await withTimeout(updatePromise as any);
+    const { data, error } = result;
 
     if (error) {
         console.error(`Error updating ${storeName}:`, error);
@@ -176,14 +217,30 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
     return savedItem as T;
 };
 
-const remove = async (storeName: string, id: string): Promise<void> => {
+const remove = async (storeName: string, id: string | string[]): Promise<void> => {
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
-    const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .eq('id', id);
+    const { companyId } = await getCurrentUserAndCompany();
+    if (!companyId) throw new Error("User not authenticated");
+
+    let deletePromise;
+    if (Array.isArray(id)) {
+        deletePromise = supabase
+            .from(tableName)
+            .delete()
+            .in('id', id)
+            .eq('company_id', companyId);
+    } else {
+        deletePromise = supabase
+            .from(tableName)
+            .delete()
+            .eq('id', id)
+            .eq('company_id', companyId);
+    }
+
+    const result: any = await withTimeout(deletePromise as any);
+    const { error } = result;
 
     if (error) {
         console.error(`Error deleting from ${storeName}:`, error);
@@ -203,7 +260,7 @@ const bulkAdd = async (storeName: string, items: any[]): Promise<void> => {
     const tableName = TABLE_MAP[storeName];
     if (!tableName || items.length === 0) return;
 
-    const userId = await getCurrentUserId();
+    const { userId } = await getCurrentUserAndCompany();
     if (!userId) throw new Error("User not authenticated");
 
     const itemsWithUser = items.map(item => ({ ...item, user_id: userId }));
@@ -223,7 +280,7 @@ export const dbService = {
         getAll: () => getAll<Client>('clients'),
         add: (item: Client) => add<Client>('clients', item),
         update: (item: Client) => update<Client>('clients', item),
-        delete: (id: string) => remove('clients', id),
+        delete: (id: string | string[]) => remove('clients', id),
     },
     products: {
         getAll: () => getAll<Product>('products'),
@@ -238,42 +295,42 @@ export const dbService = {
         },
         add: (item: Product) => add<Product>('products', item),
         update: (item: Product) => update<Product>('products', item),
-        delete: (id: string) => remove('products', id),
+        delete: (id: string | string[]) => remove('products', id),
     },
     suppliers: {
         getAll: () => getAll<Supplier>('suppliers'),
         add: (item: Supplier) => add<Supplier>('suppliers', item),
         update: (item: Supplier) => update<Supplier>('suppliers', item),
-        delete: (id: string) => remove('suppliers', id),
+        delete: (id: string | string[]) => remove('suppliers', id),
     },
     quotes: {
         getAll: () => getAll<Quote>('quotes'),
         add: (item: Quote) => add<Quote>('quotes', item),
         update: (item: Quote) => update<Quote>('quotes', item),
-        delete: (id: string) => remove('quotes', id),
+        delete: (id: string | string[]) => remove('quotes', id),
     },
     purchaseOrders: {
         getAll: () => getAll<PurchaseOrder>('purchase_orders'),
         add: (item: PurchaseOrder) => add<PurchaseOrder>('purchase_orders', item),
         update: (item: PurchaseOrder) => update<PurchaseOrder>('purchase_orders', item),
-        delete: (id: string) => remove('purchase_orders', id),
+        delete: (id: string | string[]) => remove('purchase_orders', id),
     },
     invoices: {
         getAll: () => getAll<Invoice>('invoices'),
         add: (item: Invoice) => add<Invoice>('invoices', item),
         update: (item: Invoice) => update<Invoice>('invoices', item),
-        delete: (id: string) => remove('invoices', id),
+        delete: (id: string | string[]) => remove('invoices', id),
     },
     creditNotes: {
         getAll: () => getAll<CreditNote>('credit_notes'),
         add: (item: CreditNote) => add<CreditNote>('credit_notes', item),
         update: (item: CreditNote) => update<CreditNote>('credit_notes', item),
-        delete: (id: string) => remove('credit_notes', id),
+        delete: (id: string | string[]) => remove('credit_notes', id),
     },
     payments: {
         getAll: () => getAll<Payment>('payments'),
         add: (item: Payment) => add<Payment>('payments', item),
-        delete: (id: string) => remove('payments', id),
+        delete: (id: string | string[]) => remove('payments', id),
     },
     stockMovements: {
         getAll: () => getAll<StockMovement>('stock_movements'),
@@ -283,17 +340,17 @@ export const dbService = {
         getAll: () => getAll<DeliveryNote>('delivery_notes'),
         add: (item: DeliveryNote) => add<DeliveryNote>('delivery_notes', item),
         update: (item: DeliveryNote) => update<DeliveryNote>('delivery_notes', item),
-        delete: (id: string) => remove('delivery_notes', id),
+        delete: (id: string | string[]) => remove('delivery_notes', id),
     },
     settings: {
         get: async (): Promise<CompanySettings | null> => {
-            const userId = await getCurrentUserId();
-            if (!userId) return null;
+            const { companyId } = await getCurrentUserAndCompany();
+            if (!companyId) return null;
 
             const { data, error } = await supabase
                 .from('settings')
                 .select('*')
-                .eq('user_id', userId)
+                .eq('company_id', companyId)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle(); 
@@ -345,8 +402,8 @@ export const dbService = {
             return settings;
         },
         update: async (settings: CompanySettings): Promise<CompanySettings> => {
-            const userId = await getCurrentUserId();
-            if (!userId) throw new Error("Utilisateur non connecté");
+            const { userId, companyId } = await getCurrentUserAndCompany();
+            if (!userId || !companyId) throw new Error("Utilisateur non connecté");
             
             // Save to localStorage with safety
             try {
@@ -372,7 +429,7 @@ export const dbService = {
             const { data: existingRow, error: fetchError } = await supabase
                 .from('settings')
                 .select('id')
-                .eq('user_id', userId)
+                .eq('company_id', companyId)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -400,7 +457,7 @@ export const dbService = {
                 resultData = response.data;
                 resultError = response.error;
             } else {
-                const payload = { ...cleanData, user_id: userId };
+                const payload = { ...cleanData, user_id: userId, company_id: companyId };
                 const response = await supabase
                     .from('settings')
                     .insert(payload)

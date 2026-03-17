@@ -20,6 +20,7 @@ export const translations = {
     products: 'Produits & Services',
     settings: 'Paramètres',
     profile: 'Mon Profil',
+    users: 'Utilisateurs',
     logout: 'Déconnexion',
     
     // Dashboard
@@ -303,6 +304,13 @@ export const translations = {
     paymentRecorded: 'Paiement enregistré',
     
     // Chart
+    import: 'Importer',
+    importProducts: 'Importer des produits',
+    importInstructions: 'Téléchargez un fichier Excel (.xlsx) avec les colonnes suivantes : Nom, Référence, Prix d\'achat, Prix de vente, Quantité, TVA.',
+    selectFile: 'Sélectionner un fichier',
+    processing: 'Traitement...',
+    importSuccess: 'Produits importés avec succès',
+    importError: 'Erreur lors de l\'importation',
     periodDay: 'Jour',
     periodWeek: 'Sem',
     periodMonth: 'Mois',
@@ -333,6 +341,7 @@ export const translations = {
     products: 'Productos y servicios',
     settings: 'Configuración',
     profile: 'Mi perfil',
+    users: 'Usuarios',
     logout: 'Cerrar sesión',
 
     // Dashboard
@@ -616,6 +625,13 @@ export const translations = {
     paymentRecorded: 'Pago registrado',
 
     // Chart
+    import: 'Importar',
+    importProducts: 'Importar productos',
+    importInstructions: 'Cargue un archivo Excel (.xlsx) con las siguientes columnas: Nombre, Referencia, Precio de compra, Precio de venta, Cantidad, IVA.',
+    selectFile: 'Seleccionar un archivo',
+    processing: 'Procesando...',
+    importSuccess: 'Productos importados con éxito',
+    importError: 'Error durante la importación',
     periodDay: 'Día',
     periodWeek: 'Sem',
     periodMonth: 'Mes',
@@ -646,6 +662,7 @@ export const translations = {
     products: 'Products & Services',
     settings: 'Settings',
     profile: 'My Profile',
+    users: 'Users',
     logout: 'Logout',
 
     // Dashboard
@@ -929,6 +946,13 @@ export const translations = {
     paymentRecorded: 'Payment Recorded',
 
     // Chart
+    import: 'Import',
+    importProducts: 'Import Products',
+    importInstructions: 'Upload an Excel file (.xlsx) with the following columns: Name, Reference, Purchase Price, Sale Price, Quantity, VAT.',
+    selectFile: 'Select a file',
+    processing: 'Processing...',
+    importSuccess: 'Products imported successfully',
+    importError: 'Error during import',
     periodDay: 'Day',
     periodWeek: 'Week',
     periodMonth: 'Month',
@@ -959,6 +983,7 @@ export const translations = {
     products: 'المنتجات والخدمات',
     settings: 'الإعدادات',
     profile: 'ملفي الشخصي',
+    users: 'المستخدمون',
     logout: 'تسجيل الخروج',
 
     // Dashboard
@@ -1233,6 +1258,13 @@ export const translations = {
     paymentRecorded: 'تم تسجيل الدفع',
 
     // Chart
+    import: 'استيراد',
+    importProducts: 'استيراد المنتجات',
+    importInstructions: 'قم بتحميل ملف Excel (.xlsx) بالأعمدة التالية: الاسم، المرجع، سعر الشراء، سعر البيع، الكمية، الضريبة.',
+    selectFile: 'اختر ملفًا',
+    processing: 'جاري المعالجة...',
+    importSuccess: 'تم استيراد المنتجات بنجاح',
+    importError: 'خطأ أثناء الاستيراد',
     periodDay: 'يوم',
     periodWeek: 'أسبوع',
     periodMonth: 'شهر',

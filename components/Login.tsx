@@ -17,14 +17,26 @@ const Login: React.FC = () => {
         setError(null);
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
+            console.log("Attempting login for:", email);
+            
+            // Add a timeout to the login call
+            const loginPromise = supabase.auth.signInWithPassword({
                 email,
                 password,
             });
 
+            const timeoutPromise = new Promise<any>((_, reject) => 
+                setTimeout(() => reject(new Error("La connexion prend plus de temps que prévu. Veuillez vérifier votre connexion internet.")), 15000)
+            );
+
+            const { error } = await Promise.race([loginPromise, timeoutPromise]);
+
             if (error) throw error;
+            
+            console.log("Login successful, navigating...");
             navigate('/dashboard');
         } catch (err: any) {
+            console.error("Login error:", err);
             setError(err.message || 'Une erreur est survenue lors de la connexion.');
         } finally {
             setIsLoading(false);
@@ -71,11 +83,17 @@ const Login: React.FC = () => {
                                             type="button"
                                             onClick={() => {
                                                 localStorage.clear();
+                                                sessionStorage.clear();
+                                                document.cookie.split(";").forEach((c) => {
+                                                    document.cookie = c
+                                                        .replace(/^ +/, "")
+                                                        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                                                });
                                                 window.location.reload();
                                             }}
-                                            className="mt-3 text-xs font-medium text-red-600 hover:text-red-500 underline"
+                                            className="mt-3 inline-flex items-center px-2.5 py-1.5 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                                         >
-                                            Effacer le cache et réessayer
+                                            Effacer le cache et recharger la page
                                         </button>
                                     </div>
                                 </div>

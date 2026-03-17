@@ -3,9 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Menu, X, Files } from 'lucide-react';
 import { Client, Product, Supplier, Quote, QuoteStatus, Invoice, InvoiceStatus, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, PurchaseOrderStatus, CreditNote, CreditNoteStatus } from './types';
-import { dbService, initDB } from './db';
+import { dbService, initDB, getCurrentUserAndCompany, resetDBCache } from './db';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
+import { AnimatePresence, motion } from 'framer-motion';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { generateUUID } from './src/utils/uuid';
 
@@ -236,6 +237,10 @@ const MainContent: React.FC = () => {
     const deleteProduct = async (productId: string) => {
         await dbService.products.delete(productId);
         setProducts(prev => prev.filter(p => p.id !== productId));
+    };
+    const deleteProducts = async (productIds: string[]) => {
+        await dbService.products.delete(productIds);
+        setProducts(prev => prev.filter(p => !productIds.includes(p.id)));
     };
 
     const addSupplier = async (supplier: Omit<Supplier, 'id' | 'supplierCode'>) => {
@@ -687,7 +692,34 @@ const MainContent: React.FC = () => {
                 <div className="w-full max-w-lg text-center">
                     <h2 className="text-xl font-bold text-red-700">Erreur de Chargement</h2>
                     <p className="mt-2 text-neutral-700 bg-red-100 p-4 rounded-lg border border-red-200">{error}</p>
-                    <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 text-sm font-medium text-white bg-neutral-800 border border-transparent rounded-lg shadow-sm hover:bg-neutral-700">Réessayer</button>
+                    <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+                        <button 
+                            onClick={() => window.location.reload()} 
+                            className="px-6 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg shadow-sm hover:bg-emerald-700 transition-colors"
+                        >
+                            Réessayer
+                        </button>
+                        <button 
+                            onClick={async () => {
+                                try {
+                                    await supabase.auth.signOut();
+                                } catch (e) {
+                                    console.error("Sign out error", e);
+                                }
+                                localStorage.clear();
+                                sessionStorage.clear();
+                                // Clear all cookies if possible
+                                document.cookie.split(";").forEach((c) => {
+                                    document.cookie = c
+                                        .replace(/^ +/, "")
+                                        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+                                });
+                            }} 
+                            className="px-6 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
+                        >
+                            Déconnexion
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -736,9 +768,9 @@ const MainContent: React.FC = () => {
                             <Route path="/stock" element={<StockManagement products={products} movements={stockMovements} onAddMovement={addStockMovement} />} />
                             <Route path="/clients" element={<ClientsComponent clients={clients} onAddClient={addClient} onUpdateClient={updateClient} onDeleteClient={deleteClient} />} />
                             <Route path="/suppliers" element={<SuppliersComponent suppliers={suppliers} onAddSupplier={addSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} />} />
-                            <Route path="/products" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} />} />
-                            <Route path="/products/new" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} />} />
-                            <Route path="/products/edit/:productId" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} />} />
+                            <Route path="/products" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onDeleteProducts={deleteProducts} />} />
+                            <Route path="/products/new" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onDeleteProducts={deleteProducts} />} />
+                            <Route path="/products/edit/:productId" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onDeleteProducts={deleteProducts} />} />
                             <Route path="/settings" element={<TemplateCustomizer settings={companySettings} onSave={updateCompanySettings} />} />
                             <Route path="/profile" element={<UserProfile />} />
                         </Routes>
@@ -767,6 +799,12 @@ const App: React.FC = () => {
         initSession();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            console.log("Auth state change:", _event, session?.user?.email);
+            if (_event === 'SIGNED_OUT' || _event === 'USER_UPDATED' && !session) {
+                resetDBCache();
+                // Clear any local storage that might interfere
+                localStorage.removeItem('supabase.auth.token');
+            }
             setSession(session);
             setLoading(false);
         });
@@ -774,14 +812,71 @@ const App: React.FC = () => {
         return () => subscription.unsubscribe();
     }, []);
     if (loading) { return <LoadingScreen />; }
+
     return (
         <LanguageProvider>
             <HashRouter>
-                <Routes>
-                    <Route path="/" element={!session ? <LandingPage /> : <Navigate to="/dashboard" replace />} />
-                    <Route path="/login" element={!session ? <Login /> : <Navigate to="/dashboard" replace />} />
-                    <Route path="/*" element={session ? <MainContent /> : <Navigate to="/" replace />} />
-                </Routes>
+                <AnimatePresence mode="wait" key={session?.user?.id || 'public'}>
+                    <Routes>
+                        <Route 
+                            path="/" 
+                            element={
+                                !session ? (
+                                    <motion.div
+                                        key="landing-wrapper"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="min-h-screen w-full bg-white"
+                                    >
+                                        <LandingPage />
+                                    </motion.div>
+                                ) : (
+                                    <Navigate to="/dashboard" replace />
+                                )
+                            } 
+                        />
+                        <Route 
+                            path="/login" 
+                            element={
+                                !session ? (
+                                    <motion.div
+                                        key="login-wrapper"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="min-h-screen w-full bg-slate-100"
+                                    >
+                                        <Login />
+                                    </motion.div>
+                                ) : (
+                                    <Navigate to="/dashboard" replace />
+                                )
+                            } 
+                        />
+                        <Route 
+                            path="/*" 
+                            element={
+                                session ? (
+                                    <motion.div
+                                        key={`app-wrapper-${session.user.id}`}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="h-full w-full"
+                                    >
+                                        <MainContent />
+                                    </motion.div>
+                                ) : (
+                                    <Navigate to="/" replace />
+                                )
+                            } 
+                        />
+                    </Routes>
+                </AnimatePresence>
             </HashRouter>
         </LanguageProvider>
     );

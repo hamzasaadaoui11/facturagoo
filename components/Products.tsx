@@ -3,10 +3,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import Header from './Header';
 import ConfirmationModal from './ConfirmationModal';
-import { Plus, Pencil, Trash2, ArrowLeft, Package, AlertTriangle, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, Package, AlertTriangle, Search, Upload } from 'lucide-react';
 import { Product, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatCurrency, parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
+import ImportProductsModal from './ImportProductsModal';
 
 // --- Helper Functions and Components ---
 
@@ -269,15 +270,20 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
 
 interface ProductListProps {
     products: Product[];
+    onAddProduct: (product: Omit<Product, 'id'>) => void;
     onDeleteProduct: (productId: string) => void;
+    onDeleteProducts: (productIds: string[]) => void;
     companySettings?: CompanySettings | null;
 }
 
-const ProductList = ({ products, onDeleteProduct, companySettings }: ProductListProps) => {
+const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts, companySettings }: ProductListProps) => {
     const { t, language, isRTL } = useLanguage();
     const navigate = useNavigate();
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
+    const [isImportOpen, setIsImportOpen] = useState(false);
     const [productIdToDelete, setProductIdToDelete] = useState<string | null>(null);
+    const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredProducts = products.filter(product => {
@@ -301,23 +307,83 @@ const ProductList = ({ products, onDeleteProduct, companySettings }: ProductList
         setProductIdToDelete(null);
     };
 
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedProductIds(filteredProducts.map(p => p.id));
+        } else {
+            setSelectedProductIds([]);
+        }
+    };
+
+    const handleSelectProduct = (productId: string) => {
+        setSelectedProductIds(prev => 
+            prev.includes(productId) 
+                ? prev.filter(id => id !== productId) 
+                : [...prev, productId]
+        );
+    };
+
+    const handleBulkDelete = () => {
+        setIsBulkConfirmOpen(true);
+    };
+
+    const confirmBulkDeletion = () => {
+        onDeleteProducts(selectedProductIds);
+        setSelectedProductIds([]);
+        setIsBulkConfirmOpen(false);
+    };
+
     return (
         <div>
             <Header title={t('products')}>
-                <button
-                    type="button"
-                    onClick={() => navigate('/products/new')}
-                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
-                >
-                    <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
-                    {t('newProduct')}
-                </button>
+                <div className="flex gap-2">
+                    {selectedProductIds.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={handleBulkDelete}
+                            className="inline-flex items-center gap-x-2 rounded-lg bg-red-50 px-3.5 py-2.5 text-sm font-semibold text-red-600 shadow-sm ring-1 ring-inset ring-red-200 hover:bg-red-100 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                        >
+                            <Trash2 className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
+                            {language === 'es' ? `Eliminar (${selectedProductIds.length})` : `Supprimer (${selectedProductIds.length})`}
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => setIsImportOpen(true)}
+                        className="inline-flex items-center gap-x-2 rounded-lg bg-white px-3.5 py-2.5 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                    >
+                        <Upload className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
+                        {t('import')}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/products/new')}
+                        className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                    >
+                        <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
+                        {t('newProduct')}
+                    </button>
+                </div>
             </Header>
 
             <ConfirmationModal
                 isOpen={isConfirmOpen}
                 onClose={() => setIsConfirmOpen(false)}
                 onConfirm={confirmDeletion}
+            />
+
+            <ConfirmationModal
+                isOpen={isBulkConfirmOpen}
+                onClose={() => setIsBulkConfirmOpen(false)}
+                onConfirm={confirmBulkDeletion}
+            />
+
+            <ImportProductsModal 
+                isOpen={isImportOpen}
+                onClose={() => setIsImportOpen(false)}
+                onImport={(importedProducts) => {
+                    importedProducts.forEach(product => onAddProduct(product));
+                }}
             />
 
             <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
@@ -339,6 +405,14 @@ const ProductList = ({ products, onDeleteProduct, companySettings }: ProductList
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>
+                                <th scope="col" className="px-6 py-3 text-left">
+                                    <input
+                                        type="checkbox"
+                                        className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                                        checked={filteredProducts.length > 0 && selectedProductIds.length === filteredProducts.length}
+                                        onChange={handleSelectAll}
+                                    />
+                                </th>
                                 <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('reference')}</th>
                                 <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('name')}</th>
                                 <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('stock')}</th>
@@ -350,7 +424,15 @@ const ProductList = ({ products, onDeleteProduct, companySettings }: ProductList
                         <tbody className="divide-y divide-neutral-200 bg-white">
                             {filteredProducts.length > 0 ? (
                                 filteredProducts.map((product: Product) => (
-                                    <tr key={product.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
+                                    <tr key={product.id} className={`hover:bg-emerald-50/60 transition-colors duration-200 ${selectedProductIds.includes(product.id) ? 'bg-emerald-50' : ''}`}>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
+                                                checked={selectedProductIds.includes(product.id)}
+                                                onChange={() => handleSelectProduct(product.id)}
+                                            />
+                                        </td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 font-mono ${isRTL ? 'text-right' : 'text-left'}`}>{product.productCode}</td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-neutral-900 ${isRTL ? 'text-right' : 'text-left'}`}>{product.name}</td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -418,6 +500,7 @@ interface ProductsProps {
     onAddProduct: (product: Omit<Product, 'id'>) => void;
     onUpdateProduct: (product: Product) => void;
     onDeleteProduct: (productId: string) => void;
+    onDeleteProducts: (productIds: string[]) => void;
     companySettings?: CompanySettings | null;
 }
 

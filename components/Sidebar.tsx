@@ -21,7 +21,9 @@ import { supabase } from '../supabaseClient';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Language } from '../i18n/translations';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {}
+
+const Sidebar: React.FC<SidebarProps> = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { t, language, setLanguage, isRTL } = useLanguage();
@@ -44,34 +46,39 @@ const Sidebar: React.FC = () => {
     
     // Define navigation structure inside component to access `t`
     const navigation = [
-        { name: t('dashboard'), href: '/dashboard', icon: LayoutDashboard },
-        { name: t('statistics'), href: '/statistics', icon: BarChart3 },
-        { name: t('paymentTracking'), href: '/sales/payments', icon: CreditCard },
+        { id: 'dashboard', name: t('dashboard'), href: '/dashboard', icon: LayoutDashboard },
+        { id: 'statistics', name: t('statistics'), href: '/statistics', icon: BarChart3 },
+        { id: 'payments', name: t('paymentTracking'), href: '/sales/payments', icon: CreditCard },
         {
+            id: 'sales',
             name: t('sales'),
             icon: ShoppingCart,
             children: [
-                { name: t('quotes'), href: '/sales/quotes' },
-                { name: t('invoices'), href: '/sales/invoices' },
-                { name: t('creditNotes'), href: '/sales/credit-notes' },
-                { name: t('deliveryNotes'), href: '/sales/delivery' },
+                { id: 'quotes', name: t('quotes'), href: '/sales/quotes' },
+                { id: 'invoices', name: t('invoices'), href: '/sales/invoices' },
+                { id: 'credit_notes', name: t('creditNotes'), href: '/sales/credit-notes' },
+                { id: 'delivery_notes', name: t('deliveryNotes'), href: '/sales/delivery' },
             ],
         },
         {
+            id: 'purchases',
             name: t('purchases'),
             icon: ShoppingBag,
             children: [
-                { name: t('purchaseOrders'), href: '/purchases/orders' },
+                { id: 'purchase_orders', name: t('purchaseOrders'), href: '/purchases/orders' },
             ],
         },
-        { name: t('stock'), href: '/stock', icon: Archive },
+        { id: 'stock', name: t('stock'), href: '/stock', icon: Archive },
         { type: 'divider' },
-        { name: t('clients'), href: '/clients', icon: Users },
-        { name: t('suppliers'), href: '/suppliers', icon: Building },
-        { name: t('products'), href: '/products', icon: Package },
+        { id: 'clients', name: t('clients'), href: '/clients', icon: Users },
+        { id: 'suppliers', name: t('suppliers'), href: '/suppliers', icon: Building },
+        { id: 'products', name: t('products'), href: '/products', icon: Package },
         { type: 'divider' },
-        { name: t('settings'), href: '/settings', icon: Settings },
+        { id: 'settings', name: t('settings'), href: '/settings', icon: Settings },
     ];
+
+    // Filter navigation (all visible now since permissions are removed)
+    const filteredNavigation = navigation;
 
     const toggleMenu = (name: string) => {
         setOpenMenu(openMenu === name ? null : name);
@@ -80,18 +87,18 @@ const Sidebar: React.FC = () => {
     const handleLogout = async () => {
         try {
             await supabase.auth.signOut();
-            // Clear all supabase related items from localStorage
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && (key.includes('supabase') || key.includes('sb-'))) {
-                    localStorage.removeItem(key);
-                }
-            }
-            window.location.href = '/';
         } catch (error) {
             console.error("Error during logout:", error);
-            // Fallback redirect
-            window.location.href = '/';
+        } finally {
+            localStorage.clear();
+            sessionStorage.clear();
+            // Clear all cookies
+            document.cookie.split(";").forEach((c) => {
+                document.cookie = c
+                    .replace(/^ +/, "")
+                    .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            // We don't force reload here, App.tsx onAuthStateChange will handle it
         }
     };
 
@@ -155,7 +162,7 @@ const Sidebar: React.FC = () => {
                 <ul role="list" className="flex flex-1 flex-col gap-y-7">
                     <li>
                         <ul role="list" className="-mx-2 space-y-1">
-                            {navigation.map((item: any) => {
+                            {filteredNavigation.map((item: any) => {
                                 if (item.type === 'divider') {
                                     return <li key={Math.random()}><div className="h-px my-4 bg-emerald-700/50" /></li>;
                                 }
