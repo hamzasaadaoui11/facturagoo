@@ -5,7 +5,7 @@ import { translations, Language } from '../i18n/translations';
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: keyof typeof translations['en']) => string;
+  t: (key: keyof typeof translations['en'], params?: Record<string, any>) => string;
   isRTL: boolean;
 }
 
@@ -36,9 +36,17 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     document.documentElement.lang = language;
   }, [language]);
 
-  const t = (key: keyof typeof translations['en']) => {
+  const t = (key: keyof typeof translations['en'], params?: Record<string, any>) => {
     const translationSet = translations[language] || translations['fr'];
-    return (translationSet as any)[key] || key;
+    let translation = (translationSet as any)[key] || key;
+    
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        translation = translation.replace(`{${k}}`, String(v));
+      });
+    }
+    
+    return translation;
   };
 
   const isRTL = language === 'ar';

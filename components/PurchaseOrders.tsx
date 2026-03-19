@@ -203,10 +203,11 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                 <button
                     type="button"
                     onClick={handleCreateClick}
-                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                    className="inline-flex items-center gap-x-1 sm:gap-x-2 rounded-lg bg-emerald-600 px-2.5 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
                 >
-                    <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
-                    {t('newPurchaseOrder')}
+                    <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="hidden xs:inline">{t('newPurchaseOrder')}</span>
+                    <span className="xs:hidden">{t('add')}</span>
                 </button>
             </Header>
 
@@ -228,22 +229,24 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                 message={t('confirmDeleteMessage')}
             />
 
-            <div className="rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
+            <div className="rounded-lg bg-white shadow-sm ring-1 ring-neutral-200 overflow-hidden">
                 <div className="p-4 border-b border-neutral-200">
                      <div className="relative">
                         <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'right-0 pr-3' : 'left-0 pl-3'}`}>
-                           <Search className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                           <Search className="h-4 w-4 sm:h-5 sm:w-5 text-neutral-400" aria-hidden="true" />
                         </div>
                         <input
                            type="search"
                            value={searchTerm}
                            onChange={(e) => setSearchTerm(e.target.value)}
                            placeholder={t('searchOrderPlaceholder')}
-                           className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
+                           className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs sm:text-sm ${isRTL ? 'pr-9 sm:pr-10' : 'pl-9 sm:pl-10'}`}
                         />
                     </div>
                 </div>
-                <div className="overflow-x-auto rounded-lg">
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>
@@ -260,12 +263,12 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                             {paginatedOrders.length > 0 ? (
                                 paginatedOrders.map((order) => (
                                     <tr key={order.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-emerald-600 ${isRTL ? 'text-right' : 'text-left'}`}>{order.documentId || order.id}</td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{new Date(order.date).toLocaleDateString()}</td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{order.supplierName}</td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{order.expectedDate ? new Date(order.expectedDate).toLocaleDateString() : '-'}</td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{order.totalAmount.toLocaleString(undefined, { style: 'currency', currency: 'MAD' })}</td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base ${isRTL ? 'text-right' : 'text-left'}`}>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600 ${isRTL ? 'text-right' : 'text-left'}`}>{order.documentId || order.id}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{new Date(order.date).toLocaleDateString()}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{order.supplierName}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{order.expectedDate ? new Date(order.expectedDate).toLocaleDateString() : '-'}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{order.totalAmount.toLocaleString(undefined, { style: 'currency', currency: 'MAD' })}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[order.status]}`}>
                                                 {order.status}
                                             </span>
@@ -292,6 +295,51 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-neutral-200">
+                    {paginatedOrders.length > 0 ? (
+                        paginatedOrders.map((order) => (
+                            <div key={order.id} className="p-4 hover:bg-emerald-50/60 transition-colors duration-200">
+                                <div className={`flex justify-between items-start mb-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                    <div>
+                                        <h4 className={`text-sm font-bold text-emerald-600 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                            #{order.documentId || order.id}
+                                        </h4>
+                                        <p className={`text-xs text-neutral-500 mt-0.5 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                            {new Date(order.date).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                    <button 
+                                        onClick={(e) => toggleMenu(e, order.id)}
+                                        className={`p-2 rounded-full transition-colors ${activeMenuId === order.id ? 'bg-neutral-200 text-neutral-800' : 'text-neutral-500 hover:bg-neutral-100'}`}
+                                    >
+                                        <MoreVertical size={20} />
+                                    </button>
+                                </div>
+                                
+                                <div className={`mb-3 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                    <p className="text-sm font-medium text-neutral-900">{order.supplierName}</p>
+                                    <p className="text-xs text-neutral-500 mt-0.5">{t('expectedDelivery')}: {order.expectedDate ? new Date(order.expectedDate).toLocaleDateString() : '-'}</p>
+                                </div>
+                                
+                                <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[order.status]}`}>
+                                        {order.status}
+                                    </span>
+                                    <p className="text-sm font-bold text-neutral-900">
+                                        {order.totalAmount.toLocaleString(undefined, { style: 'currency', currency: 'MAD' })}
+                                    </p>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-12 px-6">
+                            <ShoppingBag className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                            <h3 className="text-lg font-bold text-slate-800">{searchTerm ? t('noFinancialData') : t('noOrdersFound')}</h3>
+                        </div>
+                    )}
                 </div>
 
                 {/* Pagination UI */}

@@ -217,14 +217,18 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
             updatedLineItems[0] = { 
                 ...updatedLineItems[0], 
                 calculationMode,
-                subject: reason,
+                subject: showSubjectField ? reason : undefined,
                 notes,
-                paymentMethod
+                paymentMethod: showPaymentMethodField ? paymentMethod : undefined
             };
         }
 
         const creditNoteData: Omit<CreditNote, 'id'> = {
-            clientId, clientName: clientNameDisplay, date, subject: reason, paymentMethod, notes, lineItems: updatedLineItems,
+            clientId, clientName: clientNameDisplay, date, 
+            subject: showSubjectField ? reason : undefined, 
+            paymentMethod: showPaymentMethodField ? paymentMethod : undefined, 
+            notes, 
+            lineItems: updatedLineItems,
             status: creditNoteToEdit ? creditNoteToEdit.status : CreditNoteStatus.Draft,
             subTotal: totals.subTotal, vatAmount: totals.vatAmount, amount: totals.totalTTC, invoiceId: creditNoteToEdit?.invoiceId,
             discountType: isDiscountEnabled ? discountType : undefined,
@@ -259,7 +263,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
 
                 {error && (<div className="px-6 pt-4"><div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start gap-3"><AlertCircle className="h-5 w-5 text-red-500 shrink-0" /><p className="text-xs text-red-700">{error}</p></div></div>)}
 
-                <div className="px-4 md:px-6 py-5 overflow-y-auto custom-scrollbar flex-1 space-y-6 pb-24 md:pb-8">
+                <div className="px-3 md:px-6 py-5 overflow-y-auto custom-scrollbar flex-1 space-y-6 pb-24 md:pb-8">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('client')} *</label>
@@ -357,7 +361,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+                    <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
@@ -368,8 +372,8 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                             <div className="h-px bg-slate-100 flex-1 mx-6 hidden md:block"></div>
                         </div>
                         
-                        <div className="grid grid-cols-24 gap-4 items-end">
-                            <div className="col-span-12 lg:col-span-2">
+                        <div className="grid grid-cols-1 md:grid-cols-24 gap-4 items-end">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-2">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Hash size={10} /> {t('refLabel')}
                                 </label>
@@ -381,7 +385,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all"
                                 />
                             </div>
-                            <div className="col-span-12 lg:col-span-4">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-4">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Package size={10} /> {t('productAutoLabel')}
                                 </label>
@@ -392,7 +396,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     placeholder={`-- ${t('select')} --`}
                                 />
                             </div>
-                            <div className="col-span-24 lg:col-span-6">
+                            <div className="col-span-1 md:col-span-24 lg:col-span-6">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Tag size={10} /> {t('designationLabel')} *
                                 </label>
@@ -404,7 +408,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-[11px] h-12 font-medium transition-all"
                                 />
                             </div>
-                            <div className="col-span-12 lg:col-span-3">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-3">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Coins size={10} /> {isModeTTC ? t('puTTCLabel') : t('puHTLabel')}
                                 </label>
@@ -415,7 +419,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all font-mono"
                                 />
                             </div>
-                            <div className="col-span-12 lg:col-span-3">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-3">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Calculator size={10} /> {t('quantity')}
                                 </label>
@@ -427,7 +431,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                 />
                             </div>
                             {showLengthColumn && (
-                                <div className="col-span-12 lg:col-span-2">
+                                <div className="col-span-1 md:col-span-12 lg:col-span-2">
                                     <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Long.</label>
                                     <input 
                                         type="text" 
@@ -438,7 +442,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                 </div>
                             )}
                             {showHeightColumn && (
-                                <div className="col-span-12 lg:col-span-2">
+                                <div className="col-span-1 md:col-span-12 lg:col-span-2">
                                     <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Haut.</label>
                                     <input 
                                         type="text" 
@@ -449,7 +453,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                 </div>
                             )}
                             {isKg && (
-                                <div className="col-span-12 lg:col-span-2">
+                                <div className="col-span-1 md:col-span-12 lg:col-span-2">
                                     <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Poids (kg)</label>
                                     <input 
                                         type="text" 
@@ -459,7 +463,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     />
                                 </div>
                             )}
-                            <div className="col-span-12 lg:col-span-3">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">{t('vat')}</label>
                                 <select 
                                     value={tempVat} 
@@ -469,7 +473,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     {vatOptions.map(v => <option key={v} value={v}>{v}%</option>)}
                                 </select>
                             </div>
-                            <div className="col-span-24 lg:col-span-3">
+                            <div className="col-span-1 md:col-span-24 lg:col-span-3">
                                 <button 
                                     onClick={handleAddItem} 
                                     className="w-full inline-flex items-center justify-center h-12 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-200 transition-all active:scale-[0.98] text-sm font-bold gap-2"

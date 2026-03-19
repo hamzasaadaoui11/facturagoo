@@ -21,9 +21,11 @@ import { supabase } from '../supabaseClient';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Language } from '../i18n/translations';
 
-interface SidebarProps {}
+interface SidebarProps {
+    onClose?: () => void;
+}
 
-const Sidebar: React.FC<SidebarProps> = () => {
+const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const { t, language, setLanguage, isRTL } = useLanguage();
@@ -191,6 +193,7 @@ const Sidebar: React.FC<SidebarProps> = () => {
                                                         <li key={child.name}>
                                                             <Link
                                                                 to={child.href}
+                                                                onClick={onClose}
                                                                 className={`group flex gap-x-3 rounded-lg p-2 text-sm font-medium transition-colors duration-200 ${
                                                                         isActive
                                                                             ? 'text-white'
@@ -215,6 +218,7 @@ const Sidebar: React.FC<SidebarProps> = () => {
                                     <li key={item.name}>
                                         <Link
                                             to={item.href!}
+                                            onClick={onClose}
                                             className={`group relative flex gap-x-3 rounded-lg p-2 text-sm font-medium transition-colors duration-200 ${
                                                     isActive
                                                         ? 'bg-emerald-700 text-white shadow-md shadow-emerald-900/10'
@@ -235,6 +239,7 @@ const Sidebar: React.FC<SidebarProps> = () => {
                     <li className="mt-auto space-y-2">
                         <Link
                             to="/profile"
+                            onClick={onClose}
                             className={`group -mx-2 flex gap-x-3 rounded-lg p-2 text-sm font-medium hover:bg-emerald-700 hover:text-white transition-colors duration-200 ${location.pathname === '/profile' ? 'bg-emerald-700 text-white' : 'text-emerald-100'}`}
                         >
                             <UserCircle className="h-6 w-6 shrink-0" aria-hidden="true" />

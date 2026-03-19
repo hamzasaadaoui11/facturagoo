@@ -276,7 +276,8 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
 
             {/* Tableau des factures filtrées */}
             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-100">
                         <thead className="bg-slate-50/80">
                             <tr>
@@ -348,6 +349,70 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-slate-100">
+                    {filteredInvoices.length > 0 ? (
+                        filteredInvoices.map(invoice => {
+                            const paid = invoice.amountPaid || 0;
+                            const remaining = invoice.amount - paid;
+                            
+                            return (
+                                <div key={invoice.id} className="p-4 hover:bg-emerald-50/30 transition-colors group">
+                                    <div className={`flex justify-between items-start mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <div>
+                                            <p className={`text-sm font-bold text-emerald-600 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                                {invoice.documentId || invoice.id}
+                                            </p>
+                                            <p className={`text-sm text-slate-900 font-semibold mt-0.5 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                                {invoice.clientName}
+                                            </p>
+                                        </div>
+                                        <button 
+                                            onClick={(e) => toggleMenu(e, invoice)}
+                                            className={`p-2 rounded-full transition-colors ${activeMenuId === invoice.id ? 'bg-slate-200 text-slate-900' : 'text-slate-300 hover:bg-slate-100 group-hover:text-slate-500'}`}
+                                        >
+                                            <MoreVertical size={18} />
+                                        </button>
+                                    </div>
+                                    
+                                    <div className={`grid grid-cols-2 gap-2 mb-3 text-xs ${isRTL ? 'text-right' : 'text-left'}`}>
+                                        <div>
+                                            <p className="text-slate-400 uppercase font-black text-[9px]">{t('total')}</p>
+                                            <p className="font-bold text-slate-700">{invoice.amount.toLocaleString(locale, { style: 'currency', currency: currencyCode })}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-slate-400 uppercase font-black text-[9px]">{t('alreadyPaid')}</p>
+                                            <p className="font-bold text-emerald-600">{paid > 0 ? paid.toLocaleString(locale, { style: 'currency', currency: currencyCode }) : '-'}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                                            invoice.status === InvoiceStatus.Paid ? 'bg-green-100 text-green-700' :
+                                            invoice.status === InvoiceStatus.Partial ? 'bg-blue-100 text-blue-700' :
+                                            invoice.status === InvoiceStatus.Overdue ? 'bg-red-100 text-red-700' :
+                                            'bg-amber-100 text-amber-700'
+                                        }`}>
+                                            {invoice.status}
+                                        </span>
+                                        <div className={isRTL ? 'text-left' : 'text-right'}>
+                                            <p className="text-slate-400 uppercase font-black text-[9px]">{t('remaining')}</p>
+                                            <p className={`text-sm font-black ${remaining > 0.01 ? 'text-red-600' : 'text-slate-400'}`}>
+                                                {remaining > 0.01 ? remaining.toLocaleString(locale, { style: 'currency', currency: currencyCode }) : '0.00'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div className="px-6 py-12 text-center">
+                            <Search className="h-12 w-12 text-slate-100 mx-auto mb-4" strokeWidth={1} />
+                            <p className="text-lg font-bold text-slate-800">{t('noFinancialData')}</p>
+                        </div>
+                    )}
                 </div>
             </div>
 

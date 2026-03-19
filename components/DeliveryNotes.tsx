@@ -242,20 +242,22 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     return (
         <div>
             <Header title={t('deliveryNotes')}>
-                 <div className={`flex gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                 <div className={`flex gap-2 sm:gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <button 
                         onClick={() => setIsInvoiceModalOpen(true)}
-                        className="inline-flex items-center gap-x-2 rounded-lg bg-white px-3.5 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all"
+                        className="inline-flex items-center gap-x-1 sm:gap-x-2 rounded-lg bg-white px-2.5 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-semibold text-neutral-700 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all"
                     >
-                        <FileText className={`${isRTL ? 'ml-0.5' : '-ml-0.5'} h-5 w-5 text-neutral-500`} />
-                        {t('fromInvoice')}
+                        <FileText className={`${isRTL ? 'ml-0.5' : '-ml-0.5'} h-4 w-4 sm:h-5 sm:w-5 text-neutral-500`} />
+                        <span className="hidden xs:inline">{t('fromInvoice')}</span>
+                        <span className="xs:hidden">{t('invoice')}</span>
                     </button>
                     <button 
                         onClick={openNewModal}
-                        className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all"
+                        className="inline-flex items-center gap-x-1 sm:gap-x-2 rounded-lg bg-emerald-600 px-2.5 py-2 sm:px-3.5 sm:py-2.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all"
                     >
-                        <Plus className={`${isRTL ? 'ml-0.5' : '-ml-0.5'} h-5 w-5`} />
-                        {t('newNote')}
+                        <Plus className={`${isRTL ? 'ml-0.5' : '-ml-0.5'} h-4 w-4 sm:h-5 sm:w-5`} />
+                        <span className="hidden xs:inline">{t('newNote')}</span>
+                        <span className="xs:hidden">{t('add')}</span>
                     </button>
                  </div>
             </Header>
@@ -283,7 +285,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
             />
             
             {isInvoiceModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
                         <h3 className="text-lg font-bold mb-4">{t('generateDeliveryNote')}</h3>
                         <p className="text-sm text-gray-500 mb-4">{language === 'es' ? 'Seleccione una factura para generar el albarán correspondiente.' : 'Sélectionnez une facture pour générer le BL correspondant.'}</p>
@@ -294,8 +296,8 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                                     onClick={() => handleCreateFromInvoice(invoice.id)}
                                     className={`w-full text-left p-3 rounded-lg border hover:bg-emerald-50 hover:border-emerald-500 transition-colors flex justify-between items-center ${isRTL ? 'flex-row-reverse text-right' : ''}`}
                                 >
-                                    <span>#{invoice.documentId || invoice.id} - {invoice.clientName}</span>
-                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">{new Date(invoice.date).toLocaleDateString()}</span>
+                                    <span className="truncate mr-2">#{invoice.documentId || invoice.id} - {invoice.clientName}</span>
+                                    <span className="text-[10px] sm:text-xs bg-gray-100 px-2 py-1 rounded whitespace-nowrap">{new Date(invoice.date).toLocaleDateString()}</span>
                                 </button>
                             ))}
                         </div>
@@ -306,8 +308,9 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                 </div>
             )}
 
-            <div className="rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
-                <div className="overflow-x-auto rounded-lg">
+            <div className="rounded-lg bg-white shadow-sm ring-1 ring-neutral-200 overflow-hidden">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>
@@ -330,16 +333,16 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
 
                                     return (
                                     <tr key={note.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-emerald-600 ${isRTL ? 'text-right' : 'text-left'}`}>{note.documentId || note.id.slice(0, 8)}</td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{new Date(note.date).toLocaleDateString()}</td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-neutral-900 ${isRTL ? 'text-right' : 'text-left'}`}>{note.clientName}</td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600 ${isRTL ? 'text-right' : 'text-left'}`}>{note.documentId || note.id.slice(0, 8)}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{new Date(note.date).toLocaleDateString()}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm font-medium text-neutral-900 ${isRTL ? 'text-right' : 'text-left'}`}>{note.clientName}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>
                                             {displayReference}
                                         </td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-neutral-900 ${isRTL ? 'text-left' : 'text-right'}`}>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm font-medium text-neutral-900 ${isRTL ? 'text-left' : 'text-right'}`}>
                                             {note.totalAmount ? note.totalAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}
                                         </td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base ${isRTL ? 'text-right' : 'text-left'}`}>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusInfo.color}`}>
                                                 <StatusIcon size={12} className={`${isRTL ? 'ml-1' : 'mr-1'}`} /> {statusInfo.label}
                                             </span>
@@ -366,6 +369,58 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-neutral-200">
+                    {paginatedNotes.length > 0 ? (
+                        paginatedNotes.map((note) => {
+                            const statusInfo = getStatusDisplay(note);
+                            const StatusIcon = statusInfo.icon;
+                            const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+                            const displayReference = note.invoiceId && !isUUID(note.invoiceId) ? `#${note.invoiceId}` : (note.invoiceId ? t('statusBilled') : t('statusManual'));
+
+                            return (
+                                <div key={note.id} className="p-4 hover:bg-emerald-50/60 transition-colors duration-200">
+                                    <div className={`flex justify-between items-start mb-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <div>
+                                            <h4 className={`text-sm font-bold text-emerald-600 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                                #{note.documentId || note.id.slice(0, 8)}
+                                            </h4>
+                                            <p className={`text-xs text-neutral-500 mt-0.5 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                                {new Date(note.date).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                        <button 
+                                            onClick={(e) => toggleMenu(e, note.id)}
+                                            className={`p-2 rounded-full transition-colors ${activeMenuId === note.id ? 'bg-neutral-200 text-neutral-800' : 'text-neutral-500 hover:bg-neutral-100'}`}
+                                        >
+                                            <MoreVertical size={20} />
+                                        </button>
+                                    </div>
+                                    
+                                    <div className={`mb-3 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                        <p className="text-sm font-medium text-neutral-900">{note.clientName}</p>
+                                        <p className="text-xs text-neutral-500 mt-0.5">{t('reference')}: {displayReference}</p>
+                                    </div>
+                                    
+                                    <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusInfo.color}`}>
+                                            <StatusIcon size={12} className={`${isRTL ? 'ml-1' : 'mr-1'}`} /> {statusInfo.label}
+                                        </span>
+                                        <p className="text-sm font-bold text-neutral-900">
+                                            {note.totalAmount ? note.totalAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div className="text-center py-12 px-6">
+                            <Truck className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                            <h3 className="text-lg font-bold text-slate-800">{t('noDeliveryNotesFound')}</h3>
+                        </div>
+                    )}
                 </div>
 
                 {/* Pagination UI */}

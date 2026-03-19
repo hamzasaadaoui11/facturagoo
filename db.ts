@@ -132,6 +132,9 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
     
     // Strip fields that might be missing in Supabase schema to avoid errors
     // These are stored in lineItems[0] by the UI components
+    if (['quotes', 'invoices'].includes(tableName)) {
+        delete itemToSave.totalAmount;
+    }
     const itemWithUser = { ...itemToSave, user_id: userId, company_id: companyId };
 
     const insertPromise = supabase
@@ -179,6 +182,10 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
     // Destructure to remove fields that might not be in the Supabase schema
     // and to remove 'id' from the update payload itself
     const { id, paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, userId: _, created_at, ...itemToSave } = item as any;
+    
+    if (['quotes', 'invoices'].includes(tableName)) {
+        delete itemToSave.totalAmount;
+    }
 
     const updatePromise = supabase
         .from(tableName)

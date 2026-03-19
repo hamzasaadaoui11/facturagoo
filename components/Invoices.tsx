@@ -223,7 +223,8 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                     className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
                 >
                     <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
-                    {t('newInvoice')}
+                    <span className="hidden sm:inline">{t('newInvoice')}</span>
+                    <span className="sm:hidden">{t('add')}</span>
                 </button>
             </Header>
             
@@ -285,7 +286,8 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
             )}
 
             <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
-                <div className="overflow-x-auto">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>
@@ -293,7 +295,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('date')}</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('client')}</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('amount')}</th>
-                                <th scope="col" className="hidden md:table-cell px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('remaining')}</th>
+                                <th scope="col" className="hidden lg:table-cell px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('remaining')}</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('status')}</th>
                                 <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">{t('actions')}</span></th>
                             </tr>
@@ -308,7 +310,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500 rtl:text-right">{new Date(invoice.date).toLocaleDateString('fr-FR')}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-600 max-w-[120px] truncate rtl:text-right">{invoice.clientName}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-medium rtl:text-right">{invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
-                                        <td className="hidden md:table-cell whitespace-nowrap px-6 py-4 text-sm font-medium text-red-600 rtl:text-right">{remaining > 0 ? remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}</td>
+                                        <td className="hidden lg:table-cell whitespace-nowrap px-6 py-4 text-sm font-medium text-red-600 rtl:text-right">{remaining > 0 ? remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm rtl:text-right">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[invoice.status]}`}>
                                                 {invoice.status}
@@ -336,6 +338,56 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-neutral-200">
+                    {paginatedInvoices.length > 0 ? (
+                        paginatedInvoices.map((invoice) => {
+                            const remaining = invoice.amount - (invoice.amountPaid || 0);
+                            return (
+                                <div key={invoice.id} className="p-4 hover:bg-emerald-50/60 transition-colors duration-200">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <p className="text-sm font-bold text-emerald-600">{invoice.documentId || invoice.id}</p>
+                                            <p className="text-xs text-neutral-500">{new Date(invoice.date).toLocaleDateString('fr-FR')}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-medium ${statusColors[invoice.status]}`}>
+                                                {invoice.status}
+                                            </span>
+                                            <button 
+                                                onClick={(e) => toggleMenu(e, invoice.id)}
+                                                className={`p-1.5 rounded-full transition-colors ${activeMenuId === invoice.id ? 'bg-neutral-200 text-neutral-800' : 'text-neutral-500 hover:bg-neutral-100'}`}
+                                            >
+                                                <MoreVertical size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-end">
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-sm font-medium text-neutral-900 truncate">{invoice.clientName}</p>
+                                            {remaining > 0 && (
+                                                <p className="text-xs text-red-600 font-medium">
+                                                    {t('remaining')}: {remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm font-bold text-neutral-900">
+                                                {invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div className="text-center py-12 px-4">
+                            <FileText className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                            <h3 className="text-base font-bold text-slate-800">Aucune facture trouvée</h3>
+                        </div>
+                    )}
                 </div>
 
                 {/* Pagination UI */}

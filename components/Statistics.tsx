@@ -310,7 +310,34 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                         </div>
 
                         <div className="border border-slate-100 rounded-xl md:rounded-2xl overflow-hidden">
-                            <div className="overflow-x-auto">
+                            {/* Mobile Card View for Client Profitability */}
+                            <div className="md:hidden divide-y divide-slate-100">
+                                {clientProfitability.products.map((p, idx) => (
+                                    <div key={idx} className="p-4 space-y-2 hover:bg-slate-50 transition-colors">
+                                        <div className="flex justify-between items-start">
+                                            <div className="text-sm font-bold text-slate-900 truncate max-w-[200px]">{p.name}</div>
+                                            <div className="text-xs font-medium text-slate-500">Qté: {p.qty}</div>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 text-[11px]">
+                                            <div>
+                                                <p className="text-slate-400 uppercase font-bold text-[9px]">Encaissé</p>
+                                                <p className="text-emerald-600 font-bold">{formatMoney(p.revenue)}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-slate-400 uppercase font-bold text-[9px]">Coût</p>
+                                                <p className="text-red-500 font-bold">{formatMoney(p.cost)}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-slate-400 uppercase font-bold text-[9px]">Marge</p>
+                                                <p className={`font-black ${p.revenue - p.cost >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatMoney(p.revenue - p.cost)}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Desktop Table View for Client Profitability */}
+                            <div className="hidden md:block overflow-x-auto">
                                 <table className="min-w-full divide-y divide-slate-100">
                                     <thead className="bg-slate-50">
                                         <tr>
@@ -389,7 +416,39 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                 <div className="px-5 md:px-8 py-4 md:py-6 border-b border-slate-100 bg-slate-50/50">
                     <h3 className="text-base md:text-lg font-bold text-slate-900">Détail Rentabilité Réelle par Produit</h3>
                 </div>
-                <div className="overflow-x-auto">
+                
+                {/* Mobile Card View for Global Product Performance */}
+                <div className="md:hidden divide-y divide-slate-100">
+                    {productPerformance.length > 0 ? (
+                        productPerformance.map((p) => (
+                            <div key={p.id} className="p-4 space-y-2 hover:bg-slate-50 transition-colors">
+                                <div className="flex justify-between items-start">
+                                    <div className="text-sm font-bold text-slate-900 truncate max-w-[200px]">{p.name}</div>
+                                    <div className="text-xs font-medium text-slate-500">Qté: {p.qty}</div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-[11px]">
+                                    <div>
+                                        <p className="text-slate-400 uppercase font-bold text-[9px]">Encaissé</p>
+                                        <p className="text-emerald-600 font-bold">{formatMoney(p.revenue)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-400 uppercase font-bold text-[9px]">Coût</p>
+                                        <p className="text-slate-500 font-bold">{formatMoney(p.cost)}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-slate-400 uppercase font-bold text-[9px]">Marge</p>
+                                        <p className={`font-black ${p.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatMoney(p.profit)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="px-6 py-12 text-center text-slate-400 text-sm">{t('noDataSelectedPeriod')}</div>
+                    )}
+                </div>
+
+                {/* Desktop Table View for Global Product Performance */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full">
                         <thead className="bg-slate-50">
                             <tr>

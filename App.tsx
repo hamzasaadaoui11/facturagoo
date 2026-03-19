@@ -196,9 +196,13 @@ const MainContent: React.FC = () => {
         await dbService.clients.update(updatedClient);
         setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
     };
-    const deleteClient = async (clientId: string) => {
-        await dbService.clients.delete(clientId);
-        setClients(prev => prev.filter(c => c.id !== clientId));
+    const deleteClient = async (clientIds: string | string[]) => {
+        try {
+            await dbService.clients.delete(clientIds);
+            setClients(prev => prev.filter(c => Array.isArray(clientIds) ? !clientIds.includes(c.id) : c.id !== clientIds));
+        } catch (error) {
+            console.error('Error deleting client(s):', error);
+        }
     };
 
     const updateProductStock = async (productId: string, quantityChange: number) => {
@@ -252,15 +256,25 @@ const MainContent: React.FC = () => {
         await dbService.suppliers.update(updatedSupplier);
         setSuppliers(prev => prev.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
     };
-    const deleteSupplier = async (supplierId: string) => {
-        await dbService.suppliers.delete(supplierId);
-        setSuppliers(prev => prev.filter(s => s.id !== supplierId));
+    const deleteSupplier = async (supplierIds: string | string[]) => {
+        try {
+            await dbService.suppliers.delete(supplierIds);
+            setSuppliers(prev => prev.filter(s => Array.isArray(supplierIds) ? !supplierIds.includes(s.id) : s.id !== supplierIds));
+        } catch (error) {
+            console.error('Error deleting supplier(s):', error);
+        }
     };
 
-    const addQuote = async (quoteData: Omit<Quote, 'id' | 'amount'>) => {
+    const addQuote = async (quoteData: any) => {
         try {
             const documentId = generateDocumentId('quote', quotes);
-            const newQuote: Quote = { id: generateUUID(), documentId: documentId, amount: quoteData.subTotal + quoteData.vatAmount, ...quoteData };
+            const { totalAmount, ...cleanQuoteData } = quoteData;
+            const newQuote: Quote = { 
+                id: generateUUID(), 
+                documentId: documentId, 
+                amount: quoteData.amount || (quoteData.subTotal + quoteData.vatAmount), 
+                ...cleanQuoteData 
+            };
             await dbService.quotes.add(newQuote);
             setQuotes(prev => [newQuote, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
         } catch (e: any) {
@@ -737,7 +751,7 @@ const MainContent: React.FC = () => {
                                 <X className="h-6 w-6" />
                             </button>
                         </div>
-                        <Sidebar />
+                        <Sidebar onClose={() => setSidebarOpen(false)} />
                     </div>
                 </div>
             )}
@@ -766,8 +780,8 @@ const MainContent: React.FC = () => {
                             <Route path="/sales/delivery" element={<DeliveryNotesComponent deliveryNotes={deliveryNotes} invoices={invoices} onCreateDeliveryNote={createDeliveryNote} onUpdateDeliveryNote={updateDeliveryNote} onDeleteDeliveryNote={deleteDeliveryNote} onCreateInvoice={createInvoiceFromDeliveryNote} clients={clients} products={products} companySettings={companySettings} />} />
                             <Route path="/purchases/orders" element={<PurchaseOrders orders={purchaseOrders} suppliers={suppliers} products={products} onAddOrder={addPurchaseOrder} onUpdateOrder={updatePurchaseOrder} onUpdateStatus={updatePurchaseOrderStatus} onDeleteOrder={deletePurchaseOrder} onConvertToInvoice={(order) => navigate('/sales/invoices', { state: { prefilledPO: order.documentId || order.id } })} companySettings={companySettings} />} />
                             <Route path="/stock" element={<StockManagement products={products} movements={stockMovements} onAddMovement={addStockMovement} />} />
-                            <Route path="/clients" element={<ClientsComponent clients={clients} onAddClient={addClient} onUpdateClient={updateClient} onDeleteClient={deleteClient} />} />
-                            <Route path="/suppliers" element={<SuppliersComponent suppliers={suppliers} onAddSupplier={addSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} />} />
+                            <Route path="/clients" element={<ClientsComponent clients={clients} onAddClient={addClient} onUpdateClient={updateClient} onDeleteClient={deleteClient} onDeleteClients={deleteClient} />} />
+                            <Route path="/suppliers" element={<SuppliersComponent suppliers={suppliers} onAddSupplier={addSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} onDeleteSuppliers={deleteSupplier} />} />
                             <Route path="/products" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onDeleteProducts={deleteProducts} />} />
                             <Route path="/products/new" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onDeleteProducts={deleteProducts} />} />
                             <Route path="/products/edit/:productId" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onDeleteProducts={deleteProducts} />} />

@@ -142,35 +142,35 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
     };
     
     return (
-        <div>
+        <div className="pb-20 md:pb-0">
             <Header title={isEditMode ? t('editProduct') : t('newProduct')} />
             
-            <form onSubmit={handleSubmit} className="space-y-8">
-                 <div className="bg-white p-6 shadow-sm ring-1 ring-neutral-200 rounded-lg">
+            <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
+                 <div className="bg-white p-4 md:p-6 shadow-sm ring-1 ring-neutral-200 rounded-xl md:rounded-lg">
                     <h3 className="text-lg font-semibold text-neutral-900 border-b border-neutral-200 pb-4 mb-6">{t('generalInfo')}</h3>
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-5 md:gap-6 sm:grid-cols-2">
                         <div>
                             <label htmlFor="productName" className="block text-sm font-medium text-neutral-700">{t('name')} *</label>
-                            <input type="text" id="productName" value={name} onChange={e => setName(e.target.value)} placeholder={t('productPlaceholder')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" required/>
+                            <input type="text" id="productName" value={name} onChange={e => setName(e.target.value)} placeholder={t('productPlaceholder')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" required/>
                         </div>
                         <div>
                             <label htmlFor="productCode" className="block text-sm font-medium text-neutral-700">{t('reference')}</label>
-                            <input type="text" id="productCode" value={productCode} onChange={e => setProductCode(e.target.value)} placeholder={t('refPlaceholder')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"/>
+                            <input type="text" id="productCode" value={productCode} onChange={e => setProductCode(e.target.value)} placeholder={t('refPlaceholder')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm"/>
                         </div>
                         <div className="sm:col-span-2">
                             <label htmlFor="description" className="block text-sm font-medium text-neutral-700">{t('description')}</label>
-                            <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder={t('description')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder={t('description')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" />
                         </div>
                         <div>
                             <label htmlFor="productType" className="block text-sm font-medium text-neutral-700">{t('type')}</label>
-                            <select id="productType" value={productType} onChange={e => setProductType(e.target.value as any)} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
+                            <select id="productType" value={productType} onChange={e => setProductType(e.target.value as any)} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm">
                                 <option value="Produit">{t('pProduct')}</option>
                                 <option value="Service">{t('pService')}</option>
                             </select>
                         </div>
                          <div>
                             <label htmlFor="unitOfMeasure" className="block text-sm font-medium text-neutral-700">{t('unitOfMeasure')}</label>
-                            <select id="unitOfMeasure" value={unitOfMeasure} onChange={e => setUnitOfMeasure(e.target.value)} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
+                            <select id="unitOfMeasure" value={unitOfMeasure} onChange={e => setUnitOfMeasure(e.target.value)} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm">
                                 <option value="Aucune">{t('uNone')}</option>
                                 <option value="Unité">{t('uUnit')}</option>
                                 <option value="kg">{t('uKg')}</option>
@@ -188,7 +188,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                                     id="stockQuantity" 
                                     value={stockQuantityStr} 
                                     onChange={e => setStockQuantityStr(e.target.value)} 
-                                    className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
+                                    className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" 
                                 />
                                 <p className="mt-1 text-xs text-neutral-500">{t('stockUpdateNote')}</p>
                             </div>
@@ -196,41 +196,41 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                     </div>
                  </div>
 
-                 <div className="bg-white p-6 shadow-sm ring-1 ring-neutral-200 rounded-lg">
+                 <div className="bg-white p-4 md:p-6 shadow-sm ring-1 ring-neutral-200 rounded-xl md:rounded-lg">
                     <h3 className="text-lg font-semibold text-neutral-900 border-b border-neutral-200 pb-4 mb-6">{t('pricing')}</h3>
                     <div className="space-y-6">
                         {/* Sale Price */}
                         <div>
-                            <div className="flex justify-between items-center mb-2">
+                            <div className="flex justify-between items-center mb-4">
                                 <h4 className="text-md font-medium text-neutral-800">{t('salePrice')}</h4>
                                 <Toggle enabled={salePriceIsTTC} setEnabled={setSalePriceIsTTC} htLabel="HT" ttcLabel="TTC" />
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                                 <div>
                                     <label htmlFor="salePriceHT" className="block text-sm font-medium text-neutral-700">{t('salePrice')} HT</label>
-                                    <input type="text" id="salePriceHT" value={salePriceHTStr} onChange={e => handlePriceInputChange(e.target.value, 'sale', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                    <input type="text" id="salePriceHT" value={salePriceHTStr} onChange={e => handlePriceInputChange(e.target.value, 'sale', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" />
                                 </div>
                                 <div>
                                     <label htmlFor="salePriceTTC" className="block text-sm font-medium text-neutral-700">{t('salePrice')} TTC</label>
-                                    <input type="text" id="salePriceTTC" value={salePriceTTCStr} onChange={e => handlePriceInputChange(e.target.value, 'sale', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-neutral-50" />
+                                    <input type="text" id="salePriceTTC" value={salePriceTTCStr} onChange={e => handlePriceInputChange(e.target.value, 'sale', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm bg-neutral-50" />
                                 </div>
                             </div>
                         </div>
 
                         {/* Purchase Price */}
                         <div>
-                            <div className="flex justify-between items-center mb-2">
+                            <div className="flex justify-between items-center mb-4">
                                 <h4 className="text-md font-medium text-neutral-800">{t('purchasePrice')}</h4>
                                 <Toggle enabled={purchasePriceIsTTC} setEnabled={setPurchasePriceIsTTC} htLabel="HT" ttcLabel="TTC" />
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                                 <div>
                                     <label htmlFor="purchasePriceHT" className="block text-sm font-medium text-neutral-700">{t('purchasePrice')} HT</label>
-                                    <input type="text" id="purchasePriceHT" value={purchasePriceHTStr} onChange={e => handlePriceInputChange(e.target.value, 'purchase', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                    <input type="text" id="purchasePriceHT" value={purchasePriceHTStr} onChange={e => handlePriceInputChange(e.target.value, 'purchase', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" />
                                 </div>
                                 <div>
                                     <label htmlFor="purchasePriceTTC" className="block text-sm font-medium text-neutral-700">{t('purchasePrice')} TTC</label>
-                                    <input type="text" id="purchasePriceTTC" value={purchasePriceTTCStr} onChange={e => handlePriceInputChange(e.target.value, 'purchase', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-neutral-50" />
+                                    <input type="text" id="purchasePriceTTC" value={purchasePriceTTCStr} onChange={e => handlePriceInputChange(e.target.value, 'purchase', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm bg-neutral-50" />
                                 </div>
                             </div>
                         </div>
@@ -238,7 +238,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                         {/* VAT */}
                         <div>
                             <label htmlFor="vat" className="block text-sm font-medium text-neutral-700">{t('vat')} (%)</label>
-                            <select id="vat" value={vat} onChange={e => setVat(parseInt(e.target.value))} className="mt-1 block w-full max-w-xs rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
+                            <select id="vat" value={vat} onChange={e => setVat(parseInt(e.target.value))} className="mt-1 block w-full max-w-xs rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm">
                                 <option value="21">21%</option>
                                 <option value="20">20%</option>
                                 <option value="14">14%</option>
@@ -251,12 +251,12 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                     </div>
                 </div>
 
-                <div className="flex justify-between items-center pt-4">
-                    <button type="button" onClick={() => navigate('/products')} className="inline-flex items-center gap-x-2 rounded-lg bg-white px-3.5 py-2.5 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]">
+                <div className="flex flex-col-reverse sm:flex-row justify-between items-center gap-4 pt-4">
+                    <button type="button" onClick={() => navigate('/products')} className="w-full sm:w-auto inline-flex justify-center items-center gap-x-2 rounded-lg bg-white px-4 py-3 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]">
                         <ArrowLeft size={20} className="rtl:rotate-180" />
                         {t('backToList')}
                     </button>
-                    <button type="submit" className="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]">
+                    <button type="submit" className="w-full sm:w-auto inline-flex justify-center items-center rounded-lg bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]">
                         {t('saveProduct')}
                     </button>
                 </div>
@@ -334,34 +334,25 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
     };
 
     return (
-        <div>
+        <div className="pb-20 md:pb-0">
             <Header title={t('products')}>
                 <div className="flex gap-2">
-                    {selectedProductIds.length > 0 && (
-                        <button
-                            type="button"
-                            onClick={handleBulkDelete}
-                            className="inline-flex items-center gap-x-2 rounded-lg bg-red-50 px-3.5 py-2.5 text-sm font-semibold text-red-600 shadow-sm ring-1 ring-inset ring-red-200 hover:bg-red-100 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
-                        >
-                            <Trash2 className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
-                            {language === 'es' ? `Eliminar (${selectedProductIds.length})` : `Supprimer (${selectedProductIds.length})`}
-                        </button>
-                    )}
                     <button
                         type="button"
                         onClick={() => setIsImportOpen(true)}
-                        className="inline-flex items-center gap-x-2 rounded-lg bg-white px-3.5 py-2.5 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                        className="inline-flex items-center gap-x-2 rounded-lg bg-white px-3 py-2 md:px-3.5 md:py-2.5 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all duration-200 ease-in-out"
                     >
-                        <Upload className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
-                        {t('import')}
+                        <Upload className="h-5 w-5" />
+                        <span className="hidden sm:inline">{t('import')}</span>
                     </button>
                     <button
                         type="button"
                         onClick={() => navigate('/products/new')}
-                        className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                        className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3 py-2 md:px-3.5 md:py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out"
                     >
-                        <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
-                        {t('newProduct')}
+                        <Plus className="h-5 w-5" />
+                        <span className="hidden sm:inline">{t('newProduct')}</span>
+                        <span className="sm:hidden">{t('add')}</span>
                     </button>
                 </div>
             </Header>
@@ -386,9 +377,10 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                 }}
             />
 
-            <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
-                <div className="p-4 border-b border-neutral-200">
-                    <div className="relative">
+            <div className="space-y-4">
+                {/* Search and Bulk Actions */}
+                <div className="bg-white p-4 rounded-xl shadow-sm ring-1 ring-neutral-200 flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div className="relative w-full md:max-w-xs">
                         <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'right-0 pr-3' : 'left-0 pl-3'}`}>
                            <Search className="h-5 w-5 text-neutral-400" aria-hidden="true" />
                         </div>
@@ -397,95 +389,192 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder={t('search')}
-                            className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
+                            className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
                         />
                     </div>
+
+                    <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+                        <div className="md:hidden flex items-center gap-2 bg-neutral-50 px-3 py-2 rounded-lg border border-neutral-200">
+                            <input
+                                type="checkbox"
+                                checked={selectedProductIds.length === filteredProducts.length && filteredProducts.length > 0}
+                                onChange={handleSelectAll}
+                                className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-600"
+                            />
+                            <span className="text-xs font-medium text-neutral-500">{t('selectAll')}</span>
+                        </div>
+                        <div className="hidden md:flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="select-all"
+                                className="h-5 w-5 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                checked={filteredProducts.length > 0 && selectedProductIds.length === filteredProducts.length}
+                                onChange={handleSelectAll}
+                            />
+                            <label htmlFor="select-all" className="text-sm font-medium text-neutral-600 cursor-pointer select-none">
+                                {t('selectAll')}
+                            </label>
+                        </div>
+
+                        {selectedProductIds.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={handleBulkDelete}
+                                className="inline-flex items-center gap-x-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 transition-all duration-200 animate-in fade-in slide-in-from-right-2"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                {language === 'es' ? `Eliminar (${selectedProductIds.length})` : `Supprimer (${selectedProductIds.length})`}
+                            </button>
+                        )}
+                    </div>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-neutral-200">
-                        <thead className="bg-neutral-50">
-                            <tr>
-                                <th scope="col" className="px-6 py-3 text-left">
-                                    <input
-                                        type="checkbox"
-                                        className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
-                                        checked={filteredProducts.length > 0 && selectedProductIds.length === filteredProducts.length}
-                                        onChange={handleSelectAll}
-                                    />
-                                </th>
-                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('reference')}</th>
-                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('name')}</th>
-                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('stock')}</th>
-                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{t('totalHT')}</th>
-                                <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('vat')}</th>
-                                <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">{t('actions')}</span></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-200 bg-white">
-                            {filteredProducts.length > 0 ? (
-                                filteredProducts.map((product: Product) => (
-                                    <tr key={product.id} className={`hover:bg-emerald-50/60 transition-colors duration-200 ${selectedProductIds.includes(product.id) ? 'bg-emerald-50' : ''}`}>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <input
-                                                type="checkbox"
-                                                className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500"
-                                                checked={selectedProductIds.includes(product.id)}
-                                                onChange={() => handleSelectProduct(product.id)}
-                                            />
-                                        </td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 font-mono ${isRTL ? 'text-right' : 'text-left'}`}>{product.productCode}</td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-neutral-900 ${isRTL ? 'text-right' : 'text-left'}`}>{product.name}</td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base ${isRTL ? 'text-right' : 'text-left'}`}>
-                                            {product.productType === 'Service' ? (
-                                                <span className="text-neutral-400 italic">{t('pService')}</span>
-                                            ) : (
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(product.stockQuantity || 0) <= (product.minStockAlert || 5) ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                                                    {(product.stockQuantity || 0) <= (product.minStockAlert || 5) && <AlertTriangle className="w-3 h-3 mr-1"/>}
-                                                    {formatDecimalForInput(product.stockQuantity || 0, language)} {product.unitOfMeasure !== 'Aucune' ? product.unitOfMeasure : ''}
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{formatCurrency(product.salePrice, companySettings)}</td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{product.vat}%</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                            <div className={`flex items-center justify-end space-x-2 ${isRTL ? 'space-x-reverse' : ''}`}>
-                                                <button 
-                                                    onClick={() => navigate(`/products/edit/${product.id}`)} 
-                                                    className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors"
-                                                    title={t('edit')}
-                                                >
-                                                    <Pencil size={18} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleDeleteClick(product.id)} 
-                                                    className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors"
-                                                    title={t('delete')}
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-neutral-200">
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-neutral-200">
+                            <thead className="bg-neutral-50">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3 text-left w-10">
+                                        {/* Checkbox handled in search bar for better UX */}
+                                    </th>
+                                    <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('reference')}</th>
+                                    <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('name')}</th>
+                                    <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('stock')}</th>
+                                    <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{t('totalHT')}</th>
+                                    <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('vat')}</th>
+                                    <th scope="col" className="relative px-6 py-3 text-right"><span className="sr-only">{t('actions')}</span></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-neutral-200 bg-white">
+                                {filteredProducts.length > 0 ? (
+                                    filteredProducts.map((product: Product) => (
+                                        <tr key={product.id} className={`hover:bg-emerald-50/60 transition-colors duration-200 ${selectedProductIds.includes(product.id) ? 'bg-emerald-50' : ''}`}>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <input
+                                                    type="checkbox"
+                                                    className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                                    checked={selectedProductIds.includes(product.id)}
+                                                    onChange={() => handleSelectProduct(product.id)}
+                                                />
+                                            </td>
+                                            <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 font-mono ${isRTL ? 'text-right' : 'text-left'}`}>{product.productCode}</td>
+                                            <td className={`whitespace-nowrap px-6 py-4 text-sm font-medium text-neutral-900 ${isRTL ? 'text-right' : 'text-left'}`}>{product.name}</td>
+                                            <td className={`whitespace-nowrap px-6 py-4 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
+                                                {product.productType === 'Service' ? (
+                                                    <span className="text-neutral-400 italic">{t('pService')}</span>
+                                                ) : (
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(product.stockQuantity || 0) <= (product.minStockAlert || 5) ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                                                        {(product.stockQuantity || 0) <= (product.minStockAlert || 5) && <AlertTriangle className="w-3 h-3 mr-1"/>}
+                                                        {formatDecimalForInput(product.stockQuantity || 0, language)} {product.unitOfMeasure !== 'Aucune' ? product.unitOfMeasure : ''}
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{formatCurrency(product.salePrice, companySettings)}</td>
+                                            <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{product.vat}%</td>
+                                            <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                                                <div className={`flex items-center justify-end space-x-2 ${isRTL ? 'space-x-reverse' : ''}`}>
+                                                    <button 
+                                                        onClick={() => navigate(`/products/edit/${product.id}`)} 
+                                                        className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors"
+                                                        title={t('edit')}
+                                                    >
+                                                        <Pencil size={18} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDeleteClick(product.id)} 
+                                                        className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors"
+                                                        title={t('delete')}
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                 ) : (
+                                    <tr>
+                                         <td colSpan={7} className="text-center py-20 px-6">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <Package className="h-16 w-16 text-slate-200 mb-4" strokeWidth={1.5} />
+                                                <h3 className="text-lg font-bold text-slate-800">
+                                                    {searchTerm ? t('noFinancialData') : t('noProducts')}
+                                                </h3>
+                                                {!searchTerm && (
+                                                    <p className="text-sm text-slate-500 mt-1">
+                                                        {t('firstProductPrompt')}
+                                                    </p>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
-                                ))
-                             ) : (
-                                <tr>
-                                     <td colSpan={6} className="text-center py-20 px-6">
-                                        <div className="flex flex-col items-center justify-center">
-                                            <Package className="h-16 w-16 text-slate-200 mb-4" strokeWidth={1.5} />
-                                            <h3 className="text-lg font-bold text-slate-800">
-                                                {searchTerm ? t('noFinancialData') : t('noProducts')}
-                                            </h3>
-                                            {!searchTerm && (
-                                                <p className="text-sm text-slate-500 mt-1">
-                                                    {t('firstProductPrompt')}
-                                                </p>
-                                            )}
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4">
+                    {filteredProducts.length > 0 ? (
+                        filteredProducts.map((product: Product) => (
+                            <div 
+                                key={product.id} 
+                                className={`bg-white p-4 rounded-xl shadow-sm ring-1 ring-neutral-200 relative transition-all active:scale-[0.99] ${selectedProductIds.includes(product.id) ? 'ring-emerald-500 bg-emerald-50/30' : ''}`}
+                                onClick={() => handleSelectProduct(product.id)}
+                            >
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-start gap-3 min-w-0">
+                                        <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                className="h-5 w-5 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                                checked={selectedProductIds.includes(product.id)}
+                                                onChange={() => handleSelectProduct(product.id)}
+                                            />
                                         </div>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                                        <div className="min-w-0">
+                                            <h4 className="text-base font-bold text-neutral-900 truncate">{product.name}</h4>
+                                            <p className="text-xs text-neutral-500 font-mono mt-0.5">{product.productCode}</p>
+                                            
+                                            <div className="mt-2 flex flex-wrap gap-2">
+                                                {product.productType === 'Service' ? (
+                                                    <span className="text-xs text-neutral-400 italic">{t('pService')}</span>
+                                                ) : (
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${(product.stockQuantity || 0) <= (product.minStockAlert || 5) ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                                                        {t('stock')}: {formatDecimalForInput(product.stockQuantity || 0, language)}
+                                                    </span>
+                                                )}
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800">
+                                                    {formatCurrency(product.salePrice, companySettings)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                                        <button 
+                                            onClick={() => navigate(`/products/edit/${product.id}`)} 
+                                            className="p-2 text-emerald-600 bg-emerald-50 rounded-lg active:bg-emerald-100 transition-colors"
+                                        >
+                                            <Pencil size={20} />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDeleteClick(product.id)} 
+                                            className="p-2 text-red-600 bg-red-50 rounded-lg active:bg-red-100 transition-colors"
+                                        >
+                                            <Trash2 size={20} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="bg-white rounded-xl p-12 text-center shadow-sm ring-1 ring-neutral-200">
+                            <Package className="h-12 w-12 text-slate-200 mx-auto mb-3" />
+                            <p className="text-sm text-slate-500">{t('noProducts')}</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

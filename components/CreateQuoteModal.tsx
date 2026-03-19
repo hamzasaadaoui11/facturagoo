@@ -25,7 +25,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
 
     const [clientId, setClientId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [expiryDate, setExpiryDate] = useState(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+    const [expiryDate, setExpiryDate] = useState('');
     const [subject, setSubject] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
     const [reference, setReference] = useState('');
@@ -88,7 +88,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
             } else {
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
-                setExpiryDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+                setExpiryDate('');
                 setShowExpiryDateField(false);
                 setSubject('');
                 setShowSubjectField(false);
@@ -234,25 +234,26 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
             updatedLineItems[0] = { 
                 ...updatedLineItems[0], 
                 calculationMode,
-                subject,
-                expiryDate,
+                subject: showSubjectField ? subject : undefined,
+                expiryDate: showExpiryDateField ? expiryDate : undefined,
                 notes,
-                paymentMethod
+                paymentMethod: showPaymentMethodField ? paymentMethod : undefined
             };
         }
 
         const quoteData = {
             clientId, clientName: clientNameDisplay, date, 
             expiryDate: showExpiryDateField ? expiryDate : undefined, 
-            subject, 
-            paymentMethod,
+            subject: showSubjectField ? subject : undefined, 
+            paymentMethod: showPaymentMethodField ? paymentMethod : undefined,
             reference, 
-            purchaseOrderNumber,
+            purchaseOrderNumber: showPurchaseOrderField ? purchaseOrderNumber : undefined,
             notes,
             lineItems: updatedLineItems,
             status: quoteToEdit ? quoteToEdit.status : QuoteStatus.Draft,
             subTotal: totals.subTotal, 
             vatAmount: totals.vatAmount,
+            amount: totals.totalTTC,
             discountType: isDiscountEnabled ? discountType : undefined,
             discountValue: isDiscountEnabled ? parseDecimalInput(discountValue) : undefined,
         };
@@ -280,7 +281,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                     <button onClick={handleClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 transition-all"><X size={20} /></button>
                 </div>
 
-                <div className="px-4 md:px-6 py-5 overflow-y-auto custom-scrollbar flex-1 space-y-6 pb-24 md:pb-8">
+                <div className="px-3 md:px-6 py-5 overflow-y-auto custom-scrollbar flex-1 space-y-6 pb-24 md:pb-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('client')} *</label>
@@ -436,7 +437,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+                    <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
@@ -447,8 +448,8 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             <div className="h-px bg-slate-100 flex-1 mx-6 hidden md:block"></div>
                         </div>
                         
-                        <div className="grid grid-cols-24 gap-4 items-end">
-                            <div className="col-span-12 lg:col-span-2">
+                        <div className="grid grid-cols-1 md:grid-cols-24 gap-4 items-end">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-2">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Hash size={10} /> {t('refLabel')}
                                 </label>
@@ -460,7 +461,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                     className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all"
                                 />
                             </div>
-                            <div className="col-span-12 lg:col-span-4">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-4">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Package size={10} /> {t('productAutoLabel')}
                                 </label>
@@ -471,7 +472,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                     placeholder={`-- ${t('select')} --`}
                                 />
                             </div>
-                            <div className="col-span-24 lg:col-span-6">
+                            <div className="col-span-1 md:col-span-24 lg:col-span-6">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Tag size={10} /> {t('designationLabel')} *
                                 </label>
@@ -483,7 +484,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                     className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-[11px] h-12 font-medium transition-all"
                                 />
                             </div>
-                            <div className="col-span-12 lg:col-span-3">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-3">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Coins size={10} /> {isModeTTC ? t('puTTCLabel') : t('puHTLabel')}
                                 </label>
@@ -494,7 +495,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                     className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all font-mono"
                                 />
                             </div>
-                            <div className="col-span-12 lg:col-span-3">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-3">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Calculator size={10} /> {t('quantity')}
                                 </label>
@@ -506,7 +507,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 />
                             </div>
                             {showLengthColumn && (
-                                <div className="col-span-12 lg:col-span-2">
+                                <div className="col-span-1 md:col-span-12 lg:col-span-2">
                                     <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Long.</label>
                                     <input 
                                         type="text" 
@@ -517,7 +518,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 </div>
                             )}
                             {showHeightColumn && (
-                                <div className="col-span-12 lg:col-span-2">
+                                <div className="col-span-1 md:col-span-12 lg:col-span-2">
                                     <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Haut.</label>
                                     <input 
                                         type="text" 
@@ -528,7 +529,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 </div>
                             )}
                             {isKg && (
-                                <div className="col-span-12 lg:col-span-2">
+                                <div className="col-span-1 md:col-span-12 lg:col-span-2">
                                     <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Poids (kg)</label>
                                     <input 
                                         type="text" 
@@ -538,7 +539,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                     />
                                 </div>
                             )}
-                            <div className="col-span-12 lg:col-span-3">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">{t('vat')}</label>
                                 <select 
                                     value={tempVat} 
@@ -548,7 +549,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                     {vatOptions.map(v => <option key={v} value={v}>{v}%</option>)}
                                 </select>
                             </div>
-                            <div className="col-span-24 lg:col-span-3">
+                            <div className="col-span-1 md:col-span-24 lg:col-span-3">
                                 <button 
                                     onClick={handleAddItem} 
                                     className="w-full inline-flex items-center justify-center h-12 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-200 transition-all active:scale-[0.98] text-sm font-bold gap-2"
@@ -560,96 +561,191 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                     </div>
 
                     {lineItems.length > 0 ? (
-                        <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
-                            <table className="min-w-full divide-y divide-slate-200">
-                                <thead className="bg-slate-50">
-                                    <tr>
-                                        <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('description')}</th>
-                                        <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
-                                        {showLengthColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Long.</th>}
-                                        {showHeightColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Haut.</th>}
-                                        {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Poids (kg)</th>}
-                                        {isM2 && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">M²</th>}
-                                        {isML && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">ML</th>}
-                                        {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Total kg</th>}
-                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</th>
-                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('totalTTCLabel') : t('totalHTLabel')}</th>
-                                        <th className="px-4 py-3 w-10"></th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-slate-100">
-                                    {(lineItems || []).map(item => {
-                                        const itemVat = typeof item.vat === 'number' ? item.vat : 20;
-                                        const displayPrice = isModeTTC ? (item.unitPrice * (1 + itemVat/100)) : item.unitPrice;
-                                        const displayLineTotal = (item.quantity || 0) * getLineMultiplier(item) * (displayPrice || 0);
-                                        
-                                        return (
-                                        <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-4 py-3">
-                                                <div className="text-[11px] font-bold text-slate-900 leading-tight">{item.name}</div>
-                                                {item.productCode && <div className="text-[9px] text-slate-400 font-mono mt-0.5">{item.productCode}</div>}
-                                            </td>
-                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                <input 
-                                                    type="text" 
-                                                    value={formatDecimalForInput(item.quantity, language)} 
-                                                    onChange={(e) => updateLineItem(item.id, { quantity: parseDecimalInput(e.target.value) })}
-                                                    className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                />
-                                            </td>
-                                        {showLengthColumn && (
-                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                <input 
-                                                    type="text" 
-                                                    value={formatDecimalForInput(item.length || 1, language)} 
-                                                    onChange={(e) => updateLineItem(item.id, { length: parseDecimalInput(e.target.value) })}
-                                                    className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                />
-                                            </td>
-                                        )}
-                                        {showHeightColumn && (
-                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                <input 
-                                                    type="text" 
-                                                    value={formatDecimalForInput(item.height || 1, language)} 
-                                                    onChange={(e) => updateLineItem(item.id, { height: parseDecimalInput(e.target.value) })}
-                                                    className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                />
-                                            </td>
-                                        )}
-                                        {isKg && (
-                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                <input 
-                                                    type="text" 
-                                                    value={formatDecimalForInput(item.weight || 1, language)} 
-                                                    onChange={(e) => updateLineItem(item.id, { weight: parseDecimalInput(e.target.value) })}
-                                                    className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                />
-                                            </td>
-                                        )}
-                                        {isM2 && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1) * (item.height || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
-                                        {isML && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
-                                        {isKg && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
-                                            <td className="px-4 py-3 text-right text-xs">
-                                                <input 
-                                                    type="text" 
-                                                    value={formatDecimalForInput(displayPrice, language)} 
-                                                    onChange={(e) => {
-                                                        const val = parseDecimalInput(e.target.value);
-                                                        updateLineItem(item.id, { unitPrice: isModeTTC ? (val / (1 + item.vat/100)) : val });
-                                                    }}
-                                                    className="w-24 p-1 text-right border-none focus:ring-0 text-xs font-medium bg-transparent"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-xs font-bold text-slate-900">
-                                                {displayLineTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })}
-                                            </td>
-                                            <td className="px-4 py-3 text-center"><button onClick={() => handleRemoveItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1"><Trash2 size={16}/></button></td>
+                        <>
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block border border-slate-200 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-200">
+                                    <thead className="bg-slate-50">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('description')}</th>
+                                            <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
+                                            {showLengthColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Long.</th>}
+                                            {showHeightColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Haut.</th>}
+                                            {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Poids (kg)</th>}
+                                            {isM2 && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">M²</th>}
+                                            {isML && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">ML</th>}
+                                            {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Total kg</th>}
+                                            <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</th>
+                                            <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('totalTTCLabel') : t('totalHTLabel')}</th>
+                                            <th className="px-4 py-3 w-10"></th>
                                         </tr>
-                                    )})}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-slate-100">
+                                        {(lineItems || []).map(item => {
+                                            const itemVat = typeof item.vat === 'number' ? item.vat : 20;
+                                            const displayPrice = isModeTTC ? (item.unitPrice * (1 + itemVat/100)) : item.unitPrice;
+                                            const displayLineTotal = (item.quantity || 0) * getLineMultiplier(item) * (displayPrice || 0);
+                                            
+                                            return (
+                                            <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-4 py-3">
+                                                    <div className="text-[11px] font-bold text-slate-900 leading-tight">{item.name}</div>
+                                                    {item.productCode && <div className="text-[9px] text-slate-400 font-mono mt-0.5">{item.productCode}</div>}
+                                                </td>
+                                                <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(item.quantity, language)} 
+                                                        onChange={(e) => updateLineItem(item.id, { quantity: parseDecimalInput(e.target.value) })}
+                                                        className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                    />
+                                                </td>
+                                            {showLengthColumn && (
+                                                <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(item.length || 1, language)} 
+                                                        onChange={(e) => updateLineItem(item.id, { length: parseDecimalInput(e.target.value) })}
+                                                        className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                    />
+                                                </td>
+                                            )}
+                                            {showHeightColumn && (
+                                                <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(item.height || 1, language)} 
+                                                        onChange={(e) => updateLineItem(item.id, { height: parseDecimalInput(e.target.value) })}
+                                                        className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                    />
+                                                </td>
+                                            )}
+                                            {isKg && (
+                                                <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(item.weight || 1, language)} 
+                                                        onChange={(e) => updateLineItem(item.id, { weight: parseDecimalInput(e.target.value) })}
+                                                        className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                    />
+                                                </td>
+                                            )}
+                                            {isM2 && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1) * (item.height || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
+                                            {isML && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
+                                            {isKg && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
+                                                <td className="px-4 py-3 text-right text-xs">
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(displayPrice, language)} 
+                                                        onChange={(e) => {
+                                                            const val = parseDecimalInput(e.target.value);
+                                                            updateLineItem(item.id, { unitPrice: isModeTTC ? (val / (1 + item.vat/100)) : val });
+                                                        }}
+                                                        className="w-24 p-1 text-right border-none focus:ring-0 text-xs font-medium bg-transparent"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-right text-xs font-bold text-slate-900">
+                                                    {displayLineTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="px-4 py-3 text-center"><button onClick={() => handleRemoveItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1"><Trash2 size={16}/></button></td>
+                                            </tr>
+                                        )})}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Mobile Card View */}
+                            <div className="md:hidden space-y-4">
+                                {(lineItems || []).map(item => {
+                                    const itemVat = typeof item.vat === 'number' ? item.vat : 20;
+                                    const displayPrice = isModeTTC ? (item.unitPrice * (1 + itemVat/100)) : item.unitPrice;
+                                    const displayLineTotal = (item.quantity || 0) * getLineMultiplier(item) * (displayPrice || 0);
+                                    
+                                    return (
+                                        <div key={item.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex-1">
+                                                    <div className="text-sm font-bold text-slate-900 leading-tight">{item.name}</div>
+                                                    {item.productCode && <div className="text-[10px] text-slate-400 font-mono mt-0.5">{item.productCode}</div>}
+                                                </div>
+                                                <button onClick={() => handleRemoveItem(item.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('quantity')}</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(item.quantity, language)} 
+                                                        onChange={(e) => updateLineItem(item.id, { quantity: parseDecimalInput(e.target.value) })}
+                                                        className="w-full h-10 rounded-lg border-slate-200 bg-white text-sm font-bold px-3"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(displayPrice, language)} 
+                                                        onChange={(e) => {
+                                                            const val = parseDecimalInput(e.target.value);
+                                                            updateLineItem(item.id, { unitPrice: isModeTTC ? (val / (1 + item.vat/100)) : val });
+                                                        }}
+                                                        className="w-full h-10 rounded-lg border-slate-200 bg-white text-sm font-bold px-3"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {(showLengthColumn || showHeightColumn || isKg) && (
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    {showLengthColumn && (
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Long.</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={formatDecimalForInput(item.length || 1, language)} 
+                                                                onChange={(e) => updateLineItem(item.id, { length: parseDecimalInput(e.target.value) })}
+                                                                className="w-full h-10 rounded-lg border-slate-200 bg-white text-sm font-bold px-3"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {showHeightColumn && (
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Haut.</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={formatDecimalForInput(item.height || 1, language)} 
+                                                                onChange={(e) => updateLineItem(item.id, { height: parseDecimalInput(e.target.value) })}
+                                                                className="w-full h-10 rounded-lg border-slate-200 bg-white text-sm font-bold px-3"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {isKg && (
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Poids</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={formatDecimalForInput(item.weight || 1, language)} 
+                                                                onChange={(e) => updateLineItem(item.id, { weight: parseDecimalInput(e.target.value) })}
+                                                                className="w-full h-10 rounded-lg border-slate-200 bg-white text-sm font-bold px-3"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</div>
+                                                <div className="text-sm font-black text-emerald-600">
+                                                    {displayLineTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })} MAD
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
                     ) : (
                         <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-slate-400 text-sm italic">
                             {t('items')} ({language === 'ar' ? 'فارغ' : 'Vide'})

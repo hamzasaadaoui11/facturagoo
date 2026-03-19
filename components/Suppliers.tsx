@@ -12,15 +12,18 @@ interface SuppliersProps {
     onAddSupplier: (supplier: Omit<Supplier, 'id' | 'supplierCode'>) => void;
     onUpdateSupplier: (supplier: Supplier) => void;
     onDeleteSupplier: (supplierId: string) => void;
+    onDeleteSuppliers: (supplierIds: string[]) => void;
 }
 
-const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier, onUpdateSupplier, onDeleteSupplier }) => {
+const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier, onUpdateSupplier, onDeleteSupplier, onDeleteSuppliers }) => {
     const { t, isRTL } = useLanguage();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [supplierToEdit, setSupplierToEdit] = useState<Supplier | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [supplierIdToDelete, setSupplierIdToDelete] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
+    const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
 
     const filteredSuppliers = suppliers.filter(supplier => {
         const term = searchTerm.toLowerCase();
@@ -57,6 +60,34 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier, onUpdat
         setSupplierIdToDelete(null);
     };
 
+    const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.checked) {
+            setSelectedSupplierIds(filteredSuppliers.map(s => s.id));
+        } else {
+            setSelectedSupplierIds([]);
+        }
+    };
+
+    const handleSelectSupplier = (supplierId: string) => {
+        setSelectedSupplierIds(prev =>
+            prev.includes(supplierId)
+                ? prev.filter(id => id !== supplierId)
+                : [...prev, supplierId]
+        );
+    };
+
+    const handleBulkDelete = () => {
+        if (selectedSupplierIds.length > 0) {
+            setIsBulkConfirmOpen(true);
+        }
+    };
+
+    const confirmBulkDeletion = () => {
+        onDeleteSuppliers(selectedSupplierIds);
+        setSelectedSupplierIds([]);
+        setIsBulkConfirmOpen(false);
+    };
+
     const handleSaveSupplier = (supplierData: Omit<Supplier, 'id' | 'supplierCode'>, id?: string) => {
         if (id) {
             const existingSupplier = suppliers.find(s => s.id === id);
@@ -75,10 +106,11 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier, onUpdat
                 <button
                     type="button"
                     onClick={handleAddClick}
-                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3 py-2 md:px-3.5 md:py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
                 >
-                    <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
-                    {t('addSupplier')}
+                    <Plus className="h-5 w-5" />
+                    <span className="hidden sm:inline">{t('addSupplier')}</span>
+                    <span className="sm:hidden">{t('add')}</span>
                 </button>
             </Header>
 
@@ -95,25 +127,136 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier, onUpdat
                 onConfirm={confirmDeletion}
             />
 
+            <ConfirmationModal
+                isOpen={isBulkConfirmOpen}
+                onClose={() => setIsBulkConfirmOpen(false)}
+                onConfirm={confirmBulkDeletion}
+                title={t('confirmBulkDelete')}
+                message={t('confirmBulkDeleteMessage', { count: selectedSupplierIds.length })}
+            />
+
             <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
                  <div className="p-4 border-b border-neutral-200">
-                    <div className="relative">
-                        <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'right-0 pr-3' : 'left-0 pl-3'}`}>
-                           <Search className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="relative flex-1">
+                            <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'right-0 pr-3' : 'left-0 pl-3'}`}>
+                               <Search className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                            </div>
+                            <input
+                                type="search"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder={t('search')}
+                                className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
+                            />
                         </div>
-                        <input
-                            type="search"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder={t('search')}
-                            className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
-                        />
+                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                            <div className="md:hidden flex items-center gap-2 bg-neutral-50 px-3 py-2 rounded-lg border border-neutral-200">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedSupplierIds.length === filteredSuppliers.length && filteredSuppliers.length > 0}
+                                    onChange={handleSelectAll}
+                                    className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-600"
+                                />
+                                <span className="text-xs font-medium text-neutral-500">{t('selectAll')}</span>
+                            </div>
+                            {selectedSupplierIds.length > 0 && (
+                                <button
+                                    onClick={handleBulkDelete}
+                                    className="inline-flex items-center gap-x-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 shadow-sm hover:bg-red-100 ring-1 ring-inset ring-red-200 transition-all duration-200"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span>{t('deleteSelected')} ({selectedSupplierIds.length})</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
                  </div>
-                <div className="overflow-x-auto">
+
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-neutral-200">
+                    {filteredSuppliers.length > 0 ? (
+                        filteredSuppliers.map((supplier) => {
+                            const isCompany = supplier.type === 'Entreprise' || (!supplier.type && supplier.company);
+                            return (
+                                <div key={supplier.id} className={`p-4 space-y-3 hover:bg-emerald-50/60 transition-colors duration-200 ${selectedSupplierIds.includes(supplier.id) ? 'bg-emerald-50/40' : ''}`}>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedSupplierIds.includes(supplier.id)}
+                                                onChange={() => handleSelectSupplier(supplier.id)}
+                                                className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-600"
+                                            />
+                                            <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${isCompany ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                                {isCompany ? <Building2 size={20} /> : <User size={20} />}
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-medium text-neutral-900">
+                                                    {isCompany ? supplier.company : supplier.name}
+                                                </div>
+                                                <div className="text-xs font-mono text-neutral-500">{supplier.supplierCode}</div>
+                                            </div>
+                                        </div>
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${isCompany ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                            {isCompany ? t('enterprise') : t('individual')}
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-2 text-xs text-neutral-500">
+                                        <div>
+                                            <div className="font-medium text-neutral-700">{t('contact')}</div>
+                                            <div>{isCompany ? supplier.name : '-'}</div>
+                                        </div>
+                                        <div>
+                                            <div className="font-medium text-neutral-700">{t('coordinates')}</div>
+                                            <div className="truncate">{supplier.email}</div>
+                                            <div>{supplier.phone}</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-end space-x-2 rtl:space-x-reverse pt-2 border-t border-neutral-100">
+                                        <button 
+                                            onClick={() => handleEditClick(supplier)} 
+                                            className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors flex items-center gap-1 text-xs font-medium"
+                                        >
+                                            <Pencil size={16} />
+                                            {t('edit')}
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDeleteClick(supplier.id)} 
+                                            className="p-2 text-red-600 hover:bg-red-100 rounded-md transition-colors flex items-center gap-1 text-xs font-medium"
+                                        >
+                                            <Trash2 size={16} />
+                                            {t('delete')}
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div className="text-center py-10 px-4">
+                            <Building2 className="h-12 w-12 text-slate-200 mx-auto mb-3" strokeWidth={1.5} />
+                            <h3 className="text-sm font-bold text-slate-800">
+                                {searchTerm ? t('noFinancialData') : t('noSuppliers')}
+                            </h3>
+                        </div>
+                    )}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>
+                                <th scope="col" className="px-6 py-3 hidden md:table-cell">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedSupplierIds.length === filteredSuppliers.length && filteredSuppliers.length > 0}
+                                        onChange={handleSelectAll}
+                                        className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-600"
+                                    />
+                                </th>
                                 <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('code')}</th>
                                 <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('supplier')} / {t('company')}</th>
                                 <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('contact')}</th>
@@ -128,7 +271,15 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier, onUpdat
                                     const isCompany = supplier.type === 'Entreprise' || (!supplier.type && supplier.company);
 
                                     return (
-                                    <tr key={supplier.id} className="hover:bg-emerald-50/60 transition-colors duration-200">
+                                    <tr key={supplier.id} className={`hover:bg-emerald-50/60 transition-colors duration-200 ${selectedSupplierIds.includes(supplier.id) ? 'bg-emerald-50/40' : ''}`}>
+                                        <td className="px-6 py-4">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedSupplierIds.includes(supplier.id)}
+                                                onChange={() => handleSelectSupplier(supplier.id)}
+                                                className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-600"
+                                            />
+                                        </td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 font-mono ${isRTL ? 'text-right' : 'text-left'}`}>{supplier.supplierCode}</td>
                                         <td className={`px-6 py-4 ${isRTL ? 'text-right' : 'text-left'}`}>
                                             <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>

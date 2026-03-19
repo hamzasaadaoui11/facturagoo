@@ -4,6 +4,7 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --grid-template-columns-24: repeat(24, minmax(0, 1fr));
 }
 
 @layer base {
@@ -70,8 +71,6 @@
 .markdown-body code { @apply bg-slate-100 px-1 rounded text-sm font-mono; }
 .markdown-body pre { @apply bg-slate-900 text-slate-100 p-4 rounded-xl mb-4 overflow-x-auto; }
 .markdown-body pre code { @apply bg-transparent p-0 text-inherit; }
-
-.grid-cols-24 { grid-template-columns: repeat(24, minmax(0, 1fr)); }
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;

@@ -32,21 +32,23 @@ const Payments: React.FC<PaymentsProps> = ({ payments }) => {
                 <div className={`p-4 border-b border-neutral-200 flex flex-col sm:flex-row justify-between items-center gap-4 ${isRTL ? 'sm:flex-row-reverse' : ''}`}>
                     <div className="relative max-w-sm w-full">
                         <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'right-0 pr-3' : 'left-0 pl-3'}`}>
-                           <Search className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                           <Search className="h-4 w-4 sm:h-5 sm:w-5 text-neutral-400" aria-hidden="true" />
                         </div>
                         <input
                            type="search"
                            value={searchTerm}
                            onChange={(e) => setSearchTerm(e.target.value)}
                            placeholder={t('searchPaymentPlaceholder')}
-                           className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
+                           className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs sm:text-sm ${isRTL ? 'pr-9 sm:pr-10' : 'pl-9 sm:pl-10'}`}
                         />
                     </div>
-                    <div className={`text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <div className={`text-xs sm:text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>
                         {t('totalCollected')} : <span className="font-bold text-emerald-600">{totalCollected.toLocaleString(locale, { style: 'currency', currency: 'MAD' })}</span>
                     </div>
                 </div>
-                <div className="overflow-x-auto">
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>
@@ -85,6 +87,40 @@ const Payments: React.FC<PaymentsProps> = ({ payments }) => {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-neutral-200">
+                    {filteredPayments.length > 0 ? (
+                        filteredPayments.slice().reverse().map((payment) => (
+                            <div key={payment.id} className="p-4 hover:bg-emerald-50/60 transition-colors duration-200">
+                                <div className={`flex justify-between items-start mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                    <div>
+                                        <p className={`text-xs text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                            {new Date(payment.date).toLocaleDateString(locale)}
+                                        </p>
+                                        <p className={`text-sm font-medium text-neutral-900 mt-0.5 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                            {payment.clientName}
+                                        </p>
+                                    </div>
+                                    <p className="text-sm font-bold text-neutral-900">
+                                        {payment.amount.toLocaleString(locale, { style: 'currency', currency: 'MAD' })}
+                                    </p>
+                                </div>
+                                <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                    <p className="text-xs text-emerald-600 font-medium">#{payment.invoiceNumber}</p>
+                                    <span className="inline-flex items-center gap-1 text-xs text-neutral-500">
+                                        <CreditCard size={12} /> {payment.method}
+                                    </span>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-12 px-6 text-sm text-neutral-500">
+                            <CreditCard className="h-10 w-10 text-neutral-400 mx-auto mb-2 opacity-50" />
+                            <h3 className="font-semibold text-neutral-800">{t('noPaymentsFound')}</h3>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

@@ -10,6 +10,7 @@ export const translations = {
     sales: 'Vente',
     quotes: 'Devis',
     invoices: 'Factures',
+    invoice: 'Facture',
     creditNotes: 'Avoirs',
     deliveryNotes: 'Bons de livraison',
     purchases: 'Achats',
@@ -301,6 +302,10 @@ export const translations = {
     // Modals
     confirmDelete: 'Confirmation de suppression',
     confirmDeleteMessage: 'Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.',
+    confirmBulkDelete: 'Confirmation de suppression groupée',
+    confirmBulkDeleteMessage: 'Êtes-vous sûr de vouloir supprimer ces {count} éléments ? Cette action est irréversible.',
+    deleteSelected: 'Supprimer la sélection',
+    selectAll: 'Tout sélectionner',
     paymentRecorded: 'Paiement enregistré',
     
     // Chart
@@ -331,6 +336,7 @@ export const translations = {
     sales: 'Ventas',
     quotes: 'Presupuestos',
     invoices: 'Facturas',
+    invoice: 'Factura',
     creditNotes: 'Notas de crédito',
     deliveryNotes: 'Albaranes',
     purchases: 'Compras',
@@ -622,6 +628,10 @@ export const translations = {
     // Modals
     confirmDelete: 'Confirmar eliminación',
     confirmDeleteMessage: '¿Estás seguro de que deseas eliminar este elemento? Esta acción es irreversible.',
+    confirmBulkDelete: 'Confirmar eliminación masiva',
+    confirmBulkDeleteMessage: '¿Estás seguro de que deseas eliminar estos {count} elementos? Esta acción es irreversible.',
+    deleteSelected: 'Eliminar seleccionados',
+    selectAll: 'Seleccionar todo',
     paymentRecorded: 'Pago registrado',
 
     // Chart
@@ -652,6 +662,7 @@ export const translations = {
     sales: 'Sales',
     quotes: 'Quotes',
     invoices: 'Invoices',
+    invoice: 'Invoice',
     creditNotes: 'Credit Notes',
     deliveryNotes: 'Delivery Notes',
     purchases: 'Purchases',
@@ -943,6 +954,10 @@ export const translations = {
     // Modals
     confirmDelete: 'Delete Confirmation',
     confirmDeleteMessage: 'Are you sure you want to delete this item? This action cannot be undone.',
+    confirmBulkDelete: 'Confirm Bulk Deletion',
+    confirmBulkDeleteMessage: 'Are you sure you want to delete these {count} items? This action is irreversible.',
+    deleteSelected: 'Delete Selected',
+    selectAll: 'Select All',
     paymentRecorded: 'Payment Recorded',
 
     // Chart
@@ -973,6 +988,7 @@ export const translations = {
     sales: 'المبيعات',
     quotes: 'عروض الأسعار',
     invoices: 'الفواتير',
+    invoice: 'فاتورة',
     creditNotes: 'إشعارات دائنة',
     deliveryNotes: 'سندات التسليم',
     purchases: 'المشتريات',
@@ -1255,6 +1271,10 @@ export const translations = {
     // Modals
     confirmDelete: 'تأكيد الحذف',
     confirmDeleteMessage: 'هل أنت متأكد من رغبتك في حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.',
+    confirmBulkDelete: 'تأكيد الحذف الجماعي',
+    confirmBulkDeleteMessage: 'هل أنت متأكد من رغبتك في حذف هذه العناصر الـ {count}؟ لا يمكن التراجع عن هذا الإجراء.',
+    deleteSelected: 'حذف المحدد',
+    selectAll: 'تحديد الكل',
     paymentRecorded: 'تم تسجيل الدفع',
 
     // Chart

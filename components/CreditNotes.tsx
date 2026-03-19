@@ -189,10 +189,11 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                  <button
                     type="button"
                     onClick={handleCreateClick}
-                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-all"
+                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3 py-2 md:px-3.5 md:py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-all"
                 >
-                    <Plus className={`${isRTL ? 'ml-0.5' : '-ml-0.5'} h-5 w-5`} />
-                    {t('newCreditNote')}
+                    <Plus className="h-5 w-5" />
+                    <span className="hidden sm:inline">{t('newCreditNote')}</span>
+                    <span className="sm:hidden">{t('add')}</span>
                 </button>
             </Header>
             
@@ -213,7 +214,47 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
             />
 
             <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
-                <div className="overflow-x-auto">
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-neutral-200">
+                    {paginatedNotes.length > 0 ? (
+                        paginatedNotes.map((note) => (
+                            <div key={note.id} className="p-4 space-y-3 hover:bg-emerald-50/60 transition-colors duration-200">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm font-medium text-emerald-600">{note.documentId || note.id}</div>
+                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColors[note.status]}`}>
+                                        {getStatusLabel(note.status)}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="min-w-0">
+                                        <div className="text-sm font-bold text-neutral-900 truncate">{note.clientName}</div>
+                                        <div className="text-xs text-neutral-500">{new Date(note.date).toLocaleDateString()}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-sm font-bold text-neutral-900">{note.amount.toLocaleString(undefined, { style: 'currency', currency: 'MAD' })}</div>
+                                        <div className="text-xs text-neutral-500">{note.invoiceId || '-'}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-end pt-2 border-t border-neutral-100">
+                                    <button 
+                                        onClick={(e) => toggleMenu(e, note.id)}
+                                        className={`p-2 rounded-full transition-colors ${activeMenuId === note.id ? 'bg-neutral-200 text-neutral-800' : 'text-neutral-500 hover:bg-neutral-100'}`}
+                                    >
+                                        <MoreVertical size={20} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-10 px-4">
+                            <FileText className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                            <h3 className="text-sm font-bold text-slate-800">Aucun avoir trouvé</h3>
+                        </div>
+                    )}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>

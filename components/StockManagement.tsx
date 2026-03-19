@@ -139,7 +139,55 @@ const StockManagement: React.FC<StockManagementProps> = ({ products, movements, 
                             />
                         </div>
                     </div>
-                    <div className="overflow-x-auto flex-1">
+
+                    {/* Mobile Card View for Stock Levels */}
+                    <div className="md:hidden divide-y divide-neutral-200">
+                        {filteredProducts.length > 0 ? (
+                            filteredProducts.map(product => (
+                                <div key={product.id} className="p-4 space-y-3 hover:bg-gray-50 transition-colors">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <div className="text-sm font-medium text-neutral-900">{product.name}</div>
+                                            <div className="text-xs text-neutral-500 font-mono">{product.productCode}</div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-lg font-bold text-neutral-900">{formatDecimalForInput(product.stockQuantity || 0, language)}</div>
+                                            {(product.stockQuantity || 0) <= (product.minStockAlert || 5) ? (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-800">
+                                                    <AlertTriangle className="w-2.5 h-2.5 mr-1"/> {t('lowStock')}
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-800">
+                                                    {t('stockOk')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end gap-3 pt-2 border-t border-neutral-100">
+                                        <button 
+                                            onClick={() => openHistoryModal(product)}
+                                            className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-xs font-medium"
+                                        >
+                                            <History size={16} />
+                                            {t('history')}
+                                        </button>
+                                        <button 
+                                            onClick={() => openCorrectionModal(product)}
+                                            className="text-emerald-600 hover:text-emerald-800 flex items-center gap-1 text-xs font-medium"
+                                        >
+                                            <Pencil size={16} />
+                                            {t('edit')}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-6 py-8 text-center text-neutral-500">{t('noFinancialData')}</div>
+                        )}
+                    </div>
+
+                    {/* Desktop Table View for Stock Levels */}
+                    <div className="hidden md:block overflow-x-auto flex-1">
                         <table className="min-w-full divide-y divide-neutral-200">
                             <thead className="bg-white sticky top-0 z-10">
                                 <tr>

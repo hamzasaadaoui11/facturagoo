@@ -226,15 +226,20 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
             updatedLineItems[0] = { 
                 ...updatedLineItems[0], 
                 calculationMode,
-                subject,
-                expectedDate,
+                subject: showSubjectField ? subject : undefined,
+                expectedDate: showExpectedDateField ? expectedDate : undefined,
                 notes,
-                paymentMethod
+                paymentMethod: showPaymentMethodField ? paymentMethod : undefined
             };
         }
 
         const orderData = {
-            supplierId, supplierName: supplierNameDisplay, date, expectedDate, subject, paymentMethod, notes, lineItems: updatedLineItems,
+            supplierId, supplierName: supplierNameDisplay, date, 
+            expectedDate: showExpectedDateField ? expectedDate : undefined, 
+            subject: showSubjectField ? subject : undefined, 
+            paymentMethod: showPaymentMethodField ? paymentMethod : undefined,
+            notes, 
+            lineItems: updatedLineItems,
             status: orderToEdit ? orderToEdit.status : PurchaseOrderStatus.Draft,
             subTotal: totals.subTotal, vatAmount: totals.vatAmount, totalAmount: totals.totalAmount,
             discountType: isDiscountEnabled ? discountType : undefined,
@@ -267,7 +272,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                     <button onClick={handleClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 transition-all"><X size={20} /></button>
                 </div>
 
-                <div className="px-4 md:px-6 py-5 overflow-y-auto custom-scrollbar flex-1 space-y-6 pb-24 md:pb-8">
+                <div className="px-3 md:px-6 py-5 overflow-y-auto custom-scrollbar flex-1 space-y-6 pb-24 md:pb-8">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="sm:col-span-1 space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('supplier')} *</label>
@@ -299,7 +304,12 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                             <div className="flex items-end pb-2">
                                 <button 
                                     type="button"
-                                    onClick={() => setShowExpectedDateField(true)}
+                                    onClick={() => {
+                                        if (!expectedDate) {
+                                            setExpectedDate(new Date(new Date(date).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+                                        }
+                                        setShowExpectedDateField(true);
+                                    }}
                                     className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 transition-all hover:scale-[1.02] active:scale-[0.98]"
                                 >
                                     <Plus size={14} /> {t('addExpectedDate')}
@@ -391,7 +401,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
+                    <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-200 shadow-sm space-y-5">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
@@ -402,8 +412,8 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                             <div className="h-px bg-slate-100 flex-1 mx-6 hidden md:block"></div>
                         </div>
                         
-                        <div className="grid grid-cols-24 gap-4 items-end">
-                            <div className="col-span-12 lg:col-span-2">
+                        <div className="grid grid-cols-1 md:grid-cols-24 gap-4 items-end">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-2">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Hash size={10} /> {t('refLabel')}
                                 </label>
@@ -415,7 +425,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                     className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all"
                                 />
                             </div>
-                            <div className="col-span-12 lg:col-span-4">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-4">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Package size={10} /> {t('productAutoLabel')}
                                 </label>
@@ -426,7 +436,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                     placeholder={`-- ${t('select')} --`}
                                 />
                             </div>
-                            <div className="col-span-24 lg:col-span-6">
+                            <div className="col-span-1 md:col-span-24 lg:col-span-6">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Tag size={10} /> {t('designationLabel')} *
                                 </label>
@@ -438,7 +448,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                     className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-[11px] h-12 font-medium transition-all"
                                 />
                             </div>
-                            <div className="col-span-12 lg:col-span-3">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-3">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Coins size={10} /> {isModeTTC ? t('puTTCLabel') : t('puHTLabel')}
                                 </label>
@@ -449,7 +459,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                     className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all font-mono"
                                 />
                             </div>
-                            <div className="col-span-12 lg:col-span-3">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-3">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Calculator size={10} /> {t('quantity')}
                                 </label>
@@ -461,7 +471,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                 />
                             </div>
                             {showLengthColumn && (
-                                <div className="col-span-12 lg:col-span-2">
+                                <div className="col-span-1 md:col-span-12 lg:col-span-2">
                                     <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Long.</label>
                                     <input 
                                         type="text" 
@@ -472,7 +482,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                 </div>
                             )}
                             {showHeightColumn && (
-                                <div className="col-span-12 lg:col-span-2">
+                                <div className="col-span-1 md:col-span-12 lg:col-span-2">
                                     <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Haut.</label>
                                     <input 
                                         type="text" 
@@ -483,7 +493,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                 </div>
                             )}
                             {isKg && (
-                                <div className="col-span-12 lg:col-span-2">
+                                <div className="col-span-1 md:col-span-12 lg:col-span-2">
                                     <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Poids (kg)</label>
                                     <input 
                                         type="text" 
@@ -493,7 +503,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                     />
                                 </div>
                             )}
-                            <div className="col-span-12 lg:col-span-3">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">{t('vat')}</label>
                                 <select 
                                     value={tempVat} 
@@ -503,7 +513,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                     {vatOptions.map(v => <option key={v} value={v}>{v}%</option>)}
                                 </select>
                             </div>
-                            <div className="col-span-24 lg:col-span-3">
+                            <div className="col-span-1 md:col-span-24 lg:col-span-3">
                                 <button 
                                     onClick={handleAddItem} 
                                     className="w-full inline-flex items-center justify-center h-12 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-200 transition-all active:scale-[0.98] text-sm font-bold gap-2"

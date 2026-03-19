@@ -203,14 +203,15 @@ const Quotes: React.FC<QuotesProps> = ({
         setIsCreateModalOpen(true);
     };
 
-    const handleSaveQuote = (quoteData: Omit<Quote, 'id' | 'amount'>, id?: string) => {
+    const handleSaveQuote = (quoteData: any, id?: string) => {
         if (id && onUpdateQuote) {
              const original = quotes.find(q => q.id === id);
              if(original) {
+                 const { totalAmount, ...cleanQuoteData } = quoteData;
                  onUpdateQuote({
                      ...original,
-                     ...quoteData,
-                     amount: quoteData.subTotal + quoteData.vatAmount
+                     ...cleanQuoteData,
+                     amount: quoteData.amount || (quoteData.subTotal + quoteData.vatAmount)
                  });
              }
         } else {
@@ -232,7 +233,8 @@ const Quotes: React.FC<QuotesProps> = ({
                     className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
                 >
                     <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
-                    {t('newQuote')}
+                    <span className="hidden sm:inline">{t('newQuote')}</span>
+                    <span className="sm:hidden">{t('add')}</span>
                 </button>
             </Header>
 
@@ -272,7 +274,9 @@ const Quotes: React.FC<QuotesProps> = ({
                         />
                     </div>
                 </div>
-                <div className="overflow-x-auto rounded-lg">
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto rounded-lg">
                     <table className="min-w-full divide-y divide-neutral-200">
                         <thead className="bg-neutral-50">
                             <tr>
@@ -319,6 +323,48 @@ const Quotes: React.FC<QuotesProps> = ({
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-neutral-200">
+                    {paginatedQuotes.length > 0 ? (
+                        paginatedQuotes.map((quote) => (
+                            <div key={quote.id} className="p-4 hover:bg-emerald-50/60 transition-colors duration-200">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <p className="text-sm font-bold text-emerald-600">{quote.documentId || quote.id}</p>
+                                        <p className="text-xs text-neutral-500">{new Date(quote.date).toLocaleDateString('fr-FR')}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-medium ${statusColors[quote.status]}`}>
+                                            {quote.status}
+                                        </span>
+                                        <button 
+                                            onClick={(e) => toggleMenu(e, quote.id)}
+                                            className={`p-1.5 rounded-full transition-colors ${activeMenuId === quote.id ? 'bg-neutral-200 text-neutral-800' : 'text-neutral-500 hover:bg-neutral-100'}`}
+                                        >
+                                            <MoreVertical size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-end">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-medium text-neutral-900 truncate">{quote.clientName}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-bold text-neutral-900">
+                                            {quote.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-12 px-4">
+                            <FileText className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                            <h3 className="text-base font-bold text-slate-800">Aucun devis trouvé</h3>
+                        </div>
+                    )}
                 </div>
 
                 {/* Pagination UI */}
