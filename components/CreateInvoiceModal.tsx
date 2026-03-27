@@ -35,8 +35,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     const [showSubjectField, setShowSubjectField] = useState(false);
     const [showPaymentMethodField, setShowPaymentMethodField] = useState(false);
     const [invoicePaymentMethod, setInvoicePaymentMethod] = useState('');
-    const [reference, setReference] = useState('');
-    const [showReferenceField, setShowReferenceField] = useState(false);
     const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -74,8 +72,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 const pm = invoiceToEdit.paymentMethod || invoiceToEdit.lineItems[0]?.paymentMethod || '';
                 setInvoicePaymentMethod(pm);
                 setShowPaymentMethodField(!!pm);
-                setReference(invoiceToEdit.reference || '');
-                setShowReferenceField(!!invoiceToEdit.reference);
                 setNotes(invoiceToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(invoiceToEdit.lineItems[0]?.calculationMode || 'piece');
@@ -95,8 +91,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setShowPOField(!!prefilledPO);
                 setInvoicePaymentMethod('');
                 setShowPaymentMethodField(false);
-                setReference('');
-                setShowReferenceField(false);
                 setShowDueDateField(false);
                 setNotes('');
                 setLineItems([]);
@@ -303,7 +297,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             dueDate: showDueDateField ? dueDate : undefined, 
             subject: showSubjectField ? subject : undefined, 
             purchaseOrderNumber: showPOField ? purchaseOrderNumber : undefined,
-            reference: showReferenceField ? reference : undefined,
             paymentMethod: showPaymentMethodField ? invoicePaymentMethod : undefined,
             notes,
             lineItems: updatedLineItems, status,
@@ -472,37 +465,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                 </button>
                             </div>
                         )}
-                        {showReferenceField ? (
-                            <div className="space-y-1">
-                                <label className="block text-sm font-bold text-slate-700 ml-1">{t('reference')}</label>
-                                <div className="relative">
-                                    <input 
-                                        type="text" 
-                                        value={reference} 
-                                        onChange={(e) => setReference(e.target.value)} 
-                                        placeholder={t('reference')} 
-                                        className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 pr-10"
-                                    />
-                                    <button 
-                                        type="button"
-                                        onClick={() => { setReference(''); setShowReferenceField(false); }}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex items-end pb-2">
-                                <button 
-                                    type="button"
-                                    onClick={() => setShowReferenceField(true)}
-                                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                                >
-                                    <Plus size={14} /> {t('addReference')}
-                                </button>
-                            </div>
-                        )}
+
                         <div className="md:col-span-2 space-y-2">
                             <label className="block text-sm font-bold text-slate-700 ml-1">Mode de calcul</label>
                             <div className="flex flex-wrap gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200 w-fit">
@@ -692,7 +655,13 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <div className="text-[11px] font-bold text-slate-900 leading-tight">{item.name}</div>
+                                                    <input 
+                                                        type="text" 
+                                                        value={item.name || ''} 
+                                                        onChange={(e) => updateLineItem(item.id, { name: e.target.value })}
+                                                        placeholder={t('designationLabel')}
+                                                        className="w-full p-1 text-left border-none focus:ring-0 text-[11px] font-bold text-slate-900 bg-transparent"
+                                                    />
                                                 </td>
                                                 <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
                                                     <input 
@@ -766,9 +735,18 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                     return (
                                         <div key={item.id} className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3">
                                             <div className="flex justify-between items-start">
-                                                <div className="flex-1">
-                                                    <div className="text-sm font-bold text-slate-900">{item.name}</div>
-                                                    <div className="mt-1">
+                                                <div className="flex-1 space-y-2">
+                                                    <div>
+                                                        <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">{t('designationLabel')}</label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={item.name || ''} 
+                                                            onChange={(e) => updateLineItem(item.id, { name: e.target.value })}
+                                                            placeholder={t('designationLabel')}
+                                                            className="w-full h-8 rounded-lg border-slate-200 bg-white text-sm font-bold px-2 mt-0.5"
+                                                        />
+                                                    </div>
+                                                    <div>
                                                         <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">{t('refLabel')}</label>
                                                         <input 
                                                             type="text" 

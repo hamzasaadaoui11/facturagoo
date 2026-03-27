@@ -28,7 +28,6 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [subject, setSubject] = useState('');
     const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
-    const [reference, setReference] = useState('');
     const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -36,7 +35,6 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     const [showSubjectField, setShowSubjectField] = useState(false);
     const [showPurchaseOrderField, setShowPurchaseOrderField] = useState(false);
     const [showPaymentMethodField, setShowPaymentMethodField] = useState(false);
-    const [showReferenceField, setShowReferenceField] = useState(false);
     
     const [selectedProductId, setSelectedProductId] = useState('');
     const [tempName, setTempName] = useState('');
@@ -66,10 +64,6 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setPurchaseOrderNumber(initialPO);
                 setShowPurchaseOrderField(!!initialPO);
 
-                const initialRef = noteToEdit.reference || '';
-                setReference(initialRef);
-                setShowReferenceField(!!initialRef);
-
                 setNotes(noteToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(noteToEdit.lineItems[0]?.calculationMode || 'piece');
@@ -86,8 +80,6 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setShowSubjectField(false);
                 setPurchaseOrderNumber('');
                 setShowPurchaseOrderField(false);
-                setReference('');
-                setShowReferenceField(false);
                 setNotes('');
                 setLineItems([]);
                 setPaymentAmount(0);
@@ -215,7 +207,6 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 clientId, clientName: clientNameDisplay, date, 
                 subject: showSubjectField ? subject : undefined, 
                 purchaseOrderNumber: showPurchaseOrderField ? purchaseOrderNumber : undefined, 
-                reference: showReferenceField ? reference : undefined,
                 notes, 
                 lineItems: updatedLineItems, status: 'Livré',
                 subTotal: totals.subTotal, vatAmount: totals.vatAmount, totalAmount: totals.totalTTC,
@@ -341,37 +332,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                             </div>
                         )}
 
-                        {showReferenceField ? (
-                            <div className="space-y-1">
-                                <label className="block text-sm font-bold text-slate-700 ml-1">{t('reference')}</label>
-                                <div className="relative">
-                                    <input 
-                                        type="text" 
-                                        value={reference} 
-                                        onChange={(e) => setReference(e.target.value)} 
-                                        placeholder={t('reference')} 
-                                        className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 pr-10"
-                                    />
-                                    <button 
-                                        type="button"
-                                        onClick={() => { setReference(''); setShowReferenceField(false); }}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex items-end pb-2">
-                                <button 
-                                    type="button"
-                                    onClick={() => setShowReferenceField(true)}
-                                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                                >
-                                    <Plus size={14} /> {t('reference')}
-                                </button>
-                            </div>
-                        )}
+
 
                         <div className="md:col-span-2 space-y-2">
                             <label className="block text-sm font-bold text-slate-700 ml-1">Mode de calcul</label>
@@ -562,7 +523,13 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <div className="text-[11px] font-bold text-slate-900 leading-tight">{item.name}</div>
+                                                    <input 
+                                                        type="text" 
+                                                        value={item.name || ''} 
+                                                        onChange={(e) => updateLineItem(item.id, { name: e.target.value })}
+                                                        placeholder={t('designationLabel')}
+                                                        className="w-full p-1 text-left border-none focus:ring-0 text-[11px] font-bold text-slate-900 bg-transparent"
+                                                    />
                                                 </td>
                                                 <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
                                                     <input 
@@ -647,7 +614,16 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                                             placeholder={t('refLabel')}
                                                         />
                                                     </div>
-                                                    <div className="text-sm font-bold text-slate-900 leading-tight">{item.name}</div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <label className="text-[10px] font-bold text-slate-400 uppercase">{t('designationLabel')}</label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={item.name || ''} 
+                                                            onChange={(e) => updateLineItem(item.id, { name: e.target.value })}
+                                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold focus:ring-emerald-500 focus:border-emerald-500"
+                                                            placeholder={t('designationLabel')}
+                                                        />
+                                                    </div>
                                                 </div>
                                                 <button onClick={() => handleRemoveItem(item.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
                                                     <Trash2 size={18} />

@@ -28,8 +28,6 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
     const [expiryDate, setExpiryDate] = useState('');
     const [subject, setSubject] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
-    const [reference, setReference] = useState('');
-    const [showReferenceField, setShowReferenceField] = useState(false);
     const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
     const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
@@ -72,9 +70,6 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 const initialPaymentMethod = quoteToEdit.paymentMethod || quoteToEdit.lineItems[0]?.paymentMethod || '';
                 setPaymentMethod(initialPaymentMethod);
                 setShowPaymentMethodField(!!initialPaymentMethod);
-
-                setReference(quoteToEdit.reference || '');
-                setShowReferenceField(!!quoteToEdit.reference);
                 
                 const initialPO = quoteToEdit.purchaseOrderNumber || '';
                 setPurchaseOrderNumber(initialPO);
@@ -96,8 +91,6 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setShowSubjectField(false);
                 setPaymentMethod('');
                 setShowPaymentMethodField(false);
-                setReference('');
-                setShowReferenceField(false);
                 setPurchaseOrderNumber('');
                 setShowPurchaseOrderField(false);
                 setNotes('');
@@ -249,7 +242,6 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
             expiryDate: showExpiryDateField ? expiryDate : undefined, 
             subject: showSubjectField ? subject : undefined, 
             paymentMethod: showPaymentMethodField ? paymentMethod : undefined,
-            reference: showReferenceField ? reference : undefined, 
             purchaseOrderNumber: showPurchaseOrderField ? purchaseOrderNumber : undefined,
             notes,
             lineItems: updatedLineItems,
@@ -602,7 +594,13 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <div className="text-[11px] font-bold text-slate-900 leading-tight">{item.name}</div>
+                                                    <input 
+                                                        type="text" 
+                                                        value={item.name || ''} 
+                                                        onChange={(e) => updateLineItem(item.id, { name: e.target.value })}
+                                                        placeholder={t('designationLabel')}
+                                                        className="w-full p-1 text-left border-none focus:ring-0 text-[11px] font-bold text-slate-900 bg-transparent"
+                                                    />
                                                 </td>
                                                 <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
                                                     <input 
@@ -676,9 +674,18 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                     return (
                                         <div key={item.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
                                             <div className="flex justify-between items-start">
-                                                <div className="flex-1">
-                                                    <div className="text-sm font-bold text-slate-900 leading-tight">{item.name}</div>
-                                                    <div className="mt-1">
+                                                <div className="flex-1 space-y-2">
+                                                    <div>
+                                                        <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">{t('designationLabel')}</label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={item.name || ''} 
+                                                            onChange={(e) => updateLineItem(item.id, { name: e.target.value })}
+                                                            placeholder={t('designationLabel')}
+                                                            className="w-full h-8 rounded-lg border-slate-200 bg-white text-sm font-bold px-2 mt-0.5"
+                                                        />
+                                                    </div>
+                                                    <div>
                                                         <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">{t('refLabel')}</label>
                                                         <input 
                                                             type="text" 
