@@ -246,8 +246,8 @@ const generateDocumentHTML = (
     }
 
     let activeColumns = (settings.documentColumns && settings.documentColumns.length > 0) 
-        ? settings.documentColumns.filter(c => c.visible).sort((a, b) => a.order - b.order)
-        : DEFAULT_COLUMNS.filter(c => c.visible);
+        ? settings.documentColumns.filter(c => c.visible || (c.id === 'reference' && doc.lineItems.some(item => !!item.productCode))).sort((a, b) => a.order - b.order)
+        : DEFAULT_COLUMNS.filter(c => c.visible || (c.id === 'reference' && doc.lineItems.some(item => !!item.productCode)));
 
     if (isDeliveryNote && !showPrices) {
         activeColumns = activeColumns.filter(c => c.id === 'name' || c.id === 'quantity' || c.id === 'reference');
@@ -257,7 +257,7 @@ const generateDocumentHTML = (
         const qtyIndex = activeColumns.findIndex(c => c.id === 'quantity');
         if (qtyIndex !== -1) {
             activeColumns.splice(qtyIndex + 1, 0, 
-                { id: 'length' as any, label: lang === 'es' ? 'Largo' : (lang === 'en' ? 'Length' : 'Long.'), visible: true, order: 2.1 },
+                { id: 'length' as any, label: lang === 'es' ? 'Ancho' : (lang === 'en' ? 'Width' : 'Larg.'), visible: true, order: 2.1 },
                 { id: 'height' as any, label: lang === 'es' ? 'Alto' : (lang === 'en' ? 'Height' : 'Haut.'), visible: true, order: 2.2 },
                 { id: 'm2' as any, label: 'M²', visible: true, order: 2.3 }
             );

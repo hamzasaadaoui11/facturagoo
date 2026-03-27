@@ -51,6 +51,7 @@ const Quotes: React.FC<QuotesProps> = ({
     const [quoteToEdit, setQuoteToEdit] = useState<Quote | null>(null);
     const [convertingId, setConvertingId] = useState<string | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Responsive items per page
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -62,14 +63,21 @@ const Quotes: React.FC<QuotesProps> = ({
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = isMobile ? 4 : 6;
-    const totalPages = Math.ceil(quotes.length / itemsPerPage);
+    const itemsPerPage = 6;
+    const filteredQuotes = quotes.filter(quote => {
+        const term = searchTerm.toLowerCase();
+        return (
+            (quote.documentId || quote.id).toLowerCase().includes(term) ||
+            (quote.clientName || '').toLowerCase().includes(term)
+        );
+    });
+    const totalPages = Math.ceil(filteredQuotes.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedQuotes = quotes.slice(startIndex, startIndex + itemsPerPage);
+    const paginatedQuotes = filteredQuotes.slice(startIndex, startIndex + itemsPerPage);
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [quotes.length, itemsPerPage]);
+    }, [quotes.length, searchTerm, itemsPerPage]);
 
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -270,6 +278,8 @@ const Quotes: React.FC<QuotesProps> = ({
                         <input
                            type="search"
                            placeholder={t('search')}
+                           value={searchTerm}
+                           onChange={(e) => setSearchTerm(e.target.value)}
                            className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
                         />
                     </div>
@@ -389,7 +399,7 @@ const Quotes: React.FC<QuotesProps> = ({
                         <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                             <div>
                                 <p className="text-sm text-neutral-700">
-                                    Affichage de <span className="font-bold">{startIndex + 1}</span> à <span className="font-bold">{Math.min(startIndex + itemsPerPage, quotes.length)}</span> sur <span className="font-bold">{quotes.length}</span> devis
+                                    Affichage de <span className="font-bold">{startIndex + 1}</span> à <span className="font-bold">{Math.min(startIndex + itemsPerPage, filteredQuotes.length)}</span> sur <span className="font-bold">{filteredQuotes.length}</span> devis
                                 </p>
                             </div>
                             <div>

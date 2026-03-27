@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import Header from './Header';
-import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical, Trash2, ArrowLeftRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical, Trash2, ArrowLeftRight, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Invoice, InvoiceStatus, Payment, Client, Product, CompanySettings } from '../types';
 import CreateInvoiceModal from './CreateInvoiceModal';
 import ConfirmationModal from './ConfirmationModal';
@@ -41,6 +41,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [prefilledPO, setPrefilledPO] = useState<string | undefined>(undefined);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         if (location.state && (location.state as any).prefilledPO) {
@@ -62,15 +63,22 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = isMobile ? 4 : 6;
-    const totalPages = Math.ceil(invoices.length / itemsPerPage);
+    const itemsPerPage = 6;
+    const filteredInvoices = invoices.filter(invoice => {
+        const term = searchTerm.toLowerCase();
+        return (
+            (invoice.documentId || invoice.id).toLowerCase().includes(term) ||
+            (invoice.clientName || '').toLowerCase().includes(term)
+        );
+    });
+    const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedInvoices = invoices.slice(startIndex, startIndex + itemsPerPage);
+    const paginatedInvoices = filteredInvoices.slice(startIndex, startIndex + itemsPerPage);
 
     // Reset page if search results or data change
     useEffect(() => {
         setCurrentPage(1);
-    }, [invoices.length, itemsPerPage]);
+    }, [invoices.length, searchTerm, itemsPerPage]);
 
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -286,6 +294,20 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
             )}
 
             <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
+                <div className="p-4 border-b border-neutral-200">
+                     <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 flex items-center pl-3 rtl:right-0 rtl:pr-3">
+                           <Search className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                        </div>
+                        <input
+                           type="search"
+                           placeholder={t('search')}
+                           value={searchTerm}
+                           onChange={(e) => setSearchTerm(e.target.value)}
+                           className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
+                        />
+                    </div>
+                </div>
                 {/* Desktop Table View */}
                 <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-neutral-200">
@@ -412,7 +434,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                         <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                             <div>
                                 <p className="text-sm text-neutral-700">
-                                    Affichage de <span className="font-bold">{startIndex + 1}</span> à <span className="font-bold">{Math.min(startIndex + itemsPerPage, invoices.length)}</span> sur <span className="font-bold">{invoices.length}</span> factures
+                                    Affichage de <span className="font-bold">{startIndex + 1}</span> à <span className="font-bold">{Math.min(startIndex + itemsPerPage, filteredInvoices.length)}</span> sur <span className="font-bold">{filteredInvoices.length}</span> factures
                                 </p>
                             </div>
                             <div>

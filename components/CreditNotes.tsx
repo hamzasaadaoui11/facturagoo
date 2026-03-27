@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Header from './Header';
-import { FileText, Download, Plus, Pencil, Printer, MoreVertical, Trash2, CheckCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Download, Plus, Pencil, Printer, MoreVertical, Trash2, CheckCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { CreditNote, CreditNoteStatus, Client, Product, CompanySettings } from '../types';
 import CreateCreditNoteModal from './CreateCreditNoteModal';
 import ConfirmationModal from './ConfirmationModal';
@@ -40,6 +40,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [creditNoteToEdit, setCreditNoteToEdit] = useState<CreditNote | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Responsive items per page
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -51,14 +52,22 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = isMobile ? 4 : 6;
-    const totalPages = Math.ceil(creditNotes.length / itemsPerPage);
+    const itemsPerPage = 6;
+    const filteredNotes = creditNotes.filter(note => {
+        const term = searchTerm.toLowerCase();
+        return (
+            (note.documentId || note.id).toLowerCase().includes(term) ||
+            (note.clientName || '').toLowerCase().includes(term) ||
+            (note.invoiceId || '').toLowerCase().includes(term)
+        );
+    });
+    const totalPages = Math.ceil(filteredNotes.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedNotes = creditNotes.slice(startIndex, startIndex + itemsPerPage);
+    const paginatedNotes = filteredNotes.slice(startIndex, startIndex + itemsPerPage);
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [creditNotes.length, itemsPerPage]);
+    }, [creditNotes.length, searchTerm, itemsPerPage]);
 
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -214,6 +223,20 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
             />
 
             <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
+                <div className="p-4 border-b border-neutral-200">
+                     <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 flex items-center pl-3 rtl:right-0 rtl:pr-3">
+                           <Search className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                        </div>
+                        <input
+                           type="search"
+                           placeholder={t('search')}
+                           value={searchTerm}
+                           onChange={(e) => setSearchTerm(e.target.value)}
+                           className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
+                        />
+                    </div>
+                </div>
                 {/* Mobile Card View */}
                 <div className="md:hidden divide-y divide-neutral-200">
                     {paginatedNotes.length > 0 ? (
@@ -327,7 +350,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                         <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                             <div>
                                 <p className="text-sm text-neutral-700">
-                                    Affichage de <span className="font-bold">{startIndex + 1}</span> à <span className="font-bold">{Math.min(startIndex + itemsPerPage, creditNotes.length)}</span> sur <span className="font-bold">{creditNotes.length}</span> avoirs
+                                    Affichage de <span className="font-bold">{startIndex + 1}</span> à <span className="font-bold">{Math.min(startIndex + itemsPerPage, filteredNotes.length)}</span> sur <span className="font-bold">{filteredNotes.length}</span> avoirs
                                 </p>
                             </div>
                             <div>

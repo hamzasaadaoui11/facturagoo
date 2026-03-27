@@ -55,7 +55,7 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = isMobile ? 4 : 6;
+    const itemsPerPage = 6;
     const filteredOrders = orders.filter(order => {
         const term = searchTerm.toLowerCase();
         return (

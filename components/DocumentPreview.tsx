@@ -180,7 +180,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                 <th className="p-3 text-center font-semibold uppercase text-xs w-16">{t('quantity')}</th>
                                 {isM2 && (
                                     <>
-                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">Long.</th>
+                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">Larg.</th>
                                         <th className="p-3 text-center font-semibold uppercase text-xs w-16">Haut.</th>
                                         <th className="p-3 text-center font-semibold uppercase text-xs w-16">M²</th>
                                     </>

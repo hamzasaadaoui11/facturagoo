@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import AddSupplierModal from './AddSupplierModal';
 import ConfirmationModal from './ConfirmationModal';
-import { Plus, Pencil, Trash2, Building2, User, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Building2, User, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Supplier } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -25,6 +25,10 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier, onUpdat
     const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
     const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 6;
+
     const filteredSuppliers = suppliers.filter(supplier => {
         const term = searchTerm.toLowerCase();
         return (
@@ -36,6 +40,16 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier, onUpdat
             (supplier.ice?.toLowerCase() || '').includes(term)
         );
     });
+
+    // Reset to first page when search changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
+
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedSuppliers = filteredSuppliers.slice(startIndex, startIndex + itemsPerPage);
 
     const handleAddClick = () => {
         setSupplierToEdit(null);
@@ -175,8 +189,8 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier, onUpdat
 
                 {/* Mobile Card View */}
                 <div className="md:hidden divide-y divide-neutral-200">
-                    {filteredSuppliers.length > 0 ? (
-                        filteredSuppliers.map((supplier) => {
+                    {paginatedSuppliers.length > 0 ? (
+                        paginatedSuppliers.map((supplier) => {
                             const isCompany = supplier.type === 'Entreprise' || (!supplier.type && supplier.company);
                             return (
                                 <div key={supplier.id} className={`p-4 space-y-3 hover:bg-emerald-50/60 transition-colors duration-200 ${selectedSupplierIds.includes(supplier.id) ? 'bg-emerald-50/40' : ''}`}>
@@ -266,8 +280,8 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier, onUpdat
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-200 bg-white">
-                            {filteredSuppliers.length > 0 ? (
-                                filteredSuppliers.map((supplier) => {
+                            {paginatedSuppliers.length > 0 ? (
+                                paginatedSuppliers.map((supplier) => {
                                     const isCompany = supplier.type === 'Entreprise' || (!supplier.type && supplier.company);
 
                                     return (
@@ -348,6 +362,62 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, onAddSupplier, onUpdat
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination UI */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-neutral-200">
+                        <div className="flex-1 flex justify-between sm:hidden">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+                            >
+                                {isRTL ? 'التالي' : 'Précédent'}
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                                className="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+                            >
+                                {isRTL ? 'السابق' : 'Suivant'}
+                            </button>
+                        </div>
+                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-sm text-neutral-700">
+                                    Affichage de <span className="font-bold">{startIndex + 1}</span> à <span className="font-bold">{Math.min(startIndex + itemsPerPage, filteredSuppliers.length)}</span> sur <span className="font-bold">{filteredSuppliers.length}</span> fournisseurs
+                                </p>
+                            </div>
+                            <div>
+                                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+                                    >
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    {[...Array(totalPages)].map((_, i) => (
+                                        <button
+                                            key={i + 1}
+                                            onClick={() => setCurrentPage(i + 1)}
+                                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors ${currentPage === i + 1 ? 'z-10 bg-emerald-50 border-emerald-500 text-emerald-600 font-bold' : 'bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50'}`}
+                                        >
+                                            {i + 1}
+                                        </button>
+                                    ))}
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+                                    >
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

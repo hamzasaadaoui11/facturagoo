@@ -90,6 +90,7 @@ export interface LineItem {
   expiryDate?: string;
   expectedDate?: string;
   notes?: string;
+  reference?: string;
 }
 
 export interface Quote {

@@ -29,6 +29,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
     const [subject, setSubject] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
     const [reference, setReference] = useState('');
+    const [showReferenceField, setShowReferenceField] = useState(false);
     const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
     const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
@@ -73,6 +74,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setShowPaymentMethodField(!!initialPaymentMethod);
 
                 setReference(quoteToEdit.reference || '');
+                setShowReferenceField(!!quoteToEdit.reference);
                 
                 const initialPO = quoteToEdit.purchaseOrderNumber || '';
                 setPurchaseOrderNumber(initialPO);
@@ -95,6 +97,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setPaymentMethod('');
                 setShowPaymentMethodField(false);
                 setReference('');
+                setShowReferenceField(false);
                 setPurchaseOrderNumber('');
                 setShowPurchaseOrderField(false);
                 setNotes('');
@@ -246,7 +249,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
             expiryDate: showExpiryDateField ? expiryDate : undefined, 
             subject: showSubjectField ? subject : undefined, 
             paymentMethod: showPaymentMethodField ? paymentMethod : undefined,
-            reference, 
+            reference: showReferenceField ? reference : undefined, 
             purchaseOrderNumber: showPurchaseOrderField ? purchaseOrderNumber : undefined,
             notes,
             lineItems: updatedLineItems,
@@ -415,7 +418,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             <div className="flex flex-wrap gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200 w-fit">
                                 {[
                                     { id: 'piece', label: 'Par pièce', icon: Package },
-                                    { id: 'm2', label: 'Par m²', icon: Square },
+                                    { id: 'm2', label: 'Par m² (Larg x Haut)', icon: Square },
                                     { id: 'ml', label: 'Par mètre linéaire', icon: Ruler },
                                     { id: 'kg', label: 'Par kg', icon: Weight }
                                 ].map((mode) => (
@@ -508,7 +511,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                             </div>
                             {showLengthColumn && (
                                 <div className="col-span-1 md:col-span-12 lg:col-span-2">
-                                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Long.</label>
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">{calculationMode === 'm2' ? 'Larg.' : 'Long.'}</label>
                                     <input 
                                         type="text" 
                                         value={tempLength} 
@@ -567,9 +570,10 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                 <table className="min-w-full divide-y divide-slate-200">
                                     <thead className="bg-slate-50">
                                         <tr>
+                                            <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('refLabel')}</th>
                                             <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('description')}</th>
                                             <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
-                                            {showLengthColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Long.</th>}
+                                            {showLengthColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{calculationMode === 'm2' ? 'Larg.' : 'Long.'}</th>}
                                             {showHeightColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Haut.</th>}
                                             {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Poids (kg)</th>}
                                             {isM2 && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">M²</th>}
@@ -589,8 +593,16 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                             return (
                                             <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                                                 <td className="px-4 py-3">
+                                                    <input 
+                                                        type="text" 
+                                                        value={item.productCode || ''} 
+                                                        onChange={(e) => updateLineItem(item.id, { productCode: e.target.value })}
+                                                        placeholder={t('refLabel')}
+                                                        className="w-full p-1 text-left border-none focus:ring-0 text-[11px] font-mono bg-transparent"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3">
                                                     <div className="text-[11px] font-bold text-slate-900 leading-tight">{item.name}</div>
-                                                    {item.productCode && <div className="text-[9px] text-slate-400 font-mono mt-0.5">{item.productCode}</div>}
                                                 </td>
                                                 <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
                                                     <input 
@@ -666,7 +678,16 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                             <div className="flex justify-between items-start">
                                                 <div className="flex-1">
                                                     <div className="text-sm font-bold text-slate-900 leading-tight">{item.name}</div>
-                                                    {item.productCode && <div className="text-[10px] text-slate-400 font-mono mt-0.5">{item.productCode}</div>}
+                                                    <div className="mt-1">
+                                                        <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">{t('refLabel')}</label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={item.productCode || ''} 
+                                                            onChange={(e) => updateLineItem(item.id, { productCode: e.target.value })}
+                                                            placeholder={t('refLabel')}
+                                                            className="w-full h-8 rounded-lg border-slate-200 bg-white text-[11px] font-mono px-2 mt-0.5"
+                                                        />
+                                                    </div>
                                                 </div>
                                                 <button onClick={() => handleRemoveItem(item.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
                                                     <Trash2 size={18} />

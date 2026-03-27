@@ -21,7 +21,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ products, movements, 
 
     // Pagination for Global History
     const [movementsPage, setMovementsPage] = useState(1);
-    const MOVEMENTS_PER_PAGE = 6;
+    const MOVEMENTS_PER_PAGE = 10;
 
     // Correction State
     const [productToCorrect, setProductToCorrect] = useState<Product | null>(null);

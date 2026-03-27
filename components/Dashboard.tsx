@@ -248,8 +248,17 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
             .slice(0, 3);
     }, [invoices, products]);
 
-    const recentInvoices = useMemo(() => [...invoices].slice(0, 5), [invoices]);
-    const recentClients = useMemo(() => [...clients].slice(0, 5), [clients]);
+    const recentInvoices = useMemo(() => {
+        return [...invoices]
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 4);
+    }, [invoices]);
+
+    const recentClients = useMemo(() => {
+        return [...clients]
+            .sort((a, b) => (b.clientCode || '').localeCompare(a.clientCode || ''))
+            .slice(0, 4);
+    }, [clients]);
 
     const welcomeName = companySettings?.companyName || 'Entrepreneur';
 

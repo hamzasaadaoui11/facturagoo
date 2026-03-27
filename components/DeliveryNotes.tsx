@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import Header from './Header';
-import { Truck, FileText, Plus, Pencil, Download, Trash2, CheckCircle, AlertCircle, Clock, Loader2, FileCheck, MoreVertical, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Truck, FileText, Plus, Pencil, Download, Trash2, CheckCircle, AlertCircle, Clock, Loader2, FileCheck, MoreVertical, Printer, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { DeliveryNote, Invoice, Client, Product, CompanySettings } from '../types';
 import CreateDeliveryNoteModal from './CreateDeliveryNoteModal';
 import ConfirmationModal from './ConfirmationModal';
@@ -40,6 +40,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [convertingId, setConvertingId] = useState<string | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Responsive items per page
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -51,14 +52,22 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = isMobile ? 4 : 6;
-    const totalPages = Math.ceil(deliveryNotes.length / itemsPerPage);
+    const itemsPerPage = 6;
+    const filteredNotes = deliveryNotes.filter(note => {
+        const term = searchTerm.toLowerCase();
+        return (
+            (note.documentId || note.id).toLowerCase().includes(term) ||
+            (note.clientName || '').toLowerCase().includes(term) ||
+            (note.invoiceId || '').toLowerCase().includes(term)
+        );
+    });
+    const totalPages = Math.ceil(filteredNotes.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedNotes = deliveryNotes.slice().reverse().slice(startIndex, startIndex + itemsPerPage);
+    const paginatedNotes = filteredNotes.slice().reverse().slice(startIndex, startIndex + itemsPerPage);
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [deliveryNotes.length, itemsPerPage]);
+    }, [deliveryNotes.length, searchTerm, itemsPerPage]);
     
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [menuPosition, setMenuPosition] = useState<{top: number, left: number, transformOrigin: string} | null>(null);
@@ -309,6 +318,20 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
             )}
 
             <div className="rounded-lg bg-white shadow-sm ring-1 ring-neutral-200 overflow-hidden">
+                <div className="p-4 border-b border-neutral-200">
+                     <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 flex items-center pl-3 rtl:right-0 rtl:pr-3">
+                           <Search className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                        </div>
+                        <input
+                           type="search"
+                           placeholder={t('search')}
+                           value={searchTerm}
+                           onChange={(e) => setSearchTerm(e.target.value)}
+                           className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
+                        />
+                    </div>
+                </div>
                 {/* Desktop Table View */}
                 <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-neutral-200">
@@ -445,7 +468,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                         <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                             <div>
                                 <p className="text-sm text-neutral-700">
-                                    Affichage de <span className="font-bold">{startIndex + 1}</span> à <span className="font-bold">{Math.min(startIndex + itemsPerPage, deliveryNotes.length)}</span> sur <span className="font-bold">{deliveryNotes.length}</span> bons
+                                    Affichage de <span className="font-bold">{startIndex + 1}</span> à <span className="font-bold">{Math.min(startIndex + itemsPerPage, filteredNotes.length)}</span> sur <span className="font-bold">{filteredNotes.length}</span> bons
                                 </p>
                             </div>
                             <div>

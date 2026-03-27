@@ -28,6 +28,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [expectedDate, setExpectedDate] = useState('');
     const [subject, setSubject] = useState('');
+    const [reference, setReference] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
     const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
@@ -36,6 +37,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const [showExpectedDateField, setShowExpectedDateField] = useState(false);
     const [showSubjectField, setShowSubjectField] = useState(false);
     const [showPaymentMethodField, setShowPaymentMethodField] = useState(false);
+    const [showReferenceField, setShowReferenceField] = useState(false);
     
     const [selectedProductId, setSelectedProductId] = useState('');
     const [tempName, setTempName] = useState('');
@@ -71,6 +73,10 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setPaymentMethod(initialPaymentMethod);
                 setShowPaymentMethodField(!!initialPaymentMethod);
 
+                const initialRef = orderToEdit.reference || '';
+                setReference(initialRef);
+                setShowReferenceField(!!initialRef);
+
                 setNotes(orderToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(orderToEdit.lineItems[0]?.calculationMode || 'piece');
@@ -87,6 +93,8 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setShowSubjectField(false);
                 setPaymentMethod('');
                 setShowPaymentMethodField(false);
+                setReference('');
+                setShowReferenceField(false);
                 setNotes('');
                 setLineItems([]);
                 setTempVat(language === 'es' ? 21 : 20);
@@ -237,6 +245,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
             supplierId, supplierName: supplierNameDisplay, date, 
             expectedDate: showExpectedDateField ? expectedDate : undefined, 
             subject: showSubjectField ? subject : undefined, 
+            reference: showReferenceField ? reference : undefined,
             paymentMethod: showPaymentMethodField ? paymentMethod : undefined,
             notes, 
             lineItems: updatedLineItems,
@@ -343,6 +352,32 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                             </div>
                         )}
 
+                        {showReferenceField ? (
+                            <div className="space-y-1">
+                                <label className="block text-sm font-bold text-slate-700 ml-1">{t('reference')}</label>
+                                <div className="relative">
+                                    <input type="text" value={reference} onChange={(e) => setReference(e.target.value)} placeholder={t('reference')} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 pr-10"/>
+                                    <button 
+                                        type="button"
+                                        onClick={() => { setReference(''); setShowReferenceField(false); }}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-end pb-2">
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowReferenceField(true)}
+                                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                >
+                                    <Plus size={14} /> {t('addReference')}
+                                </button>
+                            </div>
+                        )}
+
                         {showPaymentMethodField ? (
                             <div className="space-y-1">
                                 <label className="block text-sm font-bold text-slate-700 ml-1">{t('paymentMethod')}</label>
@@ -379,7 +414,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                             <div className="flex flex-wrap gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200 w-fit">
                                 {[
                                     { id: 'piece', label: 'Par pièce', icon: Package },
-                                    { id: 'm2', label: 'Par m²', icon: Square },
+                                    { id: 'm2', label: 'Par m² (Larg x Haut)', icon: Square },
                                     { id: 'ml', label: 'Par mètre linéaire', icon: Ruler },
                                     { id: 'kg', label: 'Par kg', icon: Weight }
                                 ].map((mode) => (
@@ -472,7 +507,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                             </div>
                             {showLengthColumn && (
                                 <div className="col-span-1 md:col-span-12 lg:col-span-2">
-                                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Long.</label>
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">{calculationMode === 'm2' ? 'Larg.' : 'Long.'}</label>
                                     <input 
                                         type="text" 
                                         value={tempLength} 
@@ -525,96 +560,207 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                     </div>
 
                     {lineItems.length > 0 ? (
-                        <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
-                            <table className="min-w-full divide-y divide-slate-200">
-                                <thead className="bg-slate-50">
-                                    <tr>
-                                        <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('description')}</th>
-                                        <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
-                                        {showLengthColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Long.</th>}
-                                        {showHeightColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Haut.</th>}
-                                        {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Poids (kg)</th>}
-                                        {isM2 && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">M²</th>}
-                                        {isML && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">ML</th>}
-                                        {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Total kg</th>}
-                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</th>
-                                        <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('totalTTCLabel') : t('totalHTLabel')}</th>
-                                        <th className="px-4 py-3 w-10"></th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-slate-100">
-                                    {(lineItems || []).map(item => {
-                                        const itemVat = typeof item.vat === 'number' ? item.vat : 20;
-                                        const displayPrice = isModeTTC ? (item.unitPrice * (1 + itemVat/100)) : item.unitPrice;
-                                        const displayLineTotal = (item.quantity || 0) * getLineMultiplier(item) * (displayPrice || 0);
-                                        
-                                        return (
-                                        <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-4 py-3">
-                                                <div className="text-[11px] font-bold text-slate-900 leading-tight">{item.name}</div>
-                                                {item.productCode && <div className="text-[9px] text-slate-400 font-mono mt-0.5">{item.productCode}</div>}
-                                            </td>
-                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                <input 
-                                                    type="text" 
-                                                    value={formatDecimalForInput(item.quantity, language)} 
-                                                    onChange={(e) => updateLineItem(item.id, { quantity: parseDecimalInput(e.target.value) })}
-                                                    className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                />
-                                            </td>
-                                        {showLengthColumn && (
-                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                <input 
-                                                    type="text" 
-                                                    value={formatDecimalForInput(item.length || 1, language)} 
-                                                    onChange={(e) => updateLineItem(item.id, { length: parseDecimalInput(e.target.value) })}
-                                                    className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                />
-                                            </td>
-                                        )}
-                                        {showHeightColumn && (
-                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                <input 
-                                                    type="text" 
-                                                    value={formatDecimalForInput(item.height || 1, language)} 
-                                                    onChange={(e) => updateLineItem(item.id, { height: parseDecimalInput(e.target.value) })}
-                                                    className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                />
-                                            </td>
-                                        )}
-                                        {isKg && (
-                                            <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
-                                                <input 
-                                                    type="text" 
-                                                    value={formatDecimalForInput(item.weight || 1, language)} 
-                                                    onChange={(e) => updateLineItem(item.id, { weight: parseDecimalInput(e.target.value) })}
-                                                    className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
-                                                />
-                                            </td>
-                                        )}
-                                        {isM2 && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1) * (item.height || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
-                                        {isML && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
-                                        {isKg && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
-                                            <td className="px-4 py-3 text-right text-xs">
-                                                 <input 
-                                                    type="text" 
-                                                    value={formatDecimalForInput(displayPrice, language)} 
-                                                    onChange={(e) => {
-                                                        const val = parseDecimalInput(e.target.value);
-                                                        updateLineItem(item.id, { unitPrice: isModeTTC ? (val / (1 + item.vat/100)) : val });
-                                                    }}
-                                                    className="w-24 p-1 text-right border-none focus:ring-0 text-xs font-medium bg-transparent"
-                                                />
-                                            </td>
-                                            <td className="px-4 py-3 text-right text-xs font-bold text-slate-900">
-                                                {displayLineTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })}
-                                            </td>
-                                            <td className="px-4 py-3 text-center"><button onClick={() => handleRemoveItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1"><Trash2 size={16}/></button></td>
+                        <>
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block border border-slate-200 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-200">
+                                    <thead className="bg-slate-50">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('refLabel')}</th>
+                                            <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('description')}</th>
+                                            <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
+                                            {showLengthColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{calculationMode === 'm2' ? 'Larg.' : 'Long.'}</th>}
+                                            {showHeightColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Haut.</th>}
+                                            {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Poids (kg)</th>}
+                                            {isM2 && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">M²</th>}
+                                            {isML && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">ML</th>}
+                                            {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Total kg</th>}
+                                            <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</th>
+                                            <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('totalTTCLabel') : t('totalHTLabel')}</th>
+                                            <th className="px-4 py-3 w-10"></th>
                                         </tr>
-                                    )})}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-slate-100">
+                                        {(lineItems || []).map(item => {
+                                            const itemVat = typeof item.vat === 'number' ? item.vat : 20;
+                                            const displayPrice = isModeTTC ? (item.unitPrice * (1 + itemVat/100)) : item.unitPrice;
+                                            const displayLineTotal = (item.quantity || 0) * getLineMultiplier(item) * (displayPrice || 0);
+                                            
+                                            return (
+                                            <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                                                <td className="px-4 py-3">
+                                                    <input 
+                                                        type="text" 
+                                                        value={item.productCode || ''} 
+                                                        onChange={(e) => updateLineItem(item.id, { productCode: e.target.value })}
+                                                        className="w-full p-1 text-left border-none focus:ring-0 text-[11px] font-bold bg-transparent"
+                                                        placeholder={t('refLabel')}
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <div className="text-[11px] font-bold text-slate-900 leading-tight">{item.name}</div>
+                                                </td>
+                                                <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(item.quantity, language)} 
+                                                        onChange={(e) => updateLineItem(item.id, { quantity: parseDecimalInput(e.target.value) })}
+                                                        className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                    />
+                                                </td>
+                                            {showLengthColumn && (
+                                                <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(item.length || 1, language)} 
+                                                        onChange={(e) => updateLineItem(item.id, { length: parseDecimalInput(e.target.value) })}
+                                                        className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                    />
+                                                </td>
+                                            )}
+                                            {showHeightColumn && (
+                                                <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(item.height || 1, language)} 
+                                                        onChange={(e) => updateLineItem(item.id, { height: parseDecimalInput(e.target.value) })}
+                                                        className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                    />
+                                                </td>
+                                            )}
+                                            {isKg && (
+                                                <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(item.weight || 1, language)} 
+                                                        onChange={(e) => updateLineItem(item.id, { weight: parseDecimalInput(e.target.value) })}
+                                                        className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                    />
+                                                </td>
+                                            )}
+                                            {isM2 && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1) * (item.height || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
+                                            {isML && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
+                                            {isKg && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
+                                                <td className="px-4 py-3 text-right text-xs">
+                                                     <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(displayPrice, language)} 
+                                                        onChange={(e) => {
+                                                            const val = parseDecimalInput(e.target.value);
+                                                            updateLineItem(item.id, { unitPrice: isModeTTC ? (val / (1 + item.vat/100)) : val });
+                                                        }}
+                                                        className="w-24 p-1 text-right border-none focus:ring-0 text-xs font-medium bg-transparent"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-right text-xs font-bold text-slate-900">
+                                                    {displayLineTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="px-4 py-3 text-center"><button onClick={() => handleRemoveItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1"><Trash2 size={16}/></button></td>
+                                            </tr>
+                                        )})}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Mobile Card View */}
+                            <div className="md:hidden space-y-4">
+                                {(lineItems || []).map(item => {
+                                    const itemVat = typeof item.vat === 'number' ? item.vat : 20;
+                                    const displayPrice = isModeTTC ? (item.unitPrice * (1 + itemVat/100)) : item.unitPrice;
+                                    const displayLineTotal = (item.quantity || 0) * getLineMultiplier(item) * (displayPrice || 0);
+                                    
+                                    return (
+                                        <div key={item.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="flex flex-col gap-1">
+                                                        <label className="text-[10px] font-bold text-slate-400 uppercase">{t('refLabel')}</label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={item.productCode || ''} 
+                                                            onChange={(e) => updateLineItem(item.id, { productCode: e.target.value })}
+                                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-emerald-500 focus:border-emerald-500"
+                                                            placeholder={t('refLabel')}
+                                                        />
+                                                    </div>
+                                                    <div className="text-sm font-bold text-slate-900 leading-tight">{item.name}</div>
+                                                </div>
+                                                <button onClick={() => handleRemoveItem(item.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('quantity')}</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(item.quantity, language)} 
+                                                        onChange={(e) => updateLineItem(item.id, { quantity: parseDecimalInput(e.target.value) })}
+                                                        className="w-full h-10 rounded-lg border-slate-200 bg-white text-sm font-bold px-3"
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(displayPrice, language)} 
+                                                        onChange={(e) => {
+                                                            const val = parseDecimalInput(e.target.value);
+                                                            updateLineItem(item.id, { unitPrice: isModeTTC ? (val / (1 + item.vat/100)) : val });
+                                                        }}
+                                                        className="w-full h-10 rounded-lg border-slate-200 bg-white text-sm font-bold px-3"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {(showLengthColumn || showHeightColumn || isKg) && (
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    {showLengthColumn && (
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Long.</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={formatDecimalForInput(item.length || 1, language)} 
+                                                                onChange={(e) => updateLineItem(item.id, { length: parseDecimalInput(e.target.value) })}
+                                                                className="w-full h-10 rounded-lg border-slate-200 bg-white text-sm font-bold px-3"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {showHeightColumn && (
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Haut.</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={formatDecimalForInput(item.height || 1, language)} 
+                                                                onChange={(e) => updateLineItem(item.id, { height: parseDecimalInput(e.target.value) })}
+                                                                className="w-full h-10 rounded-lg border-slate-200 bg-white text-sm font-bold px-3"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {isKg && (
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Poids</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={formatDecimalForInput(item.weight || 1, language)} 
+                                                                onChange={(e) => updateLineItem(item.id, { weight: parseDecimalInput(e.target.value) })}
+                                                                className="w-full h-10 rounded-lg border-slate-200 bg-white text-sm font-bold px-3"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                                                <span className="text-xs font-bold text-slate-400 uppercase">{t('total')}</span>
+                                                <span className="text-sm font-black text-emerald-600">{displayLineTotal.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })} MAD</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
                     ) : (
                         <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-slate-400 text-sm italic">
                             {t('items')} ({language === 'ar' ? 'فارغ' : 'Vide'})
