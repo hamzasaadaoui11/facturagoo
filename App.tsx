@@ -354,34 +354,38 @@ const MainContent: React.FC = () => {
             updatedInvoice.id = id; 
 
             // Handle stock changes
-            if (existingInvoice.status !== InvoiceStatus.Draft) {
-                // Restore old stock
-                for (const item of existingInvoice.lineItems) {
-                    if (item.productId) {
-                        await addStockMovement({
-                            productId: item.productId,
-                            productName: item.name,
-                            date: new Date().toISOString().split('T')[0],
-                            quantity: item.quantity,
-                            type: 'Retour',
-                            reference: `Modif Facture ${existingInvoice.documentId || existingInvoice.id} (Restaurer)`
-                        });
+            const hasRelatedBL = deliveryNotes.some(dn => dn.invoiceId === existingInvoice.id || dn.invoiceId === existingInvoice.documentId);
+            
+            if (!hasRelatedBL) {
+                if (existingInvoice.status !== InvoiceStatus.Draft) {
+                    // Restore old stock
+                    for (const item of existingInvoice.lineItems) {
+                        if (item.productId) {
+                            await addStockMovement({
+                                productId: item.productId,
+                                productName: item.name,
+                                date: new Date().toISOString().split('T')[0],
+                                quantity: item.quantity,
+                                type: 'Retour',
+                                reference: `Modif Facture ${existingInvoice.documentId || existingInvoice.id} (Restaurer)`
+                            });
+                        }
                     }
                 }
-            }
 
-            if (updatedInvoice.status !== InvoiceStatus.Draft) {
-                // Deduct new stock
-                for (const item of updatedInvoice.lineItems) {
-                    if (item.productId) {
-                        await addStockMovement({
-                            productId: item.productId,
-                            productName: item.name,
-                            date: updatedInvoice.date,
-                            quantity: -item.quantity,
-                            type: 'Vente',
-                            reference: `Modif Facture ${updatedInvoice.documentId || updatedInvoice.id}`
-                        });
+                if (updatedInvoice.status !== InvoiceStatus.Draft) {
+                    // Deduct new stock
+                    for (const item of updatedInvoice.lineItems) {
+                        if (item.productId) {
+                            await addStockMovement({
+                                productId: item.productId,
+                                productName: item.name,
+                                date: updatedInvoice.date,
+                                quantity: -item.quantity,
+                                type: 'Vente',
+                                reference: `Modif Facture ${updatedInvoice.documentId || updatedInvoice.id}`
+                            });
+                        }
                     }
                 }
             }
@@ -403,17 +407,23 @@ const MainContent: React.FC = () => {
         try {
             const invoiceToDelete = invoices.find(inv => inv.id === invoiceId);
             if (invoiceToDelete && invoiceToDelete.status !== InvoiceStatus.Draft) {
-                // Restore stock
-                for (const item of invoiceToDelete.lineItems) {
-                    if (item.productId) {
-                        await addStockMovement({
-                            productId: item.productId,
-                            productName: item.name,
-                            date: new Date().toISOString().split('T')[0],
-                            quantity: item.quantity,
-                            type: 'Retour',
-                            reference: `Suppr Facture ${invoiceToDelete.documentId || invoiceToDelete.id}`
-                        });
+                // Restore stock ONLY if no active Delivery Note (BL) exists for this invoice
+                // (because if a BL exists, it's the one responsible for the stock deduction/holding)
+                const hasRelatedBL = deliveryNotes.some(dn => dn.invoiceId === invoiceToDelete.id || dn.invoiceId === invoiceToDelete.documentId);
+                
+                if (!hasRelatedBL) {
+                    // Restore stock
+                    for (const item of invoiceToDelete.lineItems) {
+                        if (item.productId) {
+                            await addStockMovement({
+                                productId: item.productId,
+                                productName: item.name,
+                                date: new Date().toISOString().split('T')[0],
+                                quantity: item.quantity,
+                                type: 'Retour',
+                                reference: `Suppr Facture ${invoiceToDelete.documentId || invoiceToDelete.id}`
+                            });
+                        }
                     }
                 }
             }
@@ -462,17 +472,23 @@ const MainContent: React.FC = () => {
 
             // Handle stock changes
             if (oldStatus === InvoiceStatus.Draft && newStatus !== InvoiceStatus.Draft) {
-                // Deduct stock
-                for (const item of updatedInvoice.lineItems) {
-                    if (item.productId) {
-                        await addStockMovement({
-                            productId: item.productId,
-                            productName: item.name,
-                            date: new Date().toISOString().split('T')[0],
-                            quantity: -item.quantity,
-                            type: 'Vente',
-                            reference: `Validation Facture ${updatedInvoice.documentId || updatedInvoice.id}`
-                        });
+                // Check if a Delivery Note (BL) already exists for this invoice. 
+                // If it does, the BL already handled the stock deduction.
+                const hasRelatedBL = deliveryNotes.some(dn => dn.invoiceId === invoiceToUpdate.id || dn.invoiceId === invoiceToUpdate.documentId);
+                
+                if (!hasRelatedBL) {
+                    // Deduct stock
+                    for (const item of updatedInvoice.lineItems) {
+                        if (item.productId) {
+                            await addStockMovement({
+                                productId: item.productId,
+                                productName: item.name,
+                                date: new Date().toISOString().split('T')[0],
+                                quantity: -item.quantity,
+                                type: 'Vente',
+                                reference: `Validation Facture ${updatedInvoice.documentId || updatedInvoice.id}`
+                            });
+                        }
                     }
                 }
             } else if (oldStatus !== InvoiceStatus.Draft && newStatus === InvoiceStatus.Draft) {
@@ -583,9 +599,22 @@ const MainContent: React.FC = () => {
             const newNote: DeliveryNote = { id: generateUUID(), documentId: documentId, ...noteData };
             await dbService.deliveryNotes.add(newNote);
             setDeliveryNotes(prev => [newNote, ...prev]);
-            for (const item of noteData.lineItems) {
-                if (item.productId) {
-                    await addStockMovement({ productId: item.productId, productName: item.name, date: noteData.date, quantity: -item.quantity, type: 'Vente', reference: `${documentId} ${noteData.invoiceId ? '(Facture ' + noteData.invoiceId + ')' : '(Manuel)'}` });
+            // Only deduct stock if this BL is NOT created from an existing invoice that already deducted stock
+            const sourceInvoice = noteData.invoiceId ? invoices.find(inv => inv.documentId === noteData.invoiceId || inv.id === noteData.invoiceId) : null;
+            const stockAlreadyDeducted = sourceInvoice && sourceInvoice.status !== InvoiceStatus.Draft;
+
+            if (!stockAlreadyDeducted) {
+                for (const item of noteData.lineItems) {
+                    if (item.productId) {
+                        await addStockMovement({ 
+                            productId: item.productId, 
+                            productName: item.name, 
+                            date: noteData.date, 
+                            quantity: -item.quantity, 
+                            type: 'Vente', 
+                            reference: `${documentId} ${noteData.invoiceId ? '(Facture ' + noteData.invoiceId + ')' : '(Manuel)'}` 
+                        });
+                    }
                 }
             }
         } catch (e: any) {
@@ -604,8 +633,34 @@ const MainContent: React.FC = () => {
         }
     };
     const deleteDeliveryNote = async (noteId: string) => {
-        await dbService.deliveryNotes.delete(noteId);
-        setDeliveryNotes(prev => prev.filter(n => n.id !== noteId));
+        try {
+            const note = deliveryNotes.find(n => n.id === noteId);
+            if (note) {
+                // Restore stock ONLY if this BL was the one that deducted it
+                const sourceInvoice = note.invoiceId ? invoices.find(inv => inv.documentId === note.invoiceId || inv.id === note.invoiceId) : null;
+                const stockWasDeductedByInvoice = sourceInvoice && sourceInvoice.status !== InvoiceStatus.Draft;
+                
+                if (!stockWasDeductedByInvoice) {
+                    // Restore stock
+                    for (const item of note.lineItems) {
+                        if (item.productId) {
+                            await addStockMovement({ 
+                                productId: item.productId, 
+                                productName: item.name, 
+                                date: new Date().toISOString().split('T')[0], 
+                                quantity: item.quantity, 
+                                type: 'Retour', 
+                                reference: `Suppr BL ${note.documentId || note.id}` 
+                            });
+                        }
+                    }
+                }
+            }
+            await dbService.deliveryNotes.delete(noteId);
+            setDeliveryNotes(prev => prev.filter(n => n.id !== noteId));
+        } catch (e: any) {
+            alert("Erreur suppression BL: " + e.message);
+        }
     };
     const createInvoiceFromDeliveryNote = async (deliveryNoteId: string) => {
         try {
@@ -622,21 +677,8 @@ const MainContent: React.FC = () => {
             if (paidAmount >= totalAmount && totalAmount > 0) { status = InvoiceStatus.Paid; } else if (paidAmount > 0) { status = InvoiceStatus.Partial; }
             const newInvoice: Invoice = { id: invoiceId, documentId: documentId, clientId: note.clientId, clientName: note.clientName, date: new Date().toISOString().split('T')[0], dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], status: status, subject: `Facture issue du ${note.documentId || note.id}`, reference: note.documentId || note.id, purchaseOrderNumber: note.purchaseOrderNumber, lineItems: note.lineItems, subTotal: subTotal, vatAmount: vatAmount, amount: totalAmount, amountPaid: paidAmount, paymentDate: status === InvoiceStatus.Paid ? note.date : undefined };
             
-            // Deduct stock if not draft
-            if (newInvoice.status !== InvoiceStatus.Draft) {
-                for (const item of newInvoice.lineItems) {
-                    if (item.productId) {
-                        await addStockMovement({
-                            productId: item.productId,
-                            productName: item.name,
-                            date: newInvoice.date,
-                            quantity: -item.quantity,
-                            type: 'Vente',
-                            reference: `Facture ${newInvoice.documentId || newInvoice.id} (depuis BL)`
-                        });
-                    }
-                }
-            }
+            // Stock is NOT deducted here because it was already deducted when the Delivery Note (BL) was created.
+            // A Delivery Note always deducts stock upon creation (unless it was created from an already validated invoice).
 
             await dbService.invoices.add(newInvoice);
             setInvoices(prev => [newInvoice, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));

@@ -597,44 +597,68 @@ const generateDocumentHTML = (
 
     // --- Pagination Logic ---
     const items = [...doc.lineItems];
-    const pages: string[] = [];
     
-    // Helper to calculate item "weight" (height)
     const getItemWeight = (item: any) => {
         let weight = 1;
         if (item.description) {
-            // Estimate lines in description
-            const descLines = Math.ceil(item.description.length / 60);
-            weight += Math.min(descLines, 3) * 0.5;
+            // Estimate lines in description - more conservative
+            const descLines = Math.ceil(item.description.length / 55);
+            weight += Math.min(descLines, 10) * 0.4;
         }
         return weight;
     };
 
-    let currentItemIndex = 0;
-    let pageNum = 1;
-
-    while (currentItemIndex < items.length) {
-        const isFirstPage = pageNum === 1;
-        // First page has less space due to client info and subject
-        const maxWeight = isFirstPage ? 10 : 18;
+    // 1. Pre-calculate chunks to know total pages
+    const itemChunks: any[][] = [];
+    let tempIndex = 0;
+    let tempPageNum = 1;
+    
+    while (tempIndex < items.length) {
+        const isFirst = tempPageNum === 1;
+        // First page has less space due to header/client info
+        // Subsequent pages have more space
+        const maxW = isFirst ? 8 : 14; 
         
-        let currentWeight = 0;
-        const pageItems: any[] = [];
+        let currentW = 0;
+        const chunk: any[] = [];
         
-        while (currentItemIndex < items.length) {
-            const item = items[currentItemIndex];
+        while (tempIndex < items.length) {
+            const item = items[tempIndex];
             const weight = getItemWeight(item);
             
-            if (currentWeight + weight > maxWeight && pageItems.length > 0) {
+            if (currentW + weight > maxW && chunk.length > 0) {
                 break;
             }
             
-            pageItems.push(item);
-            currentWeight += weight;
-            currentItemIndex++;
+            chunk.push(item);
+            currentW += weight;
+            tempIndex++;
         }
+        itemChunks.push(chunk);
+        tempPageNum++;
+    }
 
-        const isLastPage = currentItemIndex >= items.length;
+    // 2. Check if totals fit on the last page, otherwise add a page
+    const lastChunkIndex = itemChunks.length - 1;
+    const lastChunk = itemChunks[lastChunkIndex];
+    let lastPageWeight = 0;
+    lastChunk.forEach(item => lastPageWeight += getItemWeight(item));
+    
+    const totalsWeight = 7; // Estimated weight for totals block + signatures
+    const isLastPageFirst = itemChunks.length === 1;
+    const lastMaxW = isLastPageFirst ? 8 : 14;
+
+    if (lastPageWeight + totalsWeight > lastMaxW) {
+        itemChunks.push([]); // Add a dedicated page for totals
+    }
+
+    const totalPages = itemChunks.length;
+    const pages: string[] = [];
+
+    itemChunks.forEach((pageItems, index) => {
+        const pageNum = index + 1;
+        const isFirstPage = pageNum === 1;
+        const isLastPage = pageNum === totalPages;
 
         const pageRowsHtml = pageItems.map((item, idx) => {
             const cellsHtml = activeColumns.map(col => {
@@ -646,21 +670,57 @@ const generateDocumentHTML = (
                 const totalTTC = (item.quantity * getLineMultiplier(item) * item.unitPrice) * (1 + item.vat / 100);
 
                 switch (col.id) {
-                    case 'reference': content = item.productCode || '-'; align = 'left'; style = 'font-size: 12.3px; color: #4b5563;'; break;
+                    case 'reference':
+                        content = item.productCode || '-';
+                        align = 'left';
+                        style = 'font-size: 12.3px; color: #4b5563;';
+                        break;
                     case 'name':
                         content = `
                             <div style="font-weight: 700; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
                             ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 1px; line-height: 1.1;">${item.description}</div>` : ''}
                         `;
                         break;
-                    case 'quantity': content = item.quantity.toString(); align = 'center'; style = 'font-weight: 700; font-size: 12.3px;'; break;
-                    case 'length' as any: content = (item.length || 1).toString(); align = 'center'; style = 'font-size: 12.3px;'; break;
-                    case 'height' as any: content = (item.height || 1).toString(); align = 'center'; style = 'font-size: 12.3px;'; break;
-                    case 'm2' as any: content = ((item.quantity * (item.length || 1) * (item.height || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 }); align = 'center'; style = 'font-size: 12.3px; font-weight: 500;'; break;
-                    case 'ml' as any: content = ((item.quantity * (item.length || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 }); align = 'center'; style = 'font-size: 12.3px; font-weight: 500;'; break;
-                    case 'unitPrice': content = (isModeTTC ? unitPriceTTC : item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 }); align = 'right'; style = 'font-size: 12.3px;'; break;
-                    case 'vat': content = `${item.vat}%`; align = 'center'; style = 'font-size: 12.3px;'; break;
-                    case 'total': content = (isModeTTC ? totalTTC : (item.quantity * getLineMultiplier(item) * item.unitPrice)).toLocaleString('fr-MA', { minimumFractionDigits: 2 }); align = 'right'; style = 'font-weight: 700; font-size: 12.3px;'; break;
+                    case 'quantity':
+                        content = item.quantity.toString();
+                        align = 'center';
+                        style = 'font-weight: 700; font-size: 12.3px;';
+                        break;
+                    case 'length' as any:
+                        content = (item.length || 1).toString();
+                        align = 'center';
+                        style = 'font-size: 12.3px;';
+                        break;
+                    case 'height' as any:
+                        content = (item.height || 1).toString();
+                        align = 'center';
+                        style = 'font-size: 12.3px;';
+                        break;
+                    case 'm2' as any:
+                        content = ((item.quantity * (item.length || 1) * (item.height || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
+                        align = 'center';
+                        style = 'font-size: 12.3px; font-weight: 500;';
+                        break;
+                    case 'ml' as any:
+                        content = ((item.quantity * (item.length || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
+                        align = 'center';
+                        style = 'font-size: 12.3px; font-weight: 500;';
+                        break;
+                    case 'unitPrice':
+                        content = (isModeTTC ? unitPriceTTC : item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
+                        align = 'right';
+                        style = 'font-size: 12.3px;';
+                        break;
+                    case 'vat':
+                        content = `${item.vat}%`;
+                        align = 'center';
+                        style = 'font-size: 12.3px;';
+                        break;
+                    case 'total':
+                        content = (isModeTTC ? totalTTC : (item.quantity * getLineMultiplier(item) * item.unitPrice)).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
+                        align = 'right';
+                        style = 'font-weight: 700; font-size: 12.3px;';
+                        break;
                 }
 
                 return `<td style="padding: 8px 12px 16px 12px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
@@ -692,6 +752,7 @@ const generateDocumentHTML = (
                 </div>
 
                 <div class="content-grow">
+                    ${pageItems.length > 0 ? `
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                         <thead>
                             <tr style="background-color: ${primaryColor}; color: white; -webkit-print-color-adjust: exact;">
@@ -702,18 +763,19 @@ const generateDocumentHTML = (
                             ${pageRowsHtml}
                         </tbody>
                     </table>
+                    ` : ''}
                     ${isLastPage ? totalsHtml : ''}
                 </div>
 
                 <div style="margin-top: auto; padding-top: 5px; border-top: 1px solid #000000; position: relative; z-index: 2;">
                     ${footerHtml}
+                    <div style="text-align: right; font-size: 9px; color: #9ca3af; margin-top: 5px;">Page ${pageNum} / ${totalPages}</div>
                 </div>
             </div>
         `;
         
         pages.push(pageHtml);
-        pageNum++;
-    }
+    });
 
     return `<div id="pdf-container">${pages.join('')}</div>`;
 };
@@ -767,17 +829,7 @@ export const generatePDF = async (
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
-        await (html2pdf() as any).set(opt).from(contentElement).toPdf().get('pdf').then((pdf: any) => {
-            const totalPages = pdf.internal.getNumberOfPages();
-            for (let i = 1; i <= totalPages; i++) {
-                pdf.setPage(i);
-                pdf.setFontSize(9);
-                pdf.setTextColor(100);
-                const pageWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
-                pdf.text(`Page ${i} / ${totalPages}`, pageWidth - 15, pageHeight - 10, { align: 'right' });
-            }
-        }).save();
+        await (html2pdf() as any).set(opt).from(contentElement).save();
     } finally {
         document.body.removeChild(container);
     }
