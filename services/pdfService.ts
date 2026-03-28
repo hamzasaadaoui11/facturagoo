@@ -587,8 +587,8 @@ const generateDocumentHTML = (
     }
 
     const footerHtml = `
-        <div style="text-align: center; padding-top: 5px; margin-top: auto;">
-            ${settings.footerNotes ? `<div style="font-size: 11px; color: #000000; margin-bottom: 8px; white-space: pre-wrap; font-style: normal;">${settings.footerNotes}</div>` : ''}
+        <div style="text-align: center; padding-top: 2px; margin-top: auto;">
+            ${settings.footerNotes ? `<div style="font-size: 11px; color: #000000; margin-bottom: 4px; white-space: pre-wrap; font-style: normal;">${settings.footerNotes}</div>` : ''}
             <div style="font-size: 10px; color: #000000; font-weight: normal; letter-spacing: 0.02em;">
                 ${legalIds}
             </div>
@@ -599,11 +599,17 @@ const generateDocumentHTML = (
     const items = [...doc.lineItems];
     
     const getItemWeight = (item: any) => {
-        let weight = 1;
+        let weight = 1; // Base weight for one row (~9mm)
+        
+        // Estimate name wrapping (each ~45 chars is roughly a line)
+        if (item.name && item.name.length > 45) {
+            weight += (Math.ceil(item.name.length / 45) - 1) * 0.4;
+        }
+
         if (item.description) {
-            // Estimate lines in description - more conservative
-            const descLines = Math.ceil(item.description.length / 55);
-            weight += Math.min(descLines, 10) * 0.4;
+            // Estimate lines in description - each ~65 chars is roughly one extra line (~4mm or 0.45 weight)
+            const descLines = Math.ceil(item.description.length / 65);
+            weight += descLines * 0.45;
         }
         return weight;
     };
@@ -611,14 +617,12 @@ const generateDocumentHTML = (
     // 1. Pre-calculate chunks to know total pages
     const itemChunks: any[][] = [];
     let tempIndex = 0;
-    let tempPageNum = 1;
     
+    // Safety threshold for items per page (accounting for header/footer space)
+    // Limited to 13 lines per page as requested
+    const maxW = 13; 
+
     while (tempIndex < items.length) {
-        const isFirst = tempPageNum === 1;
-        // First page has less space due to header/client info
-        // Subsequent pages have more space
-        const maxW = isFirst ? 8 : 14; 
-        
         let currentW = 0;
         const chunk: any[] = [];
         
@@ -626,7 +630,8 @@ const generateDocumentHTML = (
             const item = items[tempIndex];
             const weight = getItemWeight(item);
             
-            if (currentW + weight > maxW && chunk.length > 0) {
+            // Hard limit of 13 lines or weight threshold
+            if ((currentW + weight > maxW || chunk.length >= 13) && chunk.length > 0) {
                 break;
             }
             
@@ -635,20 +640,17 @@ const generateDocumentHTML = (
             tempIndex++;
         }
         itemChunks.push(chunk);
-        tempPageNum++;
     }
 
     // 2. Check if totals fit on the last page, otherwise add a page
     const lastChunkIndex = itemChunks.length - 1;
-    const lastChunk = itemChunks[lastChunkIndex];
+    const lastChunk = itemChunks[lastChunkIndex] || [];
     let lastPageWeight = 0;
     lastChunk.forEach(item => lastPageWeight += getItemWeight(item));
     
-    const totalsWeight = 7; // Estimated weight for totals block + signatures
-    const isLastPageFirst = itemChunks.length === 1;
-    const lastMaxW = isLastPageFirst ? 8 : 14;
+    const totalsWeight = 8; // Estimated weight for totals block + signatures
 
-    if (lastPageWeight + totalsWeight > lastMaxW) {
+    if (lastPageWeight + totalsWeight > maxW) {
         itemChunks.push([]); // Add a dedicated page for totals
     }
 
@@ -657,7 +659,6 @@ const generateDocumentHTML = (
 
     itemChunks.forEach((pageItems, index) => {
         const pageNum = index + 1;
-        const isFirstPage = pageNum === 1;
         const isLastPage = pageNum === totalPages;
 
         const pageRowsHtml = pageItems.map((item, idx) => {
@@ -730,7 +731,7 @@ const generateDocumentHTML = (
         }).join('');
 
         const pageHtml = `
-            <div class="pdf-page" style="width: 210mm; height: 296mm; background: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; display: flex; flex-direction: column; box-sizing: border-box; padding: 15mm 15mm 8mm 15mm; position: relative; overflow: hidden; page-break-after: always;">
+            <div class="pdf-page" style="width: 210mm; height: 296.5mm; background: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; display: flex; flex-direction: column; box-sizing: border-box; padding: 15mm 15mm 45mm 15mm; position: relative; overflow: hidden; ${isLastPage ? '' : 'page-break-after: always;'}">
                 <style>
                     * { box-sizing: border-box; }
                     .content-grow { flex: 1; z-index: 2; position: relative; }
@@ -767,7 +768,7 @@ const generateDocumentHTML = (
                     ${isLastPage ? totalsHtml : ''}
                 </div>
 
-                <div style="margin-top: auto; padding-top: 5px; border-top: 1px solid #000000; position: relative; z-index: 2;">
+                <div style="position: absolute; bottom: 4mm; left: 15mm; right: 15mm; padding-top: 4px; border-top: 1px solid #000000; z-index: 2; background: white;">
                     ${footerHtml}
                     <div style="text-align: right; font-size: 9px; color: #9ca3af; margin-top: 5px;">Page ${pageNum} / ${totalPages}</div>
                 </div>
@@ -860,7 +861,6 @@ export const printDocument = (
                             @page { margin: 0; size: A4; }
                             body { -webkit-print-color-adjust: exact; }
                             tr.item-row { page-break-inside: avoid; }
-                            .totals-section { page-break-inside: avoid; }
                         }
                     </style>
                 </head>
