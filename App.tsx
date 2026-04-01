@@ -39,13 +39,13 @@ const LoadingScreen = () => (
                     <Files size={48} />
                 </div>
             </div>
-            <h1 className="text-3xl font-bold text-slate-800 tracking-tight mb-4">Facturago</h1>
+            <h1 className="text-3xl font-bold text-slate-800 tracking-tight mb-4"><span>Facturago</span></h1>
             <div className="flex items-center gap-2 mb-2">
                 <div className="h-2 w-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                 <div className="h-2 w-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                 <div className="h-2 w-2 bg-emerald-500 rounded-full animate-bounce"></div>
             </div>
-            <p className="text-sm text-slate-400 font-medium">Chargement de votre espace...</p>
+            <p className="text-sm text-slate-400 font-medium"><span>Chargement de votre espace...</span></p>
         </div>
     </div>
 );
@@ -746,14 +746,14 @@ const MainContent: React.FC = () => {
         return (
             <div className="flex h-screen items-center justify-center bg-red-50 p-4">
                 <div className="w-full max-w-lg text-center">
-                    <h2 className="text-xl font-bold text-red-700">Erreur de Chargement</h2>
-                    <p className="mt-2 text-neutral-700 bg-red-100 p-4 rounded-lg border border-red-200">{error}</p>
+                    <h2 className="text-xl font-bold text-red-700"><span>Erreur de Chargement</span></h2>
+                    <p className="mt-2 text-neutral-700 bg-red-100 p-4 rounded-lg border border-red-200"><span>{error}</span></p>
                     <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
                         <button 
                             onClick={() => window.location.reload()} 
                             className="px-6 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg shadow-sm hover:bg-emerald-700 transition-colors"
                         >
-                            Réessayer
+                            <span>Réessayer</span>
                         </button>
                         <button 
                             onClick={async () => {
@@ -773,7 +773,7 @@ const MainContent: React.FC = () => {
                             }} 
                             className="px-6 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-colors"
                         >
-                            Déconnexion
+                            <span>Déconnexion</span>
                         </button>
                     </div>
                 </div>

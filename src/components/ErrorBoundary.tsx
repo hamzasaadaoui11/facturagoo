@@ -28,6 +28,17 @@ class ErrorBoundary extends React.Component<Props, State> {
     console.error('Uncaught error:', error, errorInfo);
   }
 
+  private handleClearCache = () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    document.cookie.split(";").forEach((c) => {
+      document.cookie = c
+        .replace(/^ +/, "")
+        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+    window.location.reload();
+  };
+
   public render() {
     if (this.state.hasError) {
       return (
@@ -38,27 +49,36 @@ class ErrorBoundary extends React.Component<Props, State> {
             </div>
             
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-slate-900">Oups ! Quelque chose s'est mal passé</h1>
+              <h1 className="text-2xl font-bold text-slate-900"><span>Oups ! Quelque chose s'est mal passé</span></h1>
               <p className="text-slate-500 text-sm">
-                Une erreur inattendue est survenue. Veuillez rafraîchir la page ou réessayer plus tard.
+                <span>Une erreur inattendue est survenue. Veuillez rafraîchir la page ou réessayer plus tard.</span>
               </p>
             </div>
 
             {this.state.error && (
               <div className="bg-red-50 rounded-xl p-4 text-left overflow-hidden">
                 <p className="text-xs font-mono text-red-700 break-words">
-                  {this.state.error.toString()}
+                  <span>{this.state.error.toString()}</span>
                 </p>
               </div>
             )}
 
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg active:scale-95"
-            >
-              <RefreshCw size={18} />
-              Actualiser la page
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg active:scale-95"
+              >
+                <RefreshCw size={18} />
+                <span>Actualiser la page</span>
+              </button>
+
+              <button
+                onClick={this.handleClearCache}
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-all active:scale-95"
+              >
+                <span>Effacer le cache et recharger</span>
+              </button>
+            </div>
           </div>
         </div>
       );

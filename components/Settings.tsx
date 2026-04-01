@@ -102,7 +102,7 @@ const Settings: React.FC = () => {
                         className="inline-flex items-center justify-center gap-x-2 rounded-lg bg-neutral-800 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-neutral-700 disabled:bg-neutral-400 transition-all duration-200 ease-in-out"
                     >
                         <Download className="-ml-1 h-5 w-5" />
-                        {isLoading ? 'Exportation...' : 'Exporter les données'}
+                        <span>{isLoading ? 'Exportation...' : 'Exporter les données'}</span>
                     </button>
 
                     <button
@@ -111,7 +111,7 @@ const Settings: React.FC = () => {
                         className="inline-flex items-center justify-center gap-x-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 disabled:opacity-50 transition-all duration-200 ease-in-out"
                     >
                         <Upload className="-ml-1 h-5 w-5" />
-                        {isLoading ? 'Importation...' : 'Importer les données'}
+                        <span>{isLoading ? 'Importation...' : 'Importer les données'}</span>
                     </button>
                     <input
                         type="file"

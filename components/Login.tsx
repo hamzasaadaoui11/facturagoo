@@ -153,7 +153,7 @@ const Login: React.FC = () => {
                                 {isLoading ? (
                                     <Loader2 className="animate-spin h-5 w-5" />
                                 ) : (
-                                    'Se connecter'
+                                    <span>Se connecter</span>
                                 )}
                             </button>
                         </div>

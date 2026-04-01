@@ -211,7 +211,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onSave
                         {t('cancel')}
                     </button>
                     <button type="submit" form="clientForm" className="px-4 py-2 text-sm font-semibold text-white bg-emerald-600 border border-transparent rounded-lg shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600 transition-all">
-                        {isEditMode ? t('update') : t('save')}
+                        <span>{isEditMode ? t('update') : t('save')}</span>
                     </button>
                 </div>
             </div>

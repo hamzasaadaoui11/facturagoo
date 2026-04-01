@@ -231,8 +231,8 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                         <CheckCircle size={24} className="text-white" />
                     </div>
                     <div className="flex-1">
-                        <h4 className="font-bold text-base">{language === 'es' ? 'Cambios guardados' : 'Modifications enregistrées'}</h4>
-                        <p className="text-sm text-emerald-50 mt-0.5">{language === 'es' ? 'Sus ajustes han sido actualizados.' : 'Vos paramètres ont été mis à jour.'}</p>
+                        <h4 className="font-bold text-base"><span>{language === 'es' ? 'Cambios guardados' : 'Modifications enregistrées'}</span></h4>
+                        <p className="text-sm text-emerald-50 mt-0.5"><span>{language === 'es' ? 'Sus ajustes han sido actualizados.' : 'Vos paramètres ont été mis à jour.'}</span></p>
                     </div>
                     <button onClick={() => setShowToast(false)} className="text-emerald-200 hover:text-white transition-colors p-1 rounded-md hover:bg-emerald-700">
                         <X size={18} />
@@ -247,8 +247,17 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                     disabled={isSaving}
                     className="inline-flex items-center justify-center gap-x-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-200 hover:bg-emerald-700 hover:shadow-emerald-300 transition-all duration-200 ease-in-out transform hover:-translate-y-0.5 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                    {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                    {isSaving ? (language === 'es' ? 'Guardando...' : 'Sauvegarde...') : (language === 'es' ? 'Guardar todo' : 'Sauvegarder tout')}
+                    {isSaving ? (
+                        <>
+                            <Loader2 size={18} className="animate-spin" />
+                            <span>{language === 'es' ? 'Guardando...' : 'Sauvegarde...'}</span>
+                        </>
+                    ) : (
+                        <>
+                            <Save size={18} />
+                            <span>{language === 'es' ? 'Guardar todo' : 'Sauvegarder tout'}</span>
+                        </>
+                    )}
                 </button>
             </div>
             
@@ -272,8 +281,8 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                         <Icon size={20} />
                                     </div>
                                     <div>
-                                        <div className="font-semibold">{tab.label}</div>
-                                        <div className={`text-xs mt-0.5 ${isActive ? 'text-emerald-600/80' : 'text-neutral-400'}`}>{tab.desc}</div>
+                                        <div className="font-semibold"><span>{tab.label}</span></div>
+                                        <div className={`text-xs mt-0.5 ${isActive ? 'text-emerald-600/80' : 'text-neutral-400'}`}><span>{tab.desc}</span></div>
                                     </div>
                                 </button>
                             );
