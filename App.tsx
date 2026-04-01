@@ -68,7 +68,7 @@ const MainContent: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const loadData = async () => {
+        const loadData = async (isRetry = false) => {
             setIsLoading(true);
             setError(null);
             try {
@@ -101,6 +101,16 @@ const MainContent: React.FC = () => {
                 setCompanySettings(settingsData);
             } catch (err: any) {
                 console.error("Failed to load data:", err);
+                
+                // Handle JWT expiration specifically
+                if (!isRetry && (err?.message?.includes('JWT') || err?.message?.includes('expired'))) {
+                    console.warn("JWT expired in loadData, attempting refresh...");
+                    const { data, error: refreshError } = await supabase.auth.refreshSession();
+                    if (!refreshError && data.session) {
+                        return loadData(true); // Retry once
+                    }
+                }
+                
                 setError(err.message || "Impossible de charger les données.");
             } finally {
                 setIsLoading(false);

@@ -38,7 +38,14 @@ export const resetDBCache = () => {
 };
 
 export const getCurrentUserAndCompany = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    let { data: { session } } = await supabase.auth.getSession();
+    
+    // If session is missing or expired, try to refresh it
+    if (!session) {
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        session = refreshData.session;
+    }
+
     const currentUserId = session?.user?.id || null;
 
     // Clear cache if user changed
@@ -75,29 +82,51 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number = 8000): Pr
     return Promise.race([promise, timeoutPromise]);
 };
 
+const handleAuthError = async (error: any) => {
+    if (error?.message?.includes('JWT') || error?.message?.includes('expired') || error?.code === 'PGRST301') {
+        console.warn("JWT expired detected, attempting refresh...");
+        const { data, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+            console.error("Session refresh failed, signing out:", refreshError);
+            await supabase.auth.signOut();
+            window.location.href = '/#/login';
+            return false;
+        }
+        return true;
+    }
+    return false;
+};
+
 const getAll = async <T>(storeName: string): Promise<T[]> => {
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
-    const { companyId } = await getCurrentUserAndCompany();
-    if (!companyId) return [];
+    try {
+        const { companyId } = await getCurrentUserAndCompany();
+        if (!companyId) return [];
 
-    const fetchPromise = supabase
-        .from(tableName)
-        .select('*')
-        .eq('company_id', companyId);
+        const fetchPromise = supabase
+            .from(tableName)
+            .select('*')
+            .eq('company_id', companyId);
 
-    const result: any = await withTimeout(fetchPromise as any);
-    const { data, error } = result;
+        const result: any = await withTimeout(fetchPromise as any);
+        const { data, error } = result;
 
-    if (error) {
-        console.error(`Error fetching ${storeName}:`, error);
-        throw error;
-    }
+        if (error) {
+            const recovered = await handleAuthError(error);
+            if (recovered) {
+                // Retry once
+                const retryResult: any = await withTimeout(supabase.from(tableName).select('*').eq('company_id', companyId) as any);
+                if (retryResult.data) return retryResult.data;
+            }
+            console.error(`Error fetching ${storeName}:`, error);
+            throw error;
+        }
 
-    // Restore metadata fields from first line item if missing
-    if (['quotes', 'invoices', 'purchase_orders', 'credit_notes', 'delivery_notes'].includes(tableName)) {
-        return (data as any[]).map(item => {
+        // Restore metadata fields from first line item if missing
+        if (['quotes', 'invoices', 'purchase_orders', 'credit_notes', 'delivery_notes'].includes(tableName)) {
+            return (data as any[]).map(item => {
             const lineItems = item.lineItems || item.line_items;
             const firstItem = lineItems?.[0];
             if (firstItem) {
@@ -119,139 +148,184 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
     }
 
     return data as T[];
+    } catch (e) {
+        if (await handleAuthError(e)) {
+            return getAll(storeName);
+        }
+        throw e;
+    }
 };
 
 const add = async <T>(storeName: string, item: T): Promise<T> => {
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
-    const { userId, companyId } = await getCurrentUserAndCompany();
-    if (!userId || !companyId) throw new Error("User not authenticated");
+    try {
+        const { userId, companyId } = await getCurrentUserAndCompany();
+        if (!userId || !companyId) throw new Error("User not authenticated");
 
-    const { paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, userId: _, ...itemToSave } = item as any;
-    
-    // Strip fields that might be missing in Supabase schema to avoid errors
-    // These are stored in lineItems[0] by the UI components
-    if (['quotes', 'invoices'].includes(tableName)) {
-        delete itemToSave.totalAmount;
+        const { paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, userId: _, ...itemToSave } = item as any;
+        
+        // Strip fields that might be missing in Supabase schema to avoid errors
+        // These are stored in lineItems[0] by the UI components
+        if (['quotes', 'invoices'].includes(tableName)) {
+            delete itemToSave.totalAmount;
+        }
+        const itemWithUser = { ...itemToSave, user_id: userId, company_id: companyId };
+
+        const insertPromise = supabase
+            .from(tableName)
+            .insert(itemWithUser)
+            .select()
+            .single();
+
+        const result: any = await withTimeout(insertPromise as any);
+        const { data, error } = result;
+
+        if (error) {
+            const recovered = await handleAuthError(error);
+            if (recovered) {
+                const retryResult: any = await withTimeout(supabase.from(tableName).insert(itemWithUser).select().single() as any);
+                if (retryResult.data) return retryResult.data;
+            }
+            console.error(`Error adding to ${storeName}:`, error);
+            throw error;
+        }
+
+        const savedItem = data as any;
+        const lineItems = savedItem.lineItems || savedItem.line_items;
+        const firstItem = lineItems?.[0];
+        if (firstItem) {
+            return {
+                ...savedItem,
+                subject: firstItem.subject || savedItem.subject,
+                paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod,
+                notes: firstItem.notes || savedItem.notes,
+                purchaseOrderNumber: firstItem.purchaseOrderNumber || savedItem.purchaseOrderNumber,
+                dueDate: firstItem.dueDate || savedItem.dueDate,
+                expiryDate: firstItem.expiryDate || savedItem.expiryDate,
+                expectedDate: firstItem.expectedDate || savedItem.expectedDate,
+                calculationMode: firstItem.calculationMode || savedItem.calculationMode,
+                showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : savedItem.showDimensions
+            } as T;
+        }
+
+        return savedItem as T;
+    } catch (e) {
+        if (await handleAuthError(e)) {
+            return add(storeName, item);
+        }
+        throw e;
     }
-    const itemWithUser = { ...itemToSave, user_id: userId, company_id: companyId };
-
-    const insertPromise = supabase
-        .from(tableName)
-        .insert(itemWithUser)
-        .select()
-        .single();
-
-    const result: any = await withTimeout(insertPromise as any);
-    const { data, error } = result;
-
-    if (error) {
-        console.error(`Error adding to ${storeName}:`, error);
-        throw error;
-    }
-
-    const savedItem = data as any;
-    const lineItems = savedItem.lineItems || savedItem.line_items;
-    const firstItem = lineItems?.[0];
-    if (firstItem) {
-        return {
-            ...savedItem,
-            subject: firstItem.subject || savedItem.subject,
-            paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod,
-            notes: firstItem.notes || savedItem.notes,
-            purchaseOrderNumber: firstItem.purchaseOrderNumber || savedItem.purchaseOrderNumber,
-            dueDate: firstItem.dueDate || savedItem.dueDate,
-            expiryDate: firstItem.expiryDate || savedItem.expiryDate,
-            expectedDate: firstItem.expectedDate || savedItem.expectedDate,
-            calculationMode: firstItem.calculationMode || savedItem.calculationMode,
-            showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : savedItem.showDimensions
-        } as T;
-    }
-
-    return savedItem as T;
 };
 
 const update = async <T extends { id: string }>(storeName: string, item: T): Promise<T> => {
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
-    const { companyId } = await getCurrentUserAndCompany();
-    if (!companyId) throw new Error("User not authenticated");
+    try {
+        const { companyId } = await getCurrentUserAndCompany();
+        if (!companyId) throw new Error("User not authenticated");
 
-    // Destructure to remove fields that might not be in the Supabase schema
-    // and to remove 'id' from the update payload itself
-    const { id, paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, userId: _, created_at, ...itemToSave } = item as any;
-    
-    if (['quotes', 'invoices'].includes(tableName)) {
-        delete itemToSave.totalAmount;
+        // Destructure to remove fields that might not be in the Supabase schema
+        // and to remove 'id' from the update payload itself
+        const { id, paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, userId: _, created_at, ...itemToSave } = item as any;
+        
+        if (['quotes', 'invoices'].includes(tableName)) {
+            delete itemToSave.totalAmount;
+        }
+
+        const updatePromise = supabase
+            .from(tableName)
+            .update(itemToSave)
+            .eq('id', id)
+            .eq('company_id', companyId)
+            .select()
+            .single();
+
+        const result: any = await withTimeout(updatePromise as any);
+        const { data, error } = result;
+
+        if (error) {
+            const recovered = await handleAuthError(error);
+            if (recovered) {
+                const retryResult: any = await withTimeout(supabase.from(tableName).update(itemToSave).eq('id', id).eq('company_id', companyId).select().single() as any);
+                if (retryResult.data) return retryResult.data;
+            }
+            console.error(`Error updating ${storeName}:`, error);
+            throw error;
+        }
+
+        const savedItem = data as any;
+        const lineItems = savedItem.lineItems || savedItem.line_items;
+        const firstItem = lineItems?.[0];
+        if (firstItem) {
+            return {
+                ...savedItem,
+                subject: firstItem.subject || savedItem.subject,
+                paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod,
+                notes: firstItem.notes || savedItem.notes,
+                purchaseOrderNumber: firstItem.purchaseOrderNumber || savedItem.purchaseOrderNumber,
+                dueDate: firstItem.dueDate || savedItem.dueDate,
+                expiryDate: firstItem.expiryDate || savedItem.expiryDate,
+                expectedDate: firstItem.expectedDate || savedItem.expectedDate,
+                calculationMode: firstItem.calculationMode || savedItem.calculationMode,
+                showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : savedItem.showDimensions
+            } as T;
+        }
+
+        return savedItem as T;
+    } catch (e) {
+        if (await handleAuthError(e)) {
+            return update(storeName, item);
+        }
+        throw e;
     }
-
-    const updatePromise = supabase
-        .from(tableName)
-        .update(itemToSave)
-        .eq('id', id)
-        .eq('company_id', companyId)
-        .select()
-        .single();
-
-    const result: any = await withTimeout(updatePromise as any);
-    const { data, error } = result;
-
-    if (error) {
-        console.error(`Error updating ${storeName}:`, error);
-        throw error;
-    }
-
-    const savedItem = data as any;
-    const lineItems = savedItem.lineItems || savedItem.line_items;
-    const firstItem = lineItems?.[0];
-    if (firstItem) {
-        return {
-            ...savedItem,
-            subject: firstItem.subject || savedItem.subject,
-            paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod,
-            notes: firstItem.notes || savedItem.notes,
-            purchaseOrderNumber: firstItem.purchaseOrderNumber || savedItem.purchaseOrderNumber,
-            dueDate: firstItem.dueDate || savedItem.dueDate,
-            expiryDate: firstItem.expiryDate || savedItem.expiryDate,
-            expectedDate: firstItem.expectedDate || savedItem.expectedDate,
-            calculationMode: firstItem.calculationMode || savedItem.calculationMode,
-            showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : savedItem.showDimensions
-        } as T;
-    }
-
-    return savedItem as T;
 };
 
 const remove = async (storeName: string, id: string | string[]): Promise<void> => {
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
-    const { companyId } = await getCurrentUserAndCompany();
-    if (!companyId) throw new Error("User not authenticated");
+    try {
+        const { companyId } = await getCurrentUserAndCompany();
+        if (!companyId) throw new Error("User not authenticated");
 
-    let deletePromise;
-    if (Array.isArray(id)) {
-        deletePromise = supabase
-            .from(tableName)
-            .delete()
-            .in('id', id)
-            .eq('company_id', companyId);
-    } else {
-        deletePromise = supabase
-            .from(tableName)
-            .delete()
-            .eq('id', id)
-            .eq('company_id', companyId);
-    }
+        let deletePromise;
+        if (Array.isArray(id)) {
+            deletePromise = supabase
+                .from(tableName)
+                .delete()
+                .in('id', id)
+                .eq('company_id', companyId);
+        } else {
+            deletePromise = supabase
+                .from(tableName)
+                .delete()
+                .eq('id', id)
+                .eq('company_id', companyId);
+        }
 
-    const result: any = await withTimeout(deletePromise as any);
-    const { error } = result;
+        const result: any = await withTimeout(deletePromise as any);
+        const { error } = result;
 
-    if (error) {
-        console.error(`Error deleting from ${storeName}:`, error);
-        throw error;
+        if (error) {
+            const recovered = await handleAuthError(error);
+            if (recovered) {
+                const retryPromise = Array.isArray(id) 
+                    ? supabase.from(tableName).delete().in('id', id).eq('company_id', companyId)
+                    : supabase.from(tableName).delete().eq('id', id).eq('company_id', companyId);
+                await withTimeout(retryPromise as any);
+                return;
+            }
+            console.error(`Error deleting from ${storeName}:`, error);
+            throw error;
+        }
+    } catch (e) {
+        if (await handleAuthError(e)) {
+            return remove(storeName, id);
+        }
+        throw e;
     }
 };
 
@@ -267,18 +341,29 @@ const bulkAdd = async (storeName: string, items: any[]): Promise<void> => {
     const tableName = TABLE_MAP[storeName];
     if (!tableName || items.length === 0) return;
 
-    const { userId } = await getCurrentUserAndCompany();
-    if (!userId) throw new Error("User not authenticated");
+    try {
+        const { userId } = await getCurrentUserAndCompany();
+        if (!userId) throw new Error("User not authenticated");
 
-    const itemsWithUser = items.map(item => ({ ...item, user_id: userId }));
+        const itemsWithUser = items.map(item => ({ ...item, user_id: userId }));
 
-    const { error } = await supabase
-        .from(tableName)
-        .insert(itemsWithUser);
+        const { error } = await supabase
+            .from(tableName)
+            .insert(itemsWithUser);
 
-    if (error) {
-        console.error(`Error bulk adding to ${storeName}:`, error);
-        throw error;
+        if (error) {
+            if (await handleAuthError(error)) {
+                await supabase.from(tableName).insert(itemsWithUser);
+                return;
+            }
+            console.error(`Error bulk adding to ${storeName}:`, error);
+            throw error;
+        }
+    } catch (e) {
+        if (await handleAuthError(e)) {
+            return bulkAdd(storeName, items);
+        }
+        throw e;
     }
 };
 
@@ -351,24 +436,28 @@ export const dbService = {
     },
     settings: {
         get: async (): Promise<CompanySettings | null> => {
-            const { companyId } = await getCurrentUserAndCompany();
-            if (!companyId) return null;
+            try {
+                const { companyId } = await getCurrentUserAndCompany();
+                if (!companyId) return null;
 
-            const { data, error } = await supabase
-                .from('settings')
-                .select('*')
-                .eq('company_id', companyId)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle(); 
-            
-            if (error) {
-                console.error("Error fetching settings:", error);
-                return null;
-            }
+                const { data, error } = await supabase
+                    .from('settings')
+                    .select('*')
+                    .eq('company_id', companyId)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle(); 
+                
+                if (error) {
+                    if (await handleAuthError(error)) {
+                        return dbService.settings.get();
+                    }
+                    console.error("Error fetching settings:", error);
+                    return null;
+                }
 
-            const settings = data as CompanySettings | null;
-            if (settings) {
+                const settings = data as CompanySettings | null;
+                if (settings) {
                 try {
                     const localShowAmount = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS);
                     if (localShowAmount !== null) {
@@ -405,9 +494,14 @@ export const dbService = {
                     settings.showExpiryDate = settings.showExpiryDate ?? true;
                 }
             }
-
             return settings;
-        },
+        } catch (e) {
+            if (await handleAuthError(e)) {
+                return dbService.settings.get();
+            }
+            throw e;
+        }
+    },
         update: async (settings: CompanySettings): Promise<CompanySettings> => {
             const { userId, companyId } = await getCurrentUserAndCompany();
             if (!userId || !companyId) throw new Error("Utilisateur non connecté");
