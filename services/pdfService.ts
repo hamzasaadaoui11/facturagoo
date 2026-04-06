@@ -40,7 +40,7 @@ const UNITS = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit
 const TEENS = ['dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
 const TENS = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante-dix', 'quatre-vingt', 'quatre-vingt-dix'];
 
-const convertGroup = (n: number): string => {
+const convertGroup = (n: number, isEnd: boolean): string => {
     if (n === 0) return '';
     if (n < 10) return UNITS[n];
     if (n < 20) return TEENS[n - 10];
@@ -51,75 +51,91 @@ const convertGroup = (n: number): string => {
     if (ten === 7 || ten === 9) {
         const base = TENS[ten - 1];
         const sub = unit + 10;
-        // Cas 71, 91 -> soixante-et-onze
         if (unit === 1 && ten === 7) return `${base}-et-onze`;
-        return `${base}-${TEENS[sub - 10]}`;
+        return `${base}-${TEENS[unit]}`;
     }
 
     const tenString = TENS[ten];
     
-    if (unit === 0) return tenString;
-    // Fix: replaced undefined 'maxCode' with 'tenString' for correct French number formation (e.g., vingt-et-un)
+    if (unit === 0) {
+        if (ten === 8 && isEnd) return 'quatre-vingts';
+        return tenString;
+    }
+    
     if (unit === 1 && ten < 8) return `${tenString}-et-un`;
     
     return `${tenString}-${UNITS[unit]}`;
 };
 
 const numberToWordsFr = (amount: number): string => {
-    if (amount === 0) return 'zéro dirham';
+    if (amount === 0) return 'Zéro dirham';
 
     const absAmount = Math.abs(amount);
     const integerPart = Math.floor(absAmount);
     const decimalPart = Math.round((absAmount - integerPart) * 100);
 
-    const convertInteger = (n: number): string => {
-        if (n === 0) return '';
-        
-        let words = '';
-        
-        // Millions
-        const millions = Math.floor(n / 1000000);
-        const remainderMillion = n % 1000000;
-        if (millions > 0) {
-            words += (millions === 1 ? 'un million' : `${convertGroup(millions)} millions`) + ' ';
-        }
-
-        // Thousands
-        const thousands = Math.floor(remainderMillion / 1000);
-        const remainderThousand = remainderMillion % 1000;
-        if (thousands > 0) {
-            if (thousands === 1) words += 'mille ';
-            else words += `${convertIntegerGroup(thousands)} mille `;
-        }
-
-        // Hundreds
-        if (remainderThousand > 0) {
-            words += convertIntegerGroup(remainderThousand);
-        }
-
-        return words.trim();
-    };
-
-    const convertIntegerGroup = (n: number): string => {
+    const convertIntegerGroup = (n: number, isEnd: boolean): string => {
         let str = '';
         const hundreds = Math.floor(n / 100);
         const remainder = n % 100;
 
         if (hundreds > 0) {
             if (hundreds === 1) str += 'cent ';
-            else str += `${UNITS[hundreds]} cents `; 
+            else if (remainder === 0 && isEnd) str += `${UNITS[hundreds]} cents `; 
+            else str += `${UNITS[hundreds]} cent `; 
         }
 
         if (remainder > 0) {
-            str += convertGroup(remainder);
+            str += convertGroup(remainder, isEnd);
         }
         
         return str.trim();
     };
 
-    let result = convertInteger(integerPart) + (integerPart === 1 ? ' dirham' : ' dirhams');
+    const convertInteger = (n: number): string => {
+        if (n === 0) return '';
+        
+        let words = '';
+        
+        // Billions
+        const billions = Math.floor(n / 1000000000);
+        let remainder = n % 1000000000;
+        if (billions > 0) {
+            words += (billions === 1 ? 'un milliard' : `${convertIntegerGroup(billions, true)} milliards`) + ' ';
+        }
+
+        // Millions
+        const millions = Math.floor(remainder / 1000000);
+        remainder %= 1000000;
+        if (millions > 0) {
+            words += (millions === 1 ? 'un million' : `${convertIntegerGroup(millions, true)} millions`) + ' ';
+        }
+
+        // Thousands
+        const thousands = Math.floor(remainder / 1000);
+        const remainderThousand = remainder % 1000;
+        if (thousands > 0) {
+            if (thousands === 1) words += 'mille ';
+            else words += `${convertIntegerGroup(thousands, false)} mille `;
+        }
+
+        // Hundreds
+        if (remainderThousand > 0) {
+            words += convertIntegerGroup(remainderThousand, true);
+        }
+
+        return words.trim();
+    };
+
+    let result = '';
+    if (integerPart === 0) {
+        result = 'zéro dirham';
+    } else {
+        result = convertInteger(integerPart) + (integerPart === 1 ? ' dirham' : ' dirhams');
+    }
+
     if (decimalPart > 0) {
-        result += ` et ${convertInteger(decimalPart)} centimes`;
+        result += ` et ${convertIntegerGroup(decimalPart, true)} centime${decimalPart > 1 ? 's' : ''}`;
     }
 
     return result.charAt(0).toUpperCase() + result.slice(1);
@@ -648,9 +664,18 @@ const generateDocumentHTML = (
     let lastPageWeight = 0;
     lastChunk.forEach(item => lastPageWeight += getItemWeight(item));
     
-    const totalsWeight = 8; // Estimated weight for totals block + signatures
+    // Calculate a more precise weight for the totals section
+    let totalsWeight = 5; // Base: Totals + Amount in words
+    if (doc.notes) totalsWeight += Math.ceil(doc.notes.length / 60) * 0.5;
+    if (settings?.showSignatureRecipient) totalsWeight += 3;
+    
+    // We allow the last page to be more full (up to ~20 units) 
+    // to avoid pushing totals to a new page unnecessarily.
+    // 20 units * 9mm = 180mm. Header (~95mm) + 180mm = 275mm. 
+    // Page height is 296.5mm, so this fits within the safe printable area.
+    const maxTotalWeightOnLastPage = 20;
 
-    if (lastPageWeight + totalsWeight > maxW) {
+    if (lastPageWeight + totalsWeight > maxTotalWeightOnLastPage) {
         itemChunks.push([]); // Add a dedicated page for totals
     }
 
