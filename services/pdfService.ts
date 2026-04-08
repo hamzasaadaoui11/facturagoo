@@ -180,6 +180,7 @@ const generateDocumentHTML = (
     const getLineMultiplier = (item: any) => {
         if (isM2) return (item.length || 1) * (item.height || 1);
         if (isML) return (item.length || 1);
+        if (isKg) return (item.weight || 1);
         return 1;
     };
 
@@ -286,6 +287,14 @@ const generateDocumentHTML = (
                 { id: 'ml' as any, label: 'ML', visible: true, order: 2.2 }
             );
         }
+    } else if (isKg) {
+        const qtyIndex = activeColumns.findIndex(c => c.id === 'quantity');
+        if (qtyIndex !== -1) {
+            activeColumns.splice(qtyIndex + 1, 0, 
+                { id: 'weight' as any, label: lang === 'es' ? 'Peso (kg)' : (lang === 'en' ? 'Weight (kg)' : 'Poids (kg)'), visible: true, order: 2.1 },
+                { id: 'totalWeight' as any, label: 'Total (kg)', visible: true, order: 2.2 }
+            );
+        }
     }
 
     // Override labels for Language context
@@ -365,6 +374,8 @@ const generateDocumentHTML = (
         else if (col.id === 'height' as any) { align = 'center'; width = 'width: 10%;'; }
         else if (col.id === 'm2' as any) { align = 'center'; width = 'width: 10%;'; }
         else if (col.id === 'ml' as any) { align = 'center'; width = 'width: 10%;'; }
+        else if (col.id === 'weight' as any) { align = 'center'; width = 'width: 10%;'; }
+        else if (col.id === 'totalWeight' as any) { align = 'center'; width = 'width: 10%;'; }
         else if (col.id === 'vat') { align = 'center'; width = 'width: 11%;'; }
         else if (col.id === 'unitPrice') { align = 'right'; width = 'width: 18%;'; }
         else if (col.id === 'total') { align = 'right'; width = 'width: 18%;'; }
@@ -416,6 +427,16 @@ const generateDocumentHTML = (
                     break;
                 case 'ml' as any:
                     content = ((item.quantity * (item.length || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
+                    align = 'center';
+                    style = 'font-size: 12.3px; font-weight: 500;';
+                    break;
+                case 'weight' as any:
+                    content = (item.weight || 1).toString();
+                    align = 'center';
+                    style = 'font-size: 12.3px;';
+                    break;
+                case 'totalWeight' as any:
+                    content = ((item.quantity * (item.weight || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
                     align = 'center';
                     style = 'font-size: 12.3px; font-weight: 500;';
                     break;
@@ -729,6 +750,16 @@ const generateDocumentHTML = (
                         break;
                     case 'ml' as any:
                         content = ((item.quantity * (item.length || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
+                        align = 'center';
+                        style = 'font-size: 12.3px; font-weight: 500;';
+                        break;
+                    case 'weight' as any:
+                        content = (item.weight || 1).toString();
+                        align = 'center';
+                        style = 'font-size: 12.3px;';
+                        break;
+                    case 'totalWeight' as any:
+                        content = ((item.quantity * (item.weight || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
                         align = 'center';
                         style = 'font-size: 12.3px; font-weight: 500;';
                         break;
