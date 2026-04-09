@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Header from './Header';
 import { Archive, Plus, ArrowUpRight, ArrowDownLeft, AlertTriangle, Pencil, X, Search, History, Calendar, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Product, StockMovement } from '../types';
@@ -23,6 +23,10 @@ const StockManagement: React.FC<StockManagementProps> = ({ products, movements, 
     const [movementsPage, setMovementsPage] = useState(1);
     const MOVEMENTS_PER_PAGE = 10;
 
+    // Pagination for Stock Levels
+    const [stockPage, setStockPage] = useState(1);
+    const STOCK_PER_PAGE = 10;
+
     // Correction State
     const [productToCorrect, setProductToCorrect] = useState<Product | null>(null);
     const [realQuantityStr, setRealQuantityStr] = useState<string>('0');
@@ -42,6 +46,45 @@ const StockManagement: React.FC<StockManagementProps> = ({ products, movements, 
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         p.productCode.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const totalStockPages = Math.ceil(filteredProducts.length / STOCK_PER_PAGE);
+    const paginatedProducts = filteredProducts.slice(
+        (stockPage - 1) * STOCK_PER_PAGE,
+        stockPage * STOCK_PER_PAGE
+    );
+
+    const getPageNumbers = (current: number, total: number) => {
+        const pages = [];
+        const maxVisible = 5;
+        
+        if (total <= maxVisible) {
+            for (let i = 1; i <= total; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            
+            if (current > 3) {
+                pages.push('...');
+            }
+            
+            const start = Math.max(2, current - 1);
+            const end = Math.min(total - 1, current + 1);
+            
+            for (let i = start; i <= end; i++) {
+                if (!pages.includes(i)) pages.push(i);
+            }
+            
+            if (current < total - 2) {
+                pages.push('...');
+            }
+            
+            if (!pages.includes(total)) pages.push(total);
+        }
+        return pages;
+    };
+
+    useEffect(() => {
+        setStockPage(1);
+    }, [searchTerm]);
 
     // Sorted and Paginated Movements
     const sortedMovements = useMemo(() => {
@@ -142,8 +185,8 @@ const StockManagement: React.FC<StockManagementProps> = ({ products, movements, 
 
                     {/* Mobile Card View for Stock Levels */}
                     <div className="md:hidden divide-y divide-neutral-200">
-                        {filteredProducts.length > 0 ? (
-                            filteredProducts.map(product => (
+                        {paginatedProducts.length > 0 ? (
+                            paginatedProducts.map(product => (
                                 <div key={product.id} className="p-4 space-y-3 hover:bg-gray-50 transition-colors">
                                     <div className="flex justify-between items-start">
                                         <div>
@@ -198,7 +241,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ products, movements, 
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-neutral-200 bg-white">
-                                {filteredProducts.map(product => (
+                                {paginatedProducts.map(product => (
                                     <tr key={product.id} className="hover:bg-gray-50">
                                         <td className={`px-6 py-4 ${isRTL ? 'text-right' : 'text-left'}`}>
                                             <div className="text-sm font-medium text-neutral-900">{product.name}</div>
@@ -236,7 +279,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ products, movements, 
                                         </td>
                                     </tr>
                                 ))}
-                                {filteredProducts.length === 0 && (
+                                {paginatedProducts.length === 0 && (
                                     <tr>
                                         <td colSpan={4} className="px-6 py-8 text-center text-neutral-500">{t('noFinancialData')}</td>
                                     </tr>
@@ -244,6 +287,73 @@ const StockManagement: React.FC<StockManagementProps> = ({ products, movements, 
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination for Stock Levels */}
+                    {totalStockPages > 1 && (
+                        <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-neutral-200">
+                            <div className="flex-1 flex justify-between sm:hidden">
+                                <button
+                                    onClick={() => setStockPage(prev => Math.max(prev - 1, 1))}
+                                    disabled={stockPage === 1}
+                                    className="relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+                                >
+                                    {isRTL ? 'التالي' : 'Précédent'}
+                                </button>
+                                <button
+                                    onClick={() => setStockPage(prev => Math.min(prev + 1, totalStockPages))}
+                                    disabled={stockPage === totalStockPages}
+                                    className="relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+                                >
+                                    {isRTL ? 'السابق' : 'Suivant'}
+                                </button>
+                            </div>
+                            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                <div>
+                                    <p className="text-sm text-neutral-700">
+                                        {isRTL ? (
+                                            <>عرض <span className="font-bold">{(stockPage - 1) * STOCK_PER_PAGE + 1}</span> إلى <span className="font-bold">{Math.min(stockPage * STOCK_PER_PAGE, filteredProducts.length)}</span> من <span className="font-bold">{filteredProducts.length}</span> منتج</>
+                                        ) : (
+                                            <>Affichage de <span className="font-bold">{(stockPage - 1) * STOCK_PER_PAGE + 1}</span> à <span className="font-bold">{Math.min(stockPage * STOCK_PER_PAGE, filteredProducts.length)}</span> sur <span className="font-bold">{filteredProducts.length}</span> produits</>
+                                        )}
+                                    </p>
+                                </div>
+                                <div>
+                                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                        <button
+                                            onClick={() => setStockPage(prev => Math.max(prev - 1, 1))}
+                                            disabled={stockPage === 1}
+                                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+                                        >
+                                            <ChevronLeft size={18} className={isRTL ? 'rotate-180' : ''} />
+                                        </button>
+                                        {getPageNumbers(stockPage, totalStockPages).map((page, i) => (
+                                            <React.Fragment key={i}>
+                                                {page === '...' ? (
+                                                    <span className="relative inline-flex items-center px-4 py-2 border border-neutral-300 bg-white text-sm font-medium text-neutral-400">
+                                                        ...
+                                                    </span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => setStockPage(page as number)}
+                                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors ${stockPage === page ? 'z-10 bg-emerald-50 border-emerald-500 text-emerald-600 font-bold' : 'bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50'}`}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                )}
+                                            </React.Fragment>
+                                        ))}
+                                        <button
+                                            onClick={() => setStockPage(prev => Math.min(prev + 1, totalStockPages))}
+                                            disabled={stockPage === totalStockPages}
+                                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-neutral-300 bg-white text-sm font-medium text-neutral-500 hover:bg-neutral-50 disabled:opacity-50"
+                                        >
+                                            <ChevronRight size={18} className={isRTL ? 'rotate-180' : ''} />
+                                        </button>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Recent Movements Widget (Paginated) */}
