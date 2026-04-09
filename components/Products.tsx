@@ -288,7 +288,7 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 6;
+    const itemsPerPage = 12;
 
     const filteredProducts = products.filter(product => {
         const term = searchTerm.toLowerCase();
@@ -307,6 +307,35 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedProducts = filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+
+    const getPageNumbers = () => {
+        const pages = [];
+        const maxVisible = 5;
+        
+        if (totalPages <= maxVisible) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            
+            if (currentPage > 3) {
+                pages.push('...');
+            }
+            
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+            
+            for (let i = start; i <= end; i++) {
+                if (!pages.includes(i)) pages.push(i);
+            }
+            
+            if (currentPage < totalPages - 2) {
+                pages.push('...');
+            }
+            
+            if (!pages.includes(totalPages)) pages.push(totalPages);
+        }
+        return pages;
+    };
 
     const handleDeleteClick = (productId: string) => {
         setProductIdToDelete(productId);
@@ -625,14 +654,21 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                                     >
                                         <ChevronLeft size={18} />
                                     </button>
-                                    {[...Array(totalPages)].map((_, i) => (
-                                        <button
-                                            key={i + 1}
-                                            onClick={() => setCurrentPage(i + 1)}
-                                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors ${currentPage === i + 1 ? 'z-10 bg-emerald-50 border-emerald-500 text-emerald-600 font-bold' : 'bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50'}`}
-                                        >
-                                            {i + 1}
-                                        </button>
+                                    {getPageNumbers().map((page, i) => (
+                                        <React.Fragment key={i}>
+                                            {page === '...' ? (
+                                                <span className="relative inline-flex items-center px-4 py-2 border border-neutral-300 bg-white text-sm font-medium text-neutral-400">
+                                                    ...
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setCurrentPage(page as number)}
+                                                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors ${currentPage === page ? 'z-10 bg-emerald-50 border-emerald-500 text-emerald-600 font-bold' : 'bg-white border-neutral-300 text-neutral-500 hover:bg-neutral-50'}`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            )}
+                                        </React.Fragment>
                                     ))}
                                     <button
                                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
