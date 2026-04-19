@@ -944,7 +944,8 @@ export const generatePDF = async (
         });
 
         if (!response.ok) {
-            throw new Error(`PDF generation failed: ${response.statusText}`);
+            const errData = await response.json();
+            throw new Error(errData.error || `PDF generation failed: ${response.statusText}`);
         }
 
         const blob = await response.blob();
@@ -956,9 +957,9 @@ export const generatePDF = async (
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error downloading PDF via backend:', error);
-        alert("Une erreur est survenue lors de la génération du PDF.");
+        alert(`Une erreur est survenue lors de la génération du PDF :\n\n${error.message}`);
     }
 };
 

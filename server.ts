@@ -1,6 +1,7 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import * as path from 'path';
 import cors from 'cors';
 
@@ -9,8 +10,12 @@ let globalBrowser: any = null;
 
 async function getBrowser() {
   if (!globalBrowser) {
-    globalBrowser = await puppeteer.launch({ 
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] 
+    globalBrowser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
     });
   }
   return globalBrowser;
@@ -70,9 +75,9 @@ async function startServer() {
       res.setHeader('Content-Disposition', `attachment; filename="${filename || 'document.pdf'}"`);
       res.send(Buffer.from(pdfBuffer));
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('PDF generation error:', error);
-      res.status(500).json({ error: 'Failed to generate PDF' });
+      res.status(500).json({ error: error.message || 'Failed to generate PDF' });
     } finally {
       if (page) {
         await page.close(); // Only close the tab, keep the browser alive for the next user
