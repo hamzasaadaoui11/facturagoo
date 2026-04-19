@@ -49,6 +49,7 @@ export interface Product {
     salePrice: number; // Stored as HT
     purchasePrice: number; // Stored as HT
     vat: number;
+    barcode?: string;
     stockQuantity: number; // Real stock tracking
     minStockAlert: number;
 }
@@ -82,7 +83,8 @@ export interface LineItem {
   unitPrice: number;
   vat: number;
   showDimensions?: boolean; // Persisted here to avoid schema changes
-  calculationMode?: 'piece' | 'm2' | 'ml' | 'kg';
+  calculationMode?: 'piece' | 'm2' | 'ml' | 'kg' | 'days';
+  days?: number;
   subject?: string; // Metadata for document
   paymentMethod?: string; // Metadata for document
   purchaseOrderNumber?: string; // Metadata for document
@@ -228,7 +230,7 @@ export interface DeliveryNote {
 }
 
 export interface DocumentColumn {
-    id: 'reference' | 'name' | 'quantity' | 'unitPrice' | 'vat' | 'total';
+    id: 'reference' | 'name' | 'quantity' | 'unitPrice' | 'vat' | 'total' | 'length' | 'height' | 'm2' | 'ml' | 'weight' | 'totalWeight' | 'days';
     label: string;
     visible: boolean;
     order: number;

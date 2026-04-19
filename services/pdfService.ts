@@ -176,11 +176,28 @@ const generateDocumentHTML = (
     const isM2 = calculationMode === 'm2' || (legacyShowDimensions && calculationMode === 'piece');
     const isML = calculationMode === 'ml';
     const isKg = calculationMode === 'kg';
+    const isDays = doc.lineItems.some(item => item.calculationMode === 'days') || doc.lineItems[0]?.calculationMode === 'days';
 
     const getLineMultiplier = (item: any) => {
-        if (isM2) return (item.length || 1) * (item.height || 1);
-        if (isML) return (item.length || 1);
-        if (isKg) return (item.weight || 1);
+        const mode = item.calculationMode || doc.lineItems[0]?.calculationMode;
+        
+        const getDaysExtraction = (i: any) => {
+            const raw = i.days || i.jours || i.jour || i.itemDays || i.nb_jours;
+            const parsed = Number(raw);
+            return parsed > 0 ? parsed : 1;
+        };
+
+        if (mode === 'm2') return (Number(item.length) || 1) * (Number(item.height) || 1);
+        if (mode === 'ml') return (Number(item.length) || 1);
+        if (mode === 'kg') return (Number(item.weight) || 1);
+        if (mode === 'days') return getDaysExtraction(item);
+        
+        // Fallback for legacy items without calculationMode
+        if (isM2) return (Number(item.length) || 1) * (Number(item.height) || 1);
+        if (isML) return (Number(item.length) || 1);
+        if (isKg) return (Number(item.weight) || 1);
+        if (isDays) return getDaysExtraction(item);
+        
         return 1;
     };
 
@@ -291,8 +308,15 @@ const generateDocumentHTML = (
         const qtyIndex = activeColumns.findIndex(c => c.id === 'quantity');
         if (qtyIndex !== -1) {
             activeColumns.splice(qtyIndex + 1, 0, 
-                { id: 'weight' as any, label: lang === 'es' ? 'Peso (kg)' : (lang === 'en' ? 'Weight (kg)' : 'Poids (kg)'), visible: true, order: 2.1 },
-                { id: 'totalWeight' as any, label: 'Total (kg)', visible: true, order: 2.2 }
+                { id: 'weight', label: lang === 'es' ? 'Peso (kg)' : (lang === 'en' ? 'Weight (kg)' : 'Poids (kg)'), visible: true, order: 2.1 },
+                { id: 'totalWeight', label: 'Total (kg)', visible: true, order: 2.2 }
+            );
+        }
+    } else if (isDays) {
+        const qtyIndex = activeColumns.findIndex(c => c.id === 'quantity');
+        if (qtyIndex !== -1) {
+            activeColumns.splice(qtyIndex + 1, 0, 
+                { id: 'days', label: lang === 'es' ? 'Días' : (lang === 'en' ? 'Days' : dict.uDay || 'Jours'), visible: true, order: 2.1 }
             );
         }
     }
@@ -365,22 +389,34 @@ const generateDocumentHTML = (
         capitalDisplay
     ].filter(Boolean).join(' &nbsp;|&nbsp; ');
 
+    // Helper to identify the days/jours column robustly
+    const isDaysCol = (c: any) => {
+        const cid = String(c.id || '').toLowerCase();
+        const clbl = String(c.label || '').toLowerCase();
+        // Matching: any ID or Label containing 'jour', 'day', 'día', 'dias', 'يوم', or 'أيام'
+        return cid.includes('day') || cid.includes('jour') || 
+               clbl.includes('jour') || clbl.includes('day') || 
+               clbl.includes('día') || clbl.includes('dias') ||
+               clbl.includes('يوم') || clbl.includes('أيام');
+    };
+
     const headerRowHtml = activeColumns.map(col => {
         let align = 'left';
         let width = '';
         if (col.id === 'reference') { align = 'left'; width = 'width: 12%;'; }
         else if (col.id === 'quantity') { align = 'center'; width = 'width: 11%;'; }
-        else if (col.id === 'length' as any) { align = 'center'; width = 'width: 10%;'; }
-        else if (col.id === 'height' as any) { align = 'center'; width = 'width: 10%;'; }
-        else if (col.id === 'm2' as any) { align = 'center'; width = 'width: 10%;'; }
-        else if (col.id === 'ml' as any) { align = 'center'; width = 'width: 10%;'; }
-        else if (col.id === 'weight' as any) { align = 'center'; width = 'width: 10%;'; }
-        else if (col.id === 'totalWeight' as any) { align = 'center'; width = 'width: 10%;'; }
+        else if (isDaysCol(col)) { align = 'center'; width = 'width: 10%;'; }
+        else if (col.id === 'length') { align = 'center'; width = 'width: 10%;'; }
+        else if (col.id === 'height') { align = 'center'; width = 'width: 10%;'; }
+        else if (col.id === 'm2') { align = 'center'; width = 'width: 10%;'; }
+        else if (col.id === 'ml') { align = 'center'; width = 'width: 10%;'; }
+        else if (col.id === 'weight') { align = 'center'; width = 'width: 10%;'; }
+        else if (col.id === 'totalWeight') { align = 'center'; width = 'width: 10%;'; }
         else if (col.id === 'vat') { align = 'center'; width = 'width: 11%;'; }
         else if (col.id === 'unitPrice') { align = 'right'; width = 'width: 18%;'; }
         else if (col.id === 'total') { align = 'right'; width = 'width: 18%;'; }
         
-        return `<th style="padding: 6px 12px 16px 12px; text-align: ${align}; vertical-align: middle; line-height: 1.2; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${width}">${col.label}</th>`;
+        return `<th style="padding: 12px; text-align: ${align}; vertical-align: middle; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.5; ${width}">${col.label}</th>`;
     }).join('');
 
     const rowsHtml = doc.lineItems.map((item, index) => {
@@ -392,72 +428,97 @@ const generateDocumentHTML = (
             const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
             const totalTTC = (item.quantity * getLineMultiplier(item) * item.unitPrice) * (1 + item.vat / 100);
 
-            switch (col.id) {
-                case 'reference':
-                    content = item.productCode || '-';
-                    align = 'left';
-                    style = 'font-size: 12.3px; color: #4b5563;';
-                    break;
-                case 'name':
-                    // MICRO AJUSTEMENT (+0,3px) POUR TOUTE LA TABLE (12px -> 12.3px)
-                    content = `
-                        <div style="font-weight: 700; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
-                        ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 1px; line-height: 1.1;">${item.description}</div>` : ''}
-                    `;
-                    break;
-                case 'quantity':
-                    content = item.quantity.toString();
-                    align = 'center';
-                    style = 'font-weight: 700; font-size: 12.3px;';
-                    break;
-                case 'length' as any:
-                    content = (item.length || 1).toString();
-                    align = 'center';
-                    style = 'font-size: 12.3px;';
-                    break;
-                case 'height' as any:
-                    content = (item.height || 1).toString();
-                    align = 'center';
-                    style = 'font-size: 12.3px;';
-                    break;
-                case 'm2' as any:
-                    content = ((item.quantity * (item.length || 1) * (item.height || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
-                    align = 'center';
-                    style = 'font-size: 12.3px; font-weight: 500;';
-                    break;
-                case 'ml' as any:
-                    content = ((item.quantity * (item.length || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
-                    align = 'center';
-                    style = 'font-size: 12.3px; font-weight: 500;';
-                    break;
-                case 'weight' as any:
-                    content = (item.weight || 1).toString();
-                    align = 'center';
-                    style = 'font-size: 12.3px;';
-                    break;
-                case 'totalWeight' as any:
-                    content = ((item.quantity * (item.weight || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
-                    align = 'center';
-                    style = 'font-size: 12.3px; font-weight: 500;';
-                    break;
-                case 'unitPrice':
-                    content = (isModeTTC ? unitPriceTTC : item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
-                    align = 'right';
-                    style = 'font-size: 12.3px;';
-                    break;
-                case 'vat':
-                    content = `${item.vat}%`;
-                    align = 'center';
-                    style = 'font-size: 12.3px;';
-                    break;
-                case 'total':
-                    content = (isModeTTC ? totalTTC : (item.quantity * getLineMultiplier(item) * item.unitPrice)).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
-                    align = 'right';
-                    style = 'font-weight: 700; font-size: 12.3px;';
-                    break;
+            // SYNC DISPLAY VALUE WITH CALCULATION MULTIPLIER
+            const multiplier = getLineMultiplier(item);
+            const isItemInDaysMode = item.calculationMode === 'days' || doc.lineItems[0]?.calculationMode === 'days';
+            
+            // Aggressive extraction for display fallback
+            const extraction = item.days || (item as any).jours || (item as any).jour || (item as any).itemDays || (item as any).nb_jours || 0;
+            const fallbackDaysValue = Number(extraction) > 0 ? Number(extraction) : 1;
+            
+            // If the calculation mode is days, we MUST use the multiplier that produced the correct total
+            const finalDaysDisplayValue = isItemInDaysMode ? multiplier : fallbackDaysValue;
+
+            if (isDaysCol(col)) {
+                content = String(finalDaysDisplayValue);
+                align = 'center';
+                style = 'font-size: 12.3px; font-weight: 700; color: #111827;';
+            } else {
+                switch (col.id) {
+                    case 'reference':
+                        content = item.productCode || '-';
+                        align = 'left';
+                        style = 'font-size: 12.3px; color: #4b5563;';
+                        break;
+                    case 'name':
+                        content = `
+                            <div style="font-weight: 700; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
+                            ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 1px; line-height: 1.1;">${item.description}</div>` : ''}
+                        `;
+                        break;
+                    case 'quantity':
+                        content = item.quantity.toString();
+                        align = 'center';
+                        style = 'font-weight: 700; font-size: 12.3px;';
+                        break;
+                    case 'length':
+                        content = (item.length || 1).toString();
+                        align = 'center';
+                        style = 'font-size: 12.3px;';
+                        break;
+                    case 'height':
+                        content = (item.height || 1).toString();
+                        align = 'center';
+                        style = 'font-size: 12.3px;';
+                        break;
+                    case 'm2':
+                        content = ((item.quantity * (Number(item.length) || 1) * (Number(item.height) || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
+                        align = 'center';
+                        style = 'font-size: 12.3px; font-weight: 500;';
+                        break;
+                    case 'ml':
+                        content = ((item.quantity * (Number(item.length) || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
+                        align = 'center';
+                        style = 'font-size: 12.3px; font-weight: 500;';
+                        break;
+                    case 'weight':
+                        content = (item.weight || 1).toString();
+                        align = 'center';
+                        style = 'font-size: 12.3px;';
+                        break;
+                    case 'totalWeight':
+                        content = ((item.quantity * (Number(item.weight) || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
+                        align = 'center';
+                        style = 'font-size: 12.3px; font-weight: 500;';
+                        break;
+                    case 'unitPrice':
+                        content = (isModeTTC ? unitPriceTTC : item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
+                        align = 'right';
+                        style = 'font-size: 12.3px;';
+                        break;
+                    case 'vat':
+                        content = `${item.vat}%`;
+                        align = 'center';
+                        style = 'font-size: 12.3px;';
+                        break;
+                    case 'total':
+                        const subTotalItem = item.quantity * multiplier * item.unitPrice;
+                        content = (isModeTTC ? totalTTC : subTotalItem).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
+                        align = 'right';
+                        style = 'font-weight: 700; font-size: 12.3px;';
+                        break;
+                    case 'days':
+                        content = String(finalDaysDisplayValue);
+                        align = 'center';
+                        style = 'font-size: 12.3px; font-weight: 700;';
+                        break;
+                    default:
+                        content = '-';
+                        break;
+                }
             }
 
-            return `<td style="padding: 8px 12px 16px 12px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
+            return `<td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; vertical-align: middle; line-height: 1.5; ${style}">${content}</td>`;
         }).join('');
 
         return `<tr class="item-row" style="background-color: ${index % 2 === 0 ? '#fff' : '#f9fafb'};">${cellsHtml}</tr>`;
@@ -557,9 +618,9 @@ const generateDocumentHTML = (
         <div class="totals-section" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
             <div style="width: 55%; padding-top: 10px;">
                 ${showAmountInWords ? `
-                    <div style="background-color: #f3f4f6; padding: 6px 10px 14px 10px; border-radius: 4px; border-left: 3px solid ${primaryColor};">
-                        <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: bold; margin-bottom: 4px; line-height: 1.2;">${txtAmountInWords}</div>
-                        <div style="font-size: 13px; color: #111827; font-weight: 600; font-style: italic; line-height: 1.2;">
+                    <div style="background-color: #f3f4f6; padding: 12px; border-radius: 4px; border-left: 3px solid ${primaryColor}; display: flex; flex-direction: column; justify-content: center;">
+                        <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: bold; margin-bottom: 5px;">${txtAmountInWords}</div>
+                        <div style="font-size: 13px; color: #111827; font-weight: 600; font-style: italic;">
                             ${amountInLetters}
                         </div>
                     </div>
@@ -716,8 +777,20 @@ const generateDocumentHTML = (
                 const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
                 const totalTTC = (item.quantity * getLineMultiplier(item) * item.unitPrice) * (1 + item.vat / 100);
 
-                switch (col.id) {
-                    case 'reference':
+                // SYNC DISPLAY VALUE WITH CALCULATION MULTIPLIER
+                const multiplier = getLineMultiplier(item);
+                const isItemInDaysMode = item.calculationMode === 'days' || doc.lineItems[0]?.calculationMode === 'days';
+                const extraction = item.days || (item as any).jours || (item as any).jour || (item as any).itemDays || (item as any).nb_jours || 0;
+                const fallbackDaysValue = Number(extraction) > 0 ? Number(extraction) : 1;
+                const finalDaysDisplayValue = isItemInDaysMode ? multiplier : fallbackDaysValue;
+
+                if (isDaysCol(col)) {
+                    content = String(finalDaysDisplayValue);
+                    align = 'center';
+                    style = 'font-size: 12.3px; font-weight: 700; color: #111827;';
+                } else {
+                    switch (col.id) {
+                        case 'reference':
                         content = item.productCode || '-';
                         align = 'left';
                         style = 'font-size: 12.3px; color: #4b5563;';
@@ -778,17 +851,27 @@ const generateDocumentHTML = (
                         align = 'right';
                         style = 'font-weight: 700; font-size: 12.3px;';
                         break;
+                    case 'days':
+                        content = String(finalDaysDisplayValue);
+                        align = 'center';
+                        style = 'font-size: 12.3px; font-weight: 700;';
+                        break;
+                    default:
+                        content = '-';
+                        break;
                 }
+            }
 
-                return `<td style="padding: 8px 12px 16px 12px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
+            return `<td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; vertical-align: middle; line-height: 1.5; ${style}">${content}</td>`;
             }).join('');
 
             return `<tr class="item-row" style="background-color: ${idx % 2 === 0 ? '#fff' : '#f9fafb'};">${cellsHtml}</tr>`;
         }).join('');
 
         const pageHtml = `
-            <div class="pdf-page" style="width: 210mm; height: 296.5mm; background: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; display: flex; flex-direction: column; box-sizing: border-box; padding: 15mm 15mm 45mm 15mm; position: relative; overflow: hidden; ${isLastPage ? '' : 'page-break-after: always;'}">
+            <div class="pdf-page" style="width: 210mm; height: 296.5mm; background: white; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; font-size: 13px; color: #374151; display: flex; flex-direction: column; box-sizing: border-box; padding: 15mm 15mm 45mm 15mm; position: relative; overflow: hidden; ${isLastPage ? '' : 'page-break-after: always;'}">
                 <style>
+                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
                     * { box-sizing: border-box; }
                     .content-grow { flex: 1; z-index: 2; position: relative; }
                 </style>
@@ -846,49 +929,36 @@ export const generatePDF = async (
 ): Promise<void> => {
     const template = generateDocumentHTML(docType, doc, settings, recipient, options);
     const displayId = doc.documentId || doc.id;
-
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px'; 
-    container.style.top = '0';
-    container.innerHTML = template;
-    
-    document.body.appendChild(container);
+    const filename = `${docType.toLowerCase()}_${displayId}.pdf`;
 
     try {
-        const contentElement = container.firstElementChild;
-        
-        const opt: any = {
-            margin: 0,
-            filename: `${docType.toLowerCase()}_${displayId}.pdf`,
-            image: { type: 'jpeg', quality: 1 },
-            pagebreak: { mode: ['css', 'legacy'] },
-            html2canvas: { 
-                scale: 2, 
-                useCORS: true, 
-                logging: false,
-                letterRendering: true,
-                onclone: (clonedDoc: Document) => {
-                    // Remove all oklch color references from styles to prevent html2canvas crash
-                    const styleTags = clonedDoc.getElementsByTagName('style');
-                    for (let i = 0; i < styleTags.length; i++) {
-                        styleTags[i].innerHTML = styleTags[i].innerHTML.replace(/oklch\([^)]+\)/g, '#000000');
-                    }
-                    // Also check for link tags that might contain oklch
-                    const linkTags = clonedDoc.getElementsByTagName('link');
-                    for (let i = linkTags.length - 1; i >= 0; i--) {
-                        if (linkTags[i].rel === 'stylesheet') {
-                            linkTags[i].parentNode?.removeChild(linkTags[i]);
-                        }
-                    }
-                }
+        const response = await fetch('/api/pdf', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
             },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
+            body: JSON.stringify({ 
+                html: template,
+                filename: filename
+            })
+        });
 
-        await (html2pdf() as any).set(opt).from(contentElement).save();
-    } finally {
-        document.body.removeChild(container);
+        if (!response.ok) {
+            throw new Error(`PDF generation failed: ${response.statusText}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    } catch (error) {
+        console.error('Error downloading PDF via backend:', error);
+        alert("Une erreur est survenue lors de la génération du PDF.");
     }
 };
 
@@ -912,7 +982,8 @@ export const printDocument = (
                 <head>
                     <title>${docType} #${displayId}</title>
                     <style>
-                        body { margin: 0; padding: 0; }
+                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+                        body { margin: 0; padding: 0; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
                         @media print {
                             @page { margin: 0; size: A4; }
                             body { -webkit-print-color-adjust: exact; }

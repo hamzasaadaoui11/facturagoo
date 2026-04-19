@@ -20,6 +20,15 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
     const [selectedClientId, setSelectedClientId] = useState<string>('');
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
     
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    // Reset page when tab, search or client filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, searchTerm, selectedClientId]);
+
     // Payment Modal State
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState<'Virement' | 'Chèque' | 'Espèces' | 'Carte Bancaire'>('Virement');
@@ -131,6 +140,39 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
         return filtered;
     }, [invoices, activeTab, searchTerm, selectedClientId]);
 
+    const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedInvoices = filteredInvoices.slice(startIndex, startIndex + itemsPerPage);
+
+    const getPageNumbers = () => {
+        const pages = [];
+        const maxVisible = 5;
+        
+        if (totalPages <= maxVisible) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            
+            if (currentPage > 3) {
+                pages.push('...');
+            }
+            
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+            
+            for (let i = start; i <= end; i++) {
+                if (!pages.includes(i)) pages.push(i);
+            }
+            
+            if (currentPage < totalPages - 2) {
+                pages.push('...');
+            }
+            
+            if (!pages.includes(totalPages)) pages.push(totalPages);
+        }
+        return pages;
+    };
+
     const handleOpenPayment = (invoice: Invoice) => {
         setSelectedInvoice(invoice);
         const remaining = invoice.amount - (invoice.amountPaid || 0);
@@ -208,7 +250,7 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between group hover:shadow-md transition-all">
                     <div>
-                        <p className="text-sm font-medium text-slate-500">{t('totalCollected')}</p>
+                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{t('totalCollected')}</p>
                         <p className="text-2xl font-black text-emerald-600 mt-1">{stats.totalPaid.toLocaleString(locale, { style: 'currency', currency: currencyCode })}</p>
                     </div>
                     <div className={`p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform ${isRTL ? 'mr-4' : 'ml-4'}`}>
@@ -218,7 +260,7 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
 
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between group hover:shadow-md transition-all">
                     <div>
-                        <p className="text-sm font-medium text-slate-500">{t('outstandingToRecover')}</p>
+                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{t('outstandingToRecover')}</p>
                         <p className="text-2xl font-black text-red-600 mt-1">{stats.totalRemaining.toLocaleString(locale, { style: 'currency', currency: currencyCode })}</p>
                     </div>
                     <div className={`p-3 bg-red-50 rounded-2xl text-red-600 group-hover:scale-110 transition-transform ${isRTL ? 'mr-4' : 'ml-4'}`}>
@@ -228,7 +270,7 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
 
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between group hover:shadow-md transition-all">
                     <div>
-                        <p className="text-sm font-medium text-slate-500">{t('remainingOnPartial')}</p>
+                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{t('remainingOnPartial')}</p>
                         <p className="text-2xl font-black text-blue-600 mt-1">{stats.partialRemaining.toLocaleString(locale, { style: 'currency', currency: currencyCode })}</p>
                     </div>
                     <div className={`p-3 bg-blue-50 rounded-2xl text-blue-600 group-hover:scale-110 transition-transform ${isRTL ? 'mr-4' : 'ml-4'}`}>
@@ -291,8 +333,8 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-slate-50">
-                            {filteredInvoices.length > 0 ? (
-                                filteredInvoices.map(invoice => {
+                            {paginatedInvoices.length > 0 ? (
+                                paginatedInvoices.map(invoice => {
                                     const paid = invoice.amountPaid || 0;
                                     const remaining = invoice.amount - paid;
                                     
@@ -304,14 +346,14 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
                                             <td className={`px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-semibold ${isRTL ? 'text-right' : 'text-left'}`}>
                                                 {invoice.clientName}
                                             </td>
-                                            <td className={`px-6 py-4 whitespace-nowrap text-sm text-slate-700 ${isRTL ? 'text-left' : 'text-right'}`}>
+                                            <td className={`px-6 py-4 whitespace-nowrap text-sm text-slate-600 ${isRTL ? 'text-left' : 'text-right'}`}>
                                                 {invoice.amount.toLocaleString(locale, { style: 'currency', currency: currencyCode })}
                                             </td>
                                             <td className={`px-6 py-4 whitespace-nowrap text-sm text-emerald-600 font-bold ${isRTL ? 'text-left' : 'text-right'}`}>
                                                 {paid > 0 ? paid.toLocaleString(locale, { style: 'currency', currency: currencyCode }) : '-'}
                                             </td>
                                             <td className={`px-6 py-4 whitespace-nowrap text-sm font-black ${isRTL ? 'text-left' : 'text-right'}`}>
-                                                <span className={remaining > 0.01 ? 'text-red-600' : 'text-slate-400'}>
+                                                <span className={remaining > 0.01 ? 'text-red-600 bg-red-50 px-2 py-1 rounded-lg' : 'text-slate-400'}>
                                                     {remaining > 0.01 ? remaining.toLocaleString(locale, { style: 'currency', currency: currencyCode }) : '0.00'}
                                                 </span>
                                             </td>
@@ -353,8 +395,8 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
 
                 {/* Mobile Card View */}
                 <div className="md:hidden divide-y divide-slate-100">
-                    {filteredInvoices.length > 0 ? (
-                        filteredInvoices.map(invoice => {
+                    {paginatedInvoices.length > 0 ? (
+                        paginatedInvoices.map(invoice => {
                             const paid = invoice.amountPaid || 0;
                             const remaining = invoice.amount - paid;
                             
@@ -414,6 +456,73 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
                         </div>
                     )}
                 </div>
+
+                {/* Pagination UI */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-slate-100">
+                        <div className="flex-1 flex justify-between sm:hidden">
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                                className="relative inline-flex items-center px-4 py-2 text-xs font-bold rounded-xl text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-50 transition-all uppercase tracking-wider"
+                            >
+                                {isRTL ? 'التالي' : 'Précédent'}
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                                className="relative ml-3 inline-flex items-center px-4 py-2 text-xs font-bold rounded-xl text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-50 transition-all uppercase tracking-wider"
+                            >
+                                {isRTL ? 'السابق' : 'Suivant'}
+                            </button>
+                        </div>
+                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-xs font-medium text-slate-500">
+                                    Affichage de <span className="font-bold text-emerald-600">{startIndex + 1}</span> à <span className="font-bold text-emerald-600">{Math.min(startIndex + itemsPerPage, filteredInvoices.length)}</span> sur <span className="font-bold text-emerald-600">{filteredInvoices.length}</span> documents
+                                </p>
+                            </div>
+                            <div>
+                                <nav className="relative z-0 inline-flex rounded-xl shadow-sm -space-x-px gap-1" aria-label="Pagination">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-400 hover:bg-slate-50 disabled:opacity-30 transition-all"
+                                    >
+                                        <ChevronDown size={18} className={isRTL ? '-rotate-90' : 'rotate-90'} />
+                                    </button>
+                                    {getPageNumbers().map((page, i) => (
+                                        <React.Fragment key={i}>
+                                            {page === '...' ? (
+                                                <span className="relative inline-flex items-center px-4 py-2 text-xs font-bold text-slate-300">
+                                                    ...
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setCurrentPage(page as number)}
+                                                    className={`relative inline-flex items-center px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                                                        currentPage === page 
+                                                            ? 'z-10 bg-emerald-600 text-white shadow-lg shadow-emerald-200 active:scale-95' 
+                                                            : 'bg-white text-slate-500 hover:bg-slate-50 hover:text-emerald-600 border border-transparent'
+                                                    }`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            )}
+                                        </React.Fragment>
+                                    ))}
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className="relative inline-flex items-center px-2 py-2 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-400 hover:bg-slate-50 disabled:opacity-30 transition-all"
+                                    >
+                                        <ChevronDown size={18} className={isRTL ? 'rotate-90' : '-rotate-90'} />
+                                    </button>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Menu Dropdown via Portal avec positionnement intelligent */}

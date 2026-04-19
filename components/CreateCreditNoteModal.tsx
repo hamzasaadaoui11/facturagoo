@@ -30,7 +30,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const [reason, setReason] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
     const [notes, setNotes] = useState('');
-    const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
+    const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg' | 'days'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
     const [showSubjectField, setShowSubjectField] = useState(false);
@@ -42,6 +42,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const [tempPrice, setTempPrice] = useState(0);
     const [tempVat, setTempVat] = useState(20);
     const [itemQuantity, setItemQuantity] = useState<string>('1');
+    const [tempDays, setTempDays] = useState<string>('1');
     const [tempLength, setTempLength] = useState<string>('1');
     const [tempHeight, setTempHeight] = useState<string>('1');
     const [tempWeight, setTempWeight] = useState<string>('1');
@@ -101,6 +102,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
         setTempPrice(0);
         setTempVat(language === 'es' ? 21 : 20);
         setItemQuantity('1');
+        setTempDays('1');
         setTempLength('1');
         setTempHeight('1');
         setTempProductCode('');
@@ -128,13 +130,16 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const isM2 = calculationMode === 'm2';
     const isML = calculationMode === 'ml';
     const isKg = calculationMode === 'kg';
+    const isDays = calculationMode === 'days';
     const showLengthColumn = calculationMode === 'm2' || calculationMode === 'ml';
     const showHeightColumn = calculationMode === 'm2';
+    const showDaysColumn = calculationMode === 'days';
 
     const getLineMultiplier = (item: LineItem) => {
         if (isM2) return (item.length || 1) * (item.height || 1);
         if (isML) return (item.length || 1);
         if (isKg) return (item.weight || 1);
+        if (isDays) return (item.days || 1);
         return 1;
     };
 
@@ -147,6 +152,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
             const length = showLengthColumn ? parseDecimalInput(tempLength) : 1;
             const height = showHeightColumn ? parseDecimalInput(tempHeight) : 1;
             const weight = isKg ? parseDecimalInput(tempWeight) : 1;
+            const days = isDays ? parseDecimalInput(tempDays) : 1;
 
             const newItem: LineItem = {
                 id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -158,6 +164,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 length: length || 1,
                 height: height || 1,
                 weight: weight || 1,
+                days: days || 1,
                 unitPrice: price || 0,
                 vat: vatValue
             };
@@ -207,6 +214,10 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     }, [lineItems, isDiscountEnabled, discountType, discountValue, language, calculationMode]);
 
     const handleSave = async () => {
+        if (tempName.trim()) {
+            alert("Vous avez commencé à écrire une désignation mais vous ne l'avez pas ajoutée. Cliquez sur le petit ➕ pour l'ajouter à l'avoir avant d'enregistrer.");
+            return;
+        }
         if (!clientId || lineItems.length === 0) return;
         const client = clients.find(c => c.id === clientId);
         const clientNameDisplay = client ? (client.company || client.name) : (language === 'es' ? 'Cliente desconocido' : 'Client inconnu');
@@ -343,7 +354,8 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     { id: 'piece', label: 'Par pièce', icon: Package },
                                     { id: 'm2', label: 'Par m² (Larg x Haut)', icon: Square },
                                     { id: 'ml', label: 'Par mètre linéaire', icon: Ruler },
-                                    { id: 'kg', label: 'Par kg', icon: Weight }
+                                    { id: 'kg', label: 'Par kg', icon: Weight },
+                                    { id: 'days', label: 'Par Jour', icon: Calculator }
                                 ].map((mode) => (
                                     <button
                                         key={mode.id}
@@ -465,6 +477,17 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     />
                                 </div>
                             )}
+                            {isDays && (
+                                <div className="col-span-1 md:col-span-12 lg:col-span-2">
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">{t('uDay')}</label>
+                                    <input 
+                                        type="text" 
+                                        value={tempDays} 
+                                        onChange={(e) => setTempDays(e.target.value)} 
+                                        className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all font-mono"
+                                    />
+                                </div>
+                            )}
                             <div className="col-span-1 md:col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">{t('vat')}</label>
                                 <select 
@@ -502,6 +525,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                             {isM2 && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">M²</th>}
                                             {isML && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">ML</th>}
                                             {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Total kg</th>}
+                                            {isDays && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('uDay')}</th>}
                                             <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{t('totalHTLabel')}</th>
                                             <th className="px-4 py-3 w-10"></th>
                                         </tr>
@@ -568,6 +592,16 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                             {isM2 && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1) * (item.height || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
                                             {isML && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
                                             {isKg && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
+                                            {isDays && (
+                                                <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(item.days || 1, language)} 
+                                                        onChange={(e) => updateLineItem(item.id, { days: parseDecimalInput(e.target.value) })}
+                                                        className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent font-mono"
+                                                    />
+                                                </td>
+                                            )}
                                                 <td className="px-4 py-3 text-right text-xs font-bold text-slate-900">{(item.quantity * getLineMultiplier(item) * item.unitPrice).toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })}</td>
                                                 <td className="px-4 py-3 text-center"><button onClick={() => handleRemoveItem(item.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1"><Trash2 size={16}/></button></td>
                                             </tr>

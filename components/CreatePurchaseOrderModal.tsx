@@ -30,7 +30,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const [subject, setSubject] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
     const [notes, setNotes] = useState('');
-    const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg'>('piece');
+    const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg' | 'days'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
 
     const [showExpectedDateField, setShowExpectedDateField] = useState(false);
@@ -43,6 +43,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const [tempPrice, setTempPrice] = useState<string>('0');
     const [tempVat, setTempVat] = useState(20);
     const [itemQuantity, setItemQuantity] = useState<string>('1');
+    const [tempDays, setTempDays] = useState<string>('1');
     const [tempLength, setTempLength] = useState<string>('1');
     const [tempHeight, setTempHeight] = useState<string>('1');
     const [tempWeight, setTempWeight] = useState<string>('1');
@@ -107,6 +108,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
         setTempPrice('0');
         setTempVat(language === 'es' ? 21 : 20);
         setItemQuantity('1');
+        setTempDays('1');
         setTempLength('1');
         setTempHeight('1');
         setTempProductCode('');
@@ -138,13 +140,16 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const isM2 = calculationMode === 'm2';
     const isML = calculationMode === 'ml';
     const isKg = calculationMode === 'kg';
+    const isDays = calculationMode === 'days';
     const showLengthColumn = calculationMode === 'm2' || calculationMode === 'ml';
     const showHeightColumn = calculationMode === 'm2';
+    const showDaysColumn = calculationMode === 'days';
 
     const getLineMultiplier = (item: LineItem) => {
         if (isM2) return (item.length || 1) * (item.height || 1);
         if (isML) return (item.length || 1);
         if (isKg) return (item.weight || 1);
+        if (isDays) return (item.days || 1);
         return 1;
     };
 
@@ -158,6 +163,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
             const length = showLengthColumn ? parseDecimalInput(tempLength) : 1;
             const height = showHeightColumn ? parseDecimalInput(tempHeight) : 1;
             const weight = isKg ? parseDecimalInput(tempWeight) : 1;
+            const days = isDays ? parseDecimalInput(tempDays) : 1;
 
             const newItem: LineItem = {
                 id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -169,6 +175,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 length: length || 1,
                 height: height || 1,
                 weight: weight || 1,
+                days: days || 1,
                 unitPrice: price || 0,
                 vat: vatValue
             };
@@ -214,6 +221,10 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     }, [lineItems, isDiscountEnabled, discountType, discountValue, language, calculationMode]);
 
     const handleSave = async () => {
+        if (tempName.trim()) {
+            alert("Vous avez commencé à écrire une désignation mais vous ne l'avez pas ajoutée. Cliquez sur le petit ➕ pour l'ajouter au BC avant d'enregistrer.");
+            return;
+        }
         if (!supplierId || lineItems.length === 0) return;
         const supplier = suppliers.find(s => s.id === supplierId);
         
@@ -383,7 +394,8 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                     { id: 'piece', label: 'Par pièce', icon: Package },
                                     { id: 'm2', label: 'Par m² (Larg x Haut)', icon: Square },
                                     { id: 'ml', label: 'Par mètre linéaire', icon: Ruler },
-                                    { id: 'kg', label: 'Par kg', icon: Weight }
+                                    { id: 'kg', label: 'Par kg', icon: Weight },
+                                    { id: 'days', label: 'Par Jour', icon: Calculator }
                                 ].map((mode) => (
                                     <button
                                         key={mode.id}
@@ -542,6 +554,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                             {isM2 && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">M²</th>}
                                             {isML && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">ML</th>}
                                             {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Total kg</th>}
+                                            {isDays && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('uDay')}</th>}
                                             <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</th>
                                             <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('totalTTCLabel') : t('totalHTLabel')}</th>
                                             <th className="px-4 py-3 w-10"></th>
@@ -614,6 +627,16 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                             {isM2 && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1) * (item.height || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
                                             {isML && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
                                             {isKg && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
+                                            {isDays && (
+                                                <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
+                                                    <input 
+                                                        type="text" 
+                                                        value={formatDecimalForInput(item.days || 1, language)} 
+                                                        onChange={(e) => updateLineItem(item.id, { days: parseDecimalInput(e.target.value) })}
+                                                        className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent font-mono"
+                                                    />
+                                                </td>
+                                            )}
                                                 <td className="px-4 py-3 text-right text-xs">
                                                      <input 
                                                         type="text" 
