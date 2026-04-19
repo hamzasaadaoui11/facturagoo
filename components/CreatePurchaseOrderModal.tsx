@@ -221,10 +221,6 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     }, [lineItems, isDiscountEnabled, discountType, discountValue, language, calculationMode]);
 
     const handleSave = async () => {
-        if (tempName.trim()) {
-            alert("Vous avez commencé à écrire une désignation mais vous ne l'avez pas ajoutée. Cliquez sur le petit ➕ pour l'ajouter au BC avant d'enregistrer.");
-            return;
-        }
         if (!supplierId || lineItems.length === 0) return;
         const supplier = suppliers.find(s => s.id === supplierId);
         

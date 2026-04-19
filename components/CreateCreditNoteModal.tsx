@@ -214,10 +214,6 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     }, [lineItems, isDiscountEnabled, discountType, discountValue, language, calculationMode]);
 
     const handleSave = async () => {
-        if (tempName.trim()) {
-            alert("Vous avez commencé à écrire une désignation mais vous ne l'avez pas ajoutée. Cliquez sur le petit ➕ pour l'ajouter à l'avoir avant d'enregistrer.");
-            return;
-        }
         if (!clientId || lineItems.length === 0) return;
         const client = clients.find(c => c.id === clientId);
         const clientNameDisplay = client ? (client.company || client.name) : (language === 'es' ? 'Cliente desconocido' : 'Client inconnu');
