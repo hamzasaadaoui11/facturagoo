@@ -695,71 +695,192 @@ const generateDocumentHTML = (
 
     // --- Pagination Logic ---
     const items = [...doc.lineItems];
-    
-    const getItemWeight = (item: any) => {
-        let weight = 1; // Base weight for one row (~9mm)
-        
-        // Estimate name wrapping (each ~45 chars is roughly a line)
-        if (item.name && item.name.length > 45) {
-            weight += (Math.ceil(item.name.length / 45) - 1) * 0.4;
-        }
 
-        if (item.description) {
-            // Estimate lines in description - each ~65 chars is roughly one extra line (~4mm or 0.45 weight)
-            const descLines = Math.ceil(item.description.length / 65);
-            weight += descLines * 0.45;
-        }
-        return weight;
+    const getCellsHtml = (item: any) => {
+        return activeColumns.map(col => {
+            let content = '';
+            let align = 'left';
+            let style = '';
+
+            const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
+            const totalTTC = (item.quantity * getLineMultiplier(item) * item.unitPrice) * (1 + item.vat / 100);
+
+            // SYNC DISPLAY VALUE WITH CALCULATION MULTIPLIER
+            const multiplier = getLineMultiplier(item);
+            const isItemInDaysMode = item.calculationMode === 'days' || doc.lineItems[0]?.calculationMode === 'days';
+            const extraction = item.days || (item as any).jours || (item as any).jour || (item as any).itemDays || (item as any).nb_jours || 0;
+            const fallbackDaysValue = Number(extraction) > 0 ? Number(extraction) : 1;
+            const finalDaysDisplayValue = isItemInDaysMode ? multiplier : fallbackDaysValue;
+
+            if (isDaysCol(col)) {
+                content = String(finalDaysDisplayValue);
+                align = 'center';
+                style = 'font-size: 12.3px; font-weight: 700; color: #111827;';
+            } else {
+                switch (col.id) {
+                    case 'reference':
+                    content = item.productCode || '-';
+                    align = 'left';
+                    style = 'font-size: 12.3px; color: #4b5563;';
+                    break;
+                case 'name':
+                    content = `
+                        <div style="font-weight: 700; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
+                        ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 1px; line-height: 1.1;">${item.description}</div>` : ''}
+                    `;
+                    break;
+                case 'quantity':
+                    content = item.quantity.toString();
+                    align = 'center';
+                    style = 'font-weight: 700; font-size: 12.3px;';
+                    break;
+                case 'length' as any:
+                    content = (item.length || 1).toString();
+                    align = 'center';
+                    style = 'font-size: 12.3px;';
+                    break;
+                case 'height' as any:
+                    content = (item.height || 1).toString();
+                    align = 'center';
+                    style = 'font-size: 12.3px;';
+                    break;
+                case 'm2' as any:
+                    content = ((item.quantity * (item.length || 1) * (item.height || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
+                    align = 'center';
+                    style = 'font-size: 12.3px; font-weight: 500;';
+                    break;
+                case 'ml' as any:
+                    content = ((item.quantity * (item.length || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
+                    align = 'center';
+                    style = 'font-size: 12.3px; font-weight: 500;';
+                    break;
+                case 'weight' as any:
+                    content = (item.weight || 1).toString();
+                    align = 'center';
+                    style = 'font-size: 12.3px;';
+                    break;
+                case 'totalWeight' as any:
+                    content = ((item.quantity * (item.weight || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
+                    align = 'center';
+                    style = 'font-size: 12.3px; font-weight: 500;';
+                    break;
+                case 'unitPrice':
+                    content = (isModeTTC ? unitPriceTTC : item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
+                    align = 'right';
+                    style = 'font-size: 12.3px;';
+                    break;
+                case 'vat':
+                    content = `${item.vat}%`;
+                    align = 'center';
+                    style = 'font-size: 12.3px;';
+                    break;
+                case 'total':
+                    content = (isModeTTC ? totalTTC : (item.quantity * getLineMultiplier(item) * item.unitPrice)).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
+                    align = 'right';
+                    style = 'font-weight: 700; font-size: 12.3px;';
+                    break;
+                case 'days':
+                    content = String(finalDaysDisplayValue);
+                    align = 'center';
+                    style = 'font-size: 12.3px; font-weight: 700;';
+                    break;
+                default:
+                    content = '-';
+                    break;
+                }
+            }
+
+            return `<td style="padding: 8px 12px 16px 12px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
+        }).join('');
     };
 
-    // 1. Pre-calculate chunks to know total pages
+    // 1. EXACT DOM MEASUREMENT PAGINATION
+    const allRowsHtml = items.map(item => `<tr>${getCellsHtml(item)}</tr>`).join('');
+
+    const measureBox = document.createElement('div');
+    measureBox.style.position = 'absolute';
+    measureBox.style.left = '-9999px';
+    measureBox.style.visibility = 'hidden';
+    measureBox.style.width = '210mm'; 
+    measureBox.innerHTML = `
+        <div style="width: 210mm; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; box-sizing: border-box; padding: 15mm 15mm 45mm 15mm;">
+            <div id="measure-header" style="position: relative; z-index: 2;">
+                ${topHeaderHtml}
+                ${clientInfoHtml}
+                <div style="display: flex; gap: 40px; margin-bottom: 15px;">
+                    ${doc.subject ? `<div><span style="font-weight: 600;">Objet :</span> ${doc.subject}</div>` : ''}
+                    ${doc.paymentMethod ? `<div><span style="font-weight: 600;">Mode de paiement :</span> ${doc.paymentMethod}</div>` : ''}
+                </div>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <thead id="measure-thead">
+                    <tr>${headerRowHtml}</tr>
+                </thead>
+                <tbody id="measure-tbody">
+                    ${allRowsHtml}
+                </tbody>
+            </table>
+            <div id="measure-totals">
+                ${totalsHtml}
+            </div>
+        </div>
+        <div id="measure-a4" style="height: 296.5mm;"></div>
+        <div id="measure-padd" style="height: 60mm;"></div>
+    `;
+
+    document.body.appendChild(measureBox);
+
+    const headerHeight = document.getElementById('measure-header')?.offsetHeight || 0;
+    const theadHeight = document.getElementById('measure-thead')?.offsetHeight || 0;
+    const totalsHeight = document.getElementById('measure-totals')?.offsetHeight || 0;
+    
+    const tbody = document.getElementById('measure-tbody');
+    const rowHeightsPx = tbody ? Array.from(tbody.children).map(el => (el as HTMLElement).offsetHeight) : items.map(() => 40);
+    
+    const a4FullHeight = document.getElementById('measure-a4')?.offsetHeight || 1120;
+    const paddingHeights = document.getElementById('measure-padd')?.offsetHeight || 226;
+
+    document.body.removeChild(measureBox);
+
+    // True Usable Pixel Height
+    const maxUsableHeight = a4FullHeight - paddingHeights;
+    const SAFETY_MARGIN = 2; // small threshold in pixels
+
+    // 2. Pack items into chunks optimally
     const itemChunks: any[][] = [];
     let tempIndex = 0;
-    
-    // Safety threshold for items per page (accounting for header/footer space)
-    // Limited to 13 lines per page as requested
-    const maxW = 13; 
 
     while (tempIndex < items.length) {
-        let currentW = 0;
+        let currentHeight = headerHeight + theadHeight + 20; // 20px for table margin-bottom
         const chunk: any[] = [];
         
         while (tempIndex < items.length) {
             const item = items[tempIndex];
-            const weight = getItemWeight(item);
+            const rh = rowHeightsPx[tempIndex] || 35;
             
-            // Hard limit of 13 lines or weight threshold
-            if ((currentW + weight > maxW || chunk.length >= 13) && chunk.length > 0) {
+            if (currentHeight + rh + SAFETY_MARGIN > maxUsableHeight && chunk.length > 0) {
                 break;
             }
             
             chunk.push(item);
-            currentW += weight;
+            currentHeight += rh;
             tempIndex++;
         }
         itemChunks.push(chunk);
     }
 
-    // 2. Check if totals fit on the last page, otherwise add a page
-    const lastChunkIndex = itemChunks.length - 1;
-    const lastChunk = itemChunks[lastChunkIndex] || [];
-    let lastPageWeight = 0;
-    lastChunk.forEach(item => lastPageWeight += getItemWeight(item));
-    
-    // Calculate a more precise weight for the totals section
-    let totalsWeight = 5; // Base: Totals + Amount in words
-    if (doc.notes) totalsWeight += Math.ceil(doc.notes.length / 60) * 0.5;
-    if (settings?.showSignatureRecipient) totalsWeight += 3;
-    
-    // We allow the last page to be more full (up to ~20 units) 
-    // to avoid pushing totals to a new page unnecessarily.
-    // 20 units * 9mm = 180mm. Header (~95mm) + 180mm = 275mm. 
-    // Page height is 296.5mm, so this fits within the safe printable area.
-    const maxTotalWeightOnLastPage = 20;
-
-    if (lastPageWeight + totalsWeight > maxTotalWeightOnLastPage) {
-        itemChunks.push([]); // Add a dedicated page for totals
+    // 3. Check if Totals fit on the last page
+    const lastChunk = itemChunks[itemChunks.length - 1] || [];
+    let lastChunkHeight = headerHeight + theadHeight + 20;
+    const lastChunkStartIndex = items.length - lastChunk.length;
+    for (let i = 0; i < lastChunk.length; i++) {
+        lastChunkHeight += rowHeightsPx[lastChunkStartIndex + i];
     }
+
+    if (lastChunkHeight + totalsHeight + SAFETY_MARGIN > maxUsableHeight) {
+        itemChunks.push([]); // Totals get pushed to their own new page
+    }
+
 
     const totalPages = itemChunks.length;
     const pages: string[] = [];
@@ -769,102 +890,7 @@ const generateDocumentHTML = (
         const isLastPage = pageNum === totalPages;
 
         const pageRowsHtml = pageItems.map((item, idx) => {
-            const cellsHtml = activeColumns.map(col => {
-                let content = '';
-                let align = 'left';
-                let style = '';
-
-                const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
-                const totalTTC = (item.quantity * getLineMultiplier(item) * item.unitPrice) * (1 + item.vat / 100);
-
-                // SYNC DISPLAY VALUE WITH CALCULATION MULTIPLIER
-                const multiplier = getLineMultiplier(item);
-                const isItemInDaysMode = item.calculationMode === 'days' || doc.lineItems[0]?.calculationMode === 'days';
-                const extraction = item.days || (item as any).jours || (item as any).jour || (item as any).itemDays || (item as any).nb_jours || 0;
-                const fallbackDaysValue = Number(extraction) > 0 ? Number(extraction) : 1;
-                const finalDaysDisplayValue = isItemInDaysMode ? multiplier : fallbackDaysValue;
-
-                if (isDaysCol(col)) {
-                    content = String(finalDaysDisplayValue);
-                    align = 'center';
-                    style = 'font-size: 12.3px; font-weight: 700; color: #111827;';
-                } else {
-                    switch (col.id) {
-                        case 'reference':
-                        content = item.productCode || '-';
-                        align = 'left';
-                        style = 'font-size: 12.3px; color: #4b5563;';
-                        break;
-                    case 'name':
-                        content = `
-                            <div style="font-weight: 700; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
-                            ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 1px; line-height: 1.1;">${item.description}</div>` : ''}
-                        `;
-                        break;
-                    case 'quantity':
-                        content = item.quantity.toString();
-                        align = 'center';
-                        style = 'font-weight: 700; font-size: 12.3px;';
-                        break;
-                    case 'length' as any:
-                        content = (item.length || 1).toString();
-                        align = 'center';
-                        style = 'font-size: 12.3px;';
-                        break;
-                    case 'height' as any:
-                        content = (item.height || 1).toString();
-                        align = 'center';
-                        style = 'font-size: 12.3px;';
-                        break;
-                    case 'm2' as any:
-                        content = ((item.quantity * (item.length || 1) * (item.height || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
-                        align = 'center';
-                        style = 'font-size: 12.3px; font-weight: 500;';
-                        break;
-                    case 'ml' as any:
-                        content = ((item.quantity * (item.length || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
-                        align = 'center';
-                        style = 'font-size: 12.3px; font-weight: 500;';
-                        break;
-                    case 'weight' as any:
-                        content = (item.weight || 1).toString();
-                        align = 'center';
-                        style = 'font-size: 12.3px;';
-                        break;
-                    case 'totalWeight' as any:
-                        content = ((item.quantity * (item.weight || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
-                        align = 'center';
-                        style = 'font-size: 12.3px; font-weight: 500;';
-                        break;
-                    case 'unitPrice':
-                        content = (isModeTTC ? unitPriceTTC : item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
-                        align = 'right';
-                        style = 'font-size: 12.3px;';
-                        break;
-                    case 'vat':
-                        content = `${item.vat}%`;
-                        align = 'center';
-                        style = 'font-size: 12.3px;';
-                        break;
-                    case 'total':
-                        content = (isModeTTC ? totalTTC : (item.quantity * getLineMultiplier(item) * item.unitPrice)).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
-                        align = 'right';
-                        style = 'font-weight: 700; font-size: 12.3px;';
-                        break;
-                    case 'days':
-                        content = String(finalDaysDisplayValue);
-                        align = 'center';
-                        style = 'font-size: 12.3px; font-weight: 700;';
-                        break;
-                    default:
-                        content = '-';
-                        break;
-                }
-            }
-
-            return `<td style="padding: 8px 12px 16px 12px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
-            }).join('');
-
+            const cellsHtml = getCellsHtml(item);
             return `<tr class="item-row" style="background-color: ${idx % 2 === 0 ? '#fff' : '#f9fafb'};">${cellsHtml}</tr>`;
         }).join('');
 
