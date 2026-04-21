@@ -3,14 +3,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import Header from './Header';
 import ConfirmationModal from './ConfirmationModal';
-import { Plus, Pencil, Trash2, ArrowLeft, Package, AlertTriangle, Search, Upload, ChevronLeft, ChevronRight, Barcode, Scan, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, Package, AlertTriangle, Search, Upload, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Product, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatCurrency, parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
 import ImportProductsModal from './ImportProductsModal';
-import { Html5QrcodeScanner } from 'html5-qrcode';
-
-// --- Helper Functions and Components ---
+    // --- Helper Functions and Components ---
 
 const Toggle = ({ enabled, setEnabled, htLabel, ttcLabel }: { enabled: boolean, setEnabled: (enabled: boolean) => void, htLabel: string, ttcLabel: string }) => (
     <div className="flex items-center space-x-2 rtl:space-x-reverse">
@@ -33,57 +31,6 @@ const Toggle = ({ enabled, setEnabled, htLabel, ttcLabel }: { enabled: boolean, 
 
 const round = (value: number) => Math.round(value * 100) / 100;
 
-// --- Barcode Scanner Component ---
-
-interface BarcodeScannerProps {
-    onScan: (decodedText: string) => void;
-    onClose: () => void;
-}
-
-const BarcodeScanner = ({ onScan, onClose }: BarcodeScannerProps) => {
-    const { t, isRTL } = useLanguage();
-
-    useEffect(() => {
-        const scanner = new Html5QrcodeScanner(
-            "reader",
-            { fps: 10, qrbox: { width: 250, height: 150 } },
-            /* verbose= */ false
-        );
-
-        scanner.render(
-            (decodedText) => {
-                onScan(decodedText);
-                scanner.clear();
-            },
-            (error) => {
-                // Ignore failures to avoid console noise
-            }
-        );
-
-        return () => {
-            scanner.clear().catch(error => console.error("Failed to clear scanner", error));
-        };
-    }, [onScan]);
-
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg animate-in fade-in zoom-in duration-200">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-                        <Scan size={20} className="text-emerald-600" /> {t('scanBarcode')}
-                    </h3>
-                    <button onClick={onClose} className="p-2 text-neutral-400 hover:text-neutral-600 rounded-full hover:bg-neutral-100 transition-all"><X size={20} /></button>
-                </div>
-                <div id="reader" className="overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50"></div>
-                <p className="mt-4 text-sm text-neutral-500 text-center">{t('placeBarcodeInFront')}</p>
-                <div className="mt-6 flex justify-end">
-                    <button onClick={onClose} className="px-4 py-2 text-sm font-bold text-neutral-600 hover:bg-neutral-100 rounded-lg transition-all">{t('cancel')}</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 // --- Product Form Component ---
 
 interface ProductFormProps {
@@ -105,12 +52,10 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
 
     const [name, setName] = useState('');
     const [productCode, setProductCode] = useState('');
-    const [barcode, setBarcode] = useState('');
     const [description, setDescription] = useState('');
     const [productType, setProductType] = useState<'Produit' | 'Service'>('Produit');
     const [unitOfMeasure, setUnitOfMeasure] = useState('Aucune');
     const [vat, setVat] = useState(20);
-    const [isScannerOpen, setIsScannerOpen] = useState(false);
 
     // Using string states for all numeric inputs to preserve decimal separators and trailing zeros during typing
     const [salePriceHTStr, setSalePriceHTStr] = useState('0');
@@ -126,7 +71,6 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
         if (isEditMode && existingProduct) {
             setName(existingProduct.name);
             setProductCode(existingProduct.productCode);
-            setBarcode(existingProduct.barcode || '');
             setDescription(existingProduct.description || '');
             setProductType(existingProduct.productType || 'Produit');
             setUnitOfMeasure(existingProduct.unitOfMeasure || 'Aucune');
@@ -182,7 +126,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const productData = {
-            name, productCode, barcode, description, productType, unitOfMeasure, vat,
+            name, productCode, description, productType, unitOfMeasure, vat,
             salePrice: parseDecimalInput(salePriceHTStr),
             purchasePrice: parseDecimalInput(purchasePriceHTStr),
             stockQuantity: parseDecimalInput(stockQuantityStr),
@@ -211,32 +155,6 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                         <div>
                             <label htmlFor="productCode" className="block text-sm font-medium text-neutral-700">{t('reference')}</label>
                             <input type="text" id="productCode" value={productCode} onChange={e => setProductCode(e.target.value)} placeholder={t('refPlaceholder')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm"/>
-                        </div>
-                        <div>
-                            <label htmlFor="barcode" className="block text-sm font-medium text-neutral-700">{t('barcode')}</label>
-                            <div className="mt-1 flex gap-2">
-                                <div className="relative flex-1">
-                                    <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'right-0 pr-3' : 'left-0 pl-3'}`}>
-                                        <Barcode size={18} className="text-neutral-400" />
-                                    </div>
-                                    <input 
-                                        type="text" 
-                                        id="barcode" 
-                                        value={barcode} 
-                                        onChange={e => setBarcode(e.target.value)} 
-                                        placeholder={t('search')} 
-                                        className={`block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
-                                    />
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsScannerOpen(true)}
-                                    className="inline-flex items-center justify-center p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 hover:bg-emerald-100 transition-colors"
-                                    title={t('scanBarcode')}
-                                >
-                                    <Scan size={20} />
-                                </button>
-                            </div>
                         </div>
                         <div className="sm:col-span-2">
                             <label htmlFor="description" className="block text-sm font-medium text-neutral-700">{t('description')}</label>
@@ -343,15 +261,6 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                 </div>
             </form>
 
-            {isScannerOpen && (
-                <BarcodeScanner 
-                    onScan={(code) => {
-                        setBarcode(code);
-                        setIsScannerOpen(false);
-                    }}
-                    onClose={() => setIsScannerOpen(false)}
-                />
-            )}
         </div>
     );
 };
@@ -379,15 +288,13 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const [isScannerOpen, setIsScannerOpen] = useState(false);
     const itemsPerPage = 12;
 
     const filteredProducts = products.filter(product => {
         const term = searchTerm.toLowerCase();
         return (
             product.name.toLowerCase().includes(term) ||
-            product.productCode.toLowerCase().includes(term) ||
-            (product.barcode && product.barcode.toLowerCase().includes(term))
+            product.productCode.toLowerCase().includes(term)
         );
     });
 
@@ -515,16 +422,6 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                 />
             )}
 
-            {isScannerOpen && (
-                <BarcodeScanner 
-                    onScan={(code) => {
-                        setSearchTerm(code);
-                        setIsScannerOpen(false);
-                    }}
-                    onClose={() => setIsScannerOpen(false)}
-                />
-            )}
-
             <div className="space-y-4">
                 {/* Search and Bulk Actions */}
                 <div className="bg-white p-4 rounded-xl shadow-sm ring-1 ring-neutral-200 flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -541,14 +438,6 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                                 className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
                             />
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => setIsScannerOpen(true)}
-                            className="inline-flex items-center justify-center p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 hover:bg-emerald-100 transition-colors"
-                            title={t('scanBarcode')}
-                        >
-                            <Scan size={20} />
-                        </button>
                     </div>
 
                     <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">

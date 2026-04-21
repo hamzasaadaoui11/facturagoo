@@ -49,7 +49,6 @@ export interface Product {
     salePrice: number; // Stored as HT
     purchasePrice: number; // Stored as HT
     vat: number;
-    barcode?: string;
     stockQuantity: number; // Real stock tracking
     minStockAlert: number;
 }

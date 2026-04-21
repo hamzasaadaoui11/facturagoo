@@ -129,8 +129,8 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
         if (selectedProductId) {
             const product = products.find(p => p.id === selectedProductId);
             if (product) {
-                setTempName(product.name);
-                setTempDesc(product.description || '');
+                setTempName(product.description || product.name);
+                setTempDesc('');
                 const priceToDisplay = isModeTTC ? (product.salePrice * (1 + product.vat / 100)) : product.salePrice;
                 setTempPrice(formatDecimalForInput(priceToDisplay, language));
                 setTempVat(product.vat);
