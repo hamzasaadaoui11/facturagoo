@@ -40,6 +40,7 @@ interface DocumentData {
 
 interface PDFOptions {
   showPrices?: boolean;
+  isPDFDownload?: boolean;
 }
 
 type DocumentType =
@@ -649,7 +650,7 @@ const generateDocumentHTML = (
       const isLast = idx === activeColumns.length - 1;
       const borderStyle = "";
 
-      return `<th style="padding: 10px 12px; text-align: ${align}; vertical-align: middle; line-height: 1.2; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${borderStyle} ${width}">${col.label}</th>`;
+      return `<th style="padding: ${options?.isPDFDownload ? "6px 12px 14px 12px" : "10px 12px"}; text-align: ${align}; vertical-align: middle; line-height: 1.2; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${borderStyle} ${width}">${col.label}</th>`;
     })
     .join("");
 
@@ -787,7 +788,7 @@ const generateDocumentHTML = (
             }
           }
 
-          return `<td style="padding: 10px 12px; border-bottom: 0.5px solid #d1d5db; ${cellBorder} text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
+          return `<td style="padding: ${options?.isPDFDownload ? "6px 12px 14px 12px" : "10px 12px"}; border-bottom: 0.5px solid #d1d5db; ${cellBorder} text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
         })
         .join("");
 
@@ -857,7 +858,7 @@ const generateDocumentHTML = (
 
   const clientInfoHtml = `
         <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
-            <div style="width: 45%; background-color: #f9fafb; padding: 12px 16px; border-radius: 6px; border: 1px solid #e5e7eb; line-height: 1.4; display: flex; flex-direction: column; justify-content: center;">
+            <div style="width: 45%; background-color: #f9fafb; padding: ${options?.isPDFDownload ? "8px 16px 12px 16px" : "12px 16px"}; border-radius: 6px; border: 1px solid #e5e7eb; line-height: 1.4; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;">
                 <div style="font-size: 10px; text-transform: uppercase; font-weight: 700; color: #9ca3af; margin-bottom: 6px; line-height: 1;">${dict.pdfAddressedTo || "Adressé à"}</div>
                 <div style="font-size: 14px; color: #111827; font-weight: 600;">
                     ${recipientCompany}
@@ -902,7 +903,7 @@ const generateDocumentHTML = (
                 ${
                   showAmountInWords
                     ? `
-                    <div style="background-color: #f3f4f6; padding: 10px 12px; border-radius: 4px; border-left: 3px solid ${primaryColor};">
+                    <div style="background-color: #f3f4f6; padding: ${options?.isPDFDownload ? "3px 12px 13px 12px" : "10px 12px"}; border-radius: 4px; border-left: 3px solid ${primaryColor}; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;">
                         <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: bold; margin-bottom: 4px; line-height: 1.2;">${txtAmountInWords}</div>
                         <div style="font-size: 13px; color: #111827; font-weight: 600; font-style: italic; line-height: 1.2;">
                             ${amountInLetters}
@@ -1133,7 +1134,7 @@ const generateDocumentHTML = (
           }
         }
 
-        return `<td style="padding: 10px 12px; border-bottom: 0.5px solid #d1d5db; ${cellBorder} text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
+        return `<td style="padding: ${options?.isPDFDownload ? "6px 12px 14px 12px" : "10px 12px"}; border-bottom: 0.5px solid #d1d5db; ${cellBorder} text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
       })
       .join("");
   };
@@ -1317,13 +1318,10 @@ export const generatePDF = async (
   recipient: Client | Supplier | undefined,
   options?: PDFOptions,
 ): Promise<void> => {
-  const template = generateDocumentHTML(
-    docType,
-    doc,
-    settings,
-    recipient,
-    options,
-  );
+  const template = generateDocumentHTML(docType, doc, settings, recipient, {
+    ...options,
+    isPDFDownload: true,
+  });
   const displayId = doc.documentId || doc.id;
 
   const container = document.createElement("div");
