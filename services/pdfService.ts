@@ -400,7 +400,7 @@ const generateDocumentHTML = (
                clbl.includes('يوم') || clbl.includes('أيام');
     };
 
-    const headerRowHtml = activeColumns.map(col => {
+    const headerRowHtml = activeColumns.map((col, idx) => {
         let align = 'left';
         let width = '';
         if (col.id === 'reference') { align = 'left'; width = 'width: 12%;'; }
@@ -416,14 +416,22 @@ const generateDocumentHTML = (
         else if (col.id === 'unitPrice') { align = 'right'; width = 'width: 18%;'; }
         else if (col.id === 'total') { align = 'right'; width = 'width: 18%;'; }
         
-        return `<th style="padding: 6px 12px 16px 12px; text-align: ${align}; vertical-align: middle; line-height: 1.2; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${width}">${col.label}</th>`;
+        const isFirst = idx === 0;
+        const isLast = idx === activeColumns.length - 1;
+        const borderStyle = '';
+
+        return `<th style="padding: 6px 12px 16px 12px; text-align: ${align}; vertical-align: middle; line-height: 1.2; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${borderStyle} ${width}">${col.label}</th>`;
     }).join('');
 
     const rowsHtml = doc.lineItems.map((item, index) => {
-        const cellsHtml = activeColumns.map(col => {
+        const cellsHtml = activeColumns.map((col, cIdx) => {
             let content = '';
             let align = 'left';
             let style = '';
+
+            const isFirst = cIdx === 0;
+            const isLast = cIdx === activeColumns.length - 1;
+            const cellBorder = isLast ? '' : 'border-right: 0.5px solid #d1d5db;';
 
             const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
             const totalTTC = (item.quantity * getLineMultiplier(item) * item.unitPrice) * (1 + item.vat / 100);
@@ -518,7 +526,7 @@ const generateDocumentHTML = (
                 }
             }
 
-            return `<td style="padding: 8px 12px 16px 12px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
+            return `<td style="padding: 8px 12px 16px 12px; border-bottom: 0.5px solid #d1d5db; ${cellBorder} text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
         }).join('');
 
         return `<tr class="item-row" style="background-color: ${index % 2 === 0 ? '#fff' : '#f9fafb'};">${cellsHtml}</tr>`;
@@ -584,18 +592,20 @@ const generateDocumentHTML = (
 
     const clientInfoHtml = `
         <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
-            <div style="width: 45%; background-color: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
-                <div style="font-size: 10px; text-transform: uppercase; font-weight: 700; color: #9ca3af; margin-bottom: 8px;">${dict.pdfAddressedTo || 'Adressé à'}</div>
-                <div style="font-size: 14px; color: #111827;">
+            <div style="width: 45%; background-color: #f9fafb; padding: 14px 16px 16px; border-radius: 6px; border: 1px solid #e5e7eb; line-height: 1.4;">
+                <div style="font-size: 10px; text-transform: uppercase; font-weight: 700; color: #9ca3af; margin-bottom: 6px; line-height: 1;">${dict.pdfAddressedTo || 'Adressé à'}</div>
+                <div style="font-size: 14px; color: #111827; font-weight: 600;">
                     ${recipientCompany}
-                    <div>${recipientName}</div>
+                    ${recipientName ? `<div style="${recipientCompany ? 'font-weight: normal; margin-top: 2px;' : ''} line-height: 1.2;">${recipientName}</div>` : ''}
                 </div>
-                <div style="margin-top: 8px; font-size: 12px; color: #4b5563;">
+                ${(recipientAddress || recipientIce || recipientEmail || recipientPhone) ? `
+                <div style="margin-top: 6px; font-size: 12px; color: #4b5563;">
                     ${recipientAddress}
                     ${recipientIce}
                     ${recipientEmail}
                     ${recipientPhone}
                 </div>
+                ` : ''}
             </div>
         </div>
     `;
@@ -697,10 +707,14 @@ const generateDocumentHTML = (
     const items = [...doc.lineItems];
 
     const getCellsHtml = (item: any) => {
-        return activeColumns.map(col => {
+        return activeColumns.map((col, cIdx) => {
             let content = '';
             let align = 'left';
             let style = '';
+
+            const isFirst = cIdx === 0;
+            const isLast = cIdx === activeColumns.length - 1;
+            const cellBorder = isLast ? '' : 'border-right: 0.5px solid #d1d5db;';
 
             const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
             const totalTTC = (item.quantity * getLineMultiplier(item) * item.unitPrice) * (1 + item.vat / 100);
@@ -790,7 +804,7 @@ const generateDocumentHTML = (
                 }
             }
 
-            return `<td style="padding: 8px 12px 16px 12px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
+            return `<td style="padding: 8px 12px 16px 12px; border-bottom: 0.5px solid #d1d5db; ${cellBorder} text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
         }).join('');
     };
 
