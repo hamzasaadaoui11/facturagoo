@@ -1,566 +1,830 @@
-
-import { CompanySettings, Invoice, Quote, DeliveryNote, PurchaseOrder, Client, Supplier, LineItem, DocumentColumn, CreditNote } from '../types';
-import { translations } from '../i18n/translations';
-import html2pdf from 'html2pdf.js';
+import {
+  CompanySettings,
+  Invoice,
+  Quote,
+  DeliveryNote,
+  PurchaseOrder,
+  Client,
+  Supplier,
+  LineItem,
+  DocumentColumn,
+  CreditNote,
+} from "../types";
+import { translations } from "../i18n/translations";
+import html2pdf from "html2pdf.js";
 
 interface DocumentData {
-    id: string;
-    documentId?: string; 
-    date: string;
-    lineItems: LineItem[];
-    subTotal?: number;
-    vatAmount?: number;
-    totalAmount?: number; 
-    amount?: number; 
-    amountPaid?: number; 
-    paymentAmount?: number; 
-    notes?: string;
-    subject?: string;
-    paymentMethod?: string;
-    reference?: string;
-    purchaseOrderNumber?: string;
-    dueDate?: string; 
-    expiryDate?: string; 
-    expectedDate?: string; 
-    invoiceId?: string; // For Credit Notes
-    discountType?: 'percentage' | 'fixed';
-    discountValue?: number;
-    showDimensions?: boolean;
+  id: string;
+  documentId?: string;
+  date: string;
+  lineItems: LineItem[];
+  subTotal?: number;
+  vatAmount?: number;
+  totalAmount?: number;
+  amount?: number;
+  amountPaid?: number;
+  paymentAmount?: number;
+  notes?: string;
+  subject?: string;
+  paymentMethod?: string;
+  reference?: string;
+  purchaseOrderNumber?: string;
+  dueDate?: string;
+  expiryDate?: string;
+  expectedDate?: string;
+  invoiceId?: string; // For Credit Notes
+  discountType?: "percentage" | "fixed";
+  discountValue?: number;
+  showDimensions?: boolean;
 }
 
 interface PDFOptions {
-    showPrices?: boolean;
+  showPrices?: boolean;
 }
 
-type DocumentType = 'Facture' | 'Devis' | 'Bon de Livraison' | 'Bon de Commande' | 'Avoir';
+type DocumentType =
+  | "Facture"
+  | "Devis"
+  | "Bon de Livraison"
+  | "Bon de Commande"
+  | "Avoir";
 
 // --- Utilitaires de conversion Chiffres vers Lettres (Français) ---
 
-const UNITS = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf'];
-const TEENS = ['dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
-const TENS = ['', '', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante-dix', 'quatre-vingt', 'quatre-vingt-dix'];
+const UNITS = [
+  "",
+  "un",
+  "deux",
+  "trois",
+  "quatre",
+  "cinq",
+  "six",
+  "sept",
+  "huit",
+  "neuf",
+];
+const TEENS = [
+  "dix",
+  "onze",
+  "douze",
+  "treize",
+  "quatorze",
+  "quinze",
+  "seize",
+  "dix-sept",
+  "dix-huit",
+  "dix-neuf",
+];
+const TENS = [
+  "",
+  "",
+  "vingt",
+  "trente",
+  "quarante",
+  "cinquante",
+  "soixante",
+  "soixante-dix",
+  "quatre-vingt",
+  "quatre-vingt-dix",
+];
 
 const convertGroup = (n: number, isEnd: boolean): string => {
-    if (n === 0) return '';
-    if (n < 10) return UNITS[n];
-    if (n < 20) return TEENS[n - 10];
-    
-    const ten = Math.floor(n / 10);
-    const unit = n % 10;
+  if (n === 0) return "";
+  if (n < 10) return UNITS[n];
+  if (n < 20) return TEENS[n - 10];
 
-    if (ten === 7 || ten === 9) {
-        const base = TENS[ten - 1];
-        const sub = unit + 10;
-        if (unit === 1 && ten === 7) return `${base}-et-onze`;
-        return `${base}-${TEENS[unit]}`;
-    }
+  const ten = Math.floor(n / 10);
+  const unit = n % 10;
 
-    const tenString = TENS[ten];
-    
-    if (unit === 0) {
-        if (ten === 8 && isEnd) return 'quatre-vingts';
-        return tenString;
-    }
-    
-    if (unit === 1 && ten < 8) return `${tenString}-et-un`;
-    
-    return `${tenString}-${UNITS[unit]}`;
+  if (ten === 7 || ten === 9) {
+    const base = TENS[ten - 1];
+    const sub = unit + 10;
+    if (unit === 1 && ten === 7) return `${base}-et-onze`;
+    return `${base}-${TEENS[unit]}`;
+  }
+
+  const tenString = TENS[ten];
+
+  if (unit === 0) {
+    if (ten === 8 && isEnd) return "quatre-vingts";
+    return tenString;
+  }
+
+  if (unit === 1 && ten < 8) return `${tenString}-et-un`;
+
+  return `${tenString}-${UNITS[unit]}`;
 };
 
 const numberToWordsFr = (amount: number): string => {
-    if (amount === 0) return 'Zéro dirham';
+  if (amount === 0) return "Zéro dirham";
 
-    const absAmount = Math.abs(amount);
-    const integerPart = Math.floor(absAmount);
-    const decimalPart = Math.round((absAmount - integerPart) * 100);
+  const absAmount = Math.abs(amount);
+  const integerPart = Math.floor(absAmount);
+  const decimalPart = Math.round((absAmount - integerPart) * 100);
 
-    const convertIntegerGroup = (n: number, isEnd: boolean): string => {
-        let str = '';
-        const hundreds = Math.floor(n / 100);
-        const remainder = n % 100;
+  const convertIntegerGroup = (n: number, isEnd: boolean): string => {
+    let str = "";
+    const hundreds = Math.floor(n / 100);
+    const remainder = n % 100;
 
-        if (hundreds > 0) {
-            if (hundreds === 1) str += 'cent ';
-            else if (remainder === 0 && isEnd) str += `${UNITS[hundreds]} cents `; 
-            else str += `${UNITS[hundreds]} cent `; 
-        }
-
-        if (remainder > 0) {
-            str += convertGroup(remainder, isEnd);
-        }
-        
-        return str.trim();
-    };
-
-    const convertInteger = (n: number): string => {
-        if (n === 0) return '';
-        
-        let words = '';
-        
-        // Billions
-        const billions = Math.floor(n / 1000000000);
-        let remainder = n % 1000000000;
-        if (billions > 0) {
-            words += (billions === 1 ? 'un milliard' : `${convertIntegerGroup(billions, true)} milliards`) + ' ';
-        }
-
-        // Millions
-        const millions = Math.floor(remainder / 1000000);
-        remainder %= 1000000;
-        if (millions > 0) {
-            words += (millions === 1 ? 'un million' : `${convertIntegerGroup(millions, true)} millions`) + ' ';
-        }
-
-        // Thousands
-        const thousands = Math.floor(remainder / 1000);
-        const remainderThousand = remainder % 1000;
-        if (thousands > 0) {
-            if (thousands === 1) words += 'mille ';
-            else words += `${convertIntegerGroup(thousands, false)} mille `;
-        }
-
-        // Hundreds
-        if (remainderThousand > 0) {
-            words += convertIntegerGroup(remainderThousand, true);
-        }
-
-        return words.trim();
-    };
-
-    let result = '';
-    if (integerPart === 0) {
-        result = 'zéro dirham';
-    } else {
-        result = convertInteger(integerPart) + (integerPart === 1 ? ' dirham' : ' dirhams');
+    if (hundreds > 0) {
+      if (hundreds === 1) str += "cent ";
+      else if (remainder === 0 && isEnd) str += `${UNITS[hundreds]} cents `;
+      else str += `${UNITS[hundreds]} cent `;
     }
 
-    if (decimalPart > 0) {
-        result += ` et ${convertIntegerGroup(decimalPart, true)} centime${decimalPart > 1 ? 's' : ''}`;
+    if (remainder > 0) {
+      str += convertGroup(remainder, isEnd);
     }
 
-    return result.charAt(0).toUpperCase() + result.slice(1);
+    return str.trim();
+  };
+
+  const convertInteger = (n: number): string => {
+    if (n === 0) return "";
+
+    let words = "";
+
+    // Billions
+    const billions = Math.floor(n / 1000000000);
+    let remainder = n % 1000000000;
+    if (billions > 0) {
+      words +=
+        (billions === 1
+          ? "un milliard"
+          : `${convertIntegerGroup(billions, true)} milliards`) + " ";
+    }
+
+    // Millions
+    const millions = Math.floor(remainder / 1000000);
+    remainder %= 1000000;
+    if (millions > 0) {
+      words +=
+        (millions === 1
+          ? "un million"
+          : `${convertIntegerGroup(millions, true)} millions`) + " ";
+    }
+
+    // Thousands
+    const thousands = Math.floor(remainder / 1000);
+    const remainderThousand = remainder % 1000;
+    if (thousands > 0) {
+      if (thousands === 1) words += "mille ";
+      else words += `${convertIntegerGroup(thousands, false)} mille `;
+    }
+
+    // Hundreds
+    if (remainderThousand > 0) {
+      words += convertIntegerGroup(remainderThousand, true);
+    }
+
+    return words.trim();
+  };
+
+  let result = "";
+  if (integerPart === 0) {
+    result = "zéro dirham";
+  } else {
+    result =
+      convertInteger(integerPart) +
+      (integerPart === 1 ? " dirham" : " dirhams");
+  }
+
+  if (decimalPart > 0) {
+    result += ` et ${convertIntegerGroup(decimalPart, true)} centime${decimalPart > 1 ? "s" : ""}`;
+  }
+
+  return result.charAt(0).toUpperCase() + result.slice(1);
 };
 
 const DEFAULT_COLUMNS: DocumentColumn[] = [
-    { id: 'reference', label: 'Réf', visible: false, order: 0 },
-    { id: 'name', label: 'Désignation', visible: true, order: 1 },
-    { id: 'quantity', label: 'Qté', visible: true, order: 2 },
-    { id: 'unitPrice', label: 'P.U. HT', visible: true, order: 3 },
-    { id: 'vat', label: 'TVA', visible: true, order: 4 },
-    { id: 'total', label: 'Total HT', visible: true, order: 5 },
+  { id: "reference", label: "Réf", visible: false, order: 0 },
+  { id: "name", label: "Désignation", visible: true, order: 1 },
+  { id: "quantity", label: "Qté", visible: true, order: 2 },
+  { id: "unitPrice", label: "P.U. HT", visible: true, order: 3 },
+  { id: "vat", label: "TVA", visible: true, order: 4 },
+  { id: "total", label: "Total HT", visible: true, order: 5 },
 ];
 
 const generateDocumentHTML = (
-    docType: DocumentType,
-    doc: DocumentData,
-    settings: CompanySettings | null,
-    recipient: Client | Supplier | undefined,
-    options?: PDFOptions
+  docType: DocumentType,
+  doc: DocumentData,
+  settings: CompanySettings | null,
+  recipient: Client | Supplier | undefined,
+  options?: PDFOptions,
 ): string => {
-    if (!settings || !settings.companyName) {
-        throw new Error("Impossible de générer le document : Les informations de l'entreprise (Nom) sont manquantes dans les paramètres.");
-    }
+  if (!settings || !settings.companyName) {
+    throw new Error(
+      "Impossible de générer le document : Les informations de l'entreprise (Nom) sont manquantes dans les paramètres.",
+    );
+  }
 
-    if (!recipient) {
-        throw new Error("Impossible de générer le document : Les informations du client/fournisseur sont introuvables.");
-    }
+  if (!recipient) {
+    throw new Error(
+      "Impossible de générer le document : Les informations du client/fournisseur sont introuvables.",
+    );
+  }
 
-    const lang = localStorage.getItem('app_language') || 'fr';
-    const dict = (translations as any)[lang] || translations['fr'];
-    const showPrices = options?.showPrices !== false;
-    const showAmountInWords = settings.showAmountInWords !== false;
-    const isModeTTC = settings.priceDisplayMode === 'TTC';
-    const calculationMode = doc.lineItems[0]?.calculationMode || 'piece';
-    const legacyShowDimensions = (doc as any).showDimensions || doc.lineItems[0]?.showDimensions;
-    
-    const isM2 = calculationMode === 'm2' || (legacyShowDimensions && calculationMode === 'piece');
-    const isML = calculationMode === 'ml';
-    const isKg = calculationMode === 'kg';
-    const isDays = doc.lineItems.some(item => item.calculationMode === 'days') || doc.lineItems[0]?.calculationMode === 'days';
+  const lang = localStorage.getItem("app_language") || "fr";
+  const dict = (translations as any)[lang] || translations["fr"];
+  const showPrices = options?.showPrices !== false;
+  const showAmountInWords = settings.showAmountInWords !== false;
+  const isModeTTC = settings.priceDisplayMode === "TTC";
+  const calculationMode = doc.lineItems[0]?.calculationMode || "piece";
+  const legacyShowDimensions =
+    (doc as any).showDimensions || doc.lineItems[0]?.showDimensions;
 
-    const getLineMultiplier = (item: any) => {
-        const mode = item.calculationMode || doc.lineItems[0]?.calculationMode;
-        
-        const getDaysExtraction = (i: any) => {
-            const raw = i.days || i.jours || i.jour || i.itemDays || i.nb_jours;
-            const parsed = Number(raw);
-            return parsed > 0 ? parsed : 1;
-        };
+  const isM2 =
+    calculationMode === "m2" ||
+    (legacyShowDimensions && calculationMode === "piece");
+  const isML = calculationMode === "ml";
+  const isKg = calculationMode === "kg";
+  const isDays =
+    doc.lineItems.some((item) => item.calculationMode === "days") ||
+    doc.lineItems[0]?.calculationMode === "days";
 
-        if (mode === 'm2') return (Number(item.length) || 1) * (Number(item.height) || 1);
-        if (mode === 'ml') return (Number(item.length) || 1);
-        if (mode === 'kg') return (Number(item.weight) || 1);
-        if (mode === 'days') return getDaysExtraction(item);
-        
-        // Fallback for legacy items without calculationMode
-        if (isM2) return (Number(item.length) || 1) * (Number(item.height) || 1);
-        if (isML) return (Number(item.length) || 1);
-        if (isKg) return (Number(item.weight) || 1);
-        if (isDays) return getDaysExtraction(item);
-        
-        return 1;
+  const getLineMultiplier = (item: any) => {
+    const mode = item.calculationMode || doc.lineItems[0]?.calculationMode;
+
+    const getDaysExtraction = (i: any) => {
+      const raw = i.days || i.jours || i.jour || i.itemDays || i.nb_jours;
+      const parsed = Number(raw);
+      return parsed > 0 ? parsed : 1;
     };
 
-    const subTotal = doc.lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * getLineMultiplier(item)), 0);
-    let discountAmount = 0;
-    if (doc.discountType && doc.discountValue && doc.discountValue > 0) {
-        if (doc.discountType === 'percentage') {
-            discountAmount = subTotal * (doc.discountValue / 100);
-        } else {
-            discountAmount = doc.discountValue;
-        }
-    }
+    if (mode === "m2")
+      return (Number(item.length) || 1) * (Number(item.height) || 1);
+    if (mode === "ml") return Number(item.length) || 1;
+    if (mode === "kg") return Number(item.weight) || 1;
+    if (mode === "days") return getDaysExtraction(item);
 
-    const subTotalAfterDiscount = subTotal - discountAmount;
+    // Fallback for legacy items without calculationMode
+    if (isM2) return (Number(item.length) || 1) * (Number(item.height) || 1);
+    if (isML) return Number(item.length) || 1;
+    if (isKg) return Number(item.weight) || 1;
+    if (isDays) return getDaysExtraction(item);
 
-    const vatAmount = doc.lineItems.reduce((acc, item) => {
-        const itemTotalHT = item.unitPrice * item.quantity * getLineMultiplier(item);
-        const itemDiscount = subTotal > 0 ? (itemTotalHT / subTotal) * discountAmount : 0;
-        const itemBaseForVat = itemTotalHT - itemDiscount;
-        return acc + (itemBaseForVat * (item.vat / 100));
-    }, 0);
+    return 1;
+  };
 
-    const totalAmount = subTotalAfterDiscount + vatAmount;
-
-    // Extract custom labels with defaults from translations
-    const labels = settings.documentLabels || {};
-    
-    // Core Labels for Totals using the specific pdf prefixes
-    let txtTotalHt = labels.totalHt || dict.pdfTotalHT || 'Total HT';
-    let txtTotalTax = labels.totalTax || dict.pdfTotalTax || 'Total TVA';
-    let txtTotalNet = labels.totalNet || dict.pdfTotalNet || 'Net à Payer';
-    
-    let txtAmountInWords = labels.amountInWordsPrefix || dict.pdfAmountPrefix || 'Arrêté le présent document à la somme de :';
-    if (docType === 'Facture') {
-        txtAmountInWords = txtAmountInWords.replace('le présent document', 'la présente facture');
+  const subTotal = doc.lineItems.reduce(
+    (acc, item) =>
+      acc + item.unitPrice * item.quantity * getLineMultiplier(item),
+    0,
+  );
+  let discountAmount = 0;
+  if (doc.discountType && doc.discountValue && doc.discountValue > 0) {
+    if (doc.discountType === "percentage") {
+      discountAmount = subTotal * (doc.discountValue / 100);
     } else {
-        txtAmountInWords = txtAmountInWords.replace('document', docType.toLowerCase());
+      discountAmount = doc.discountValue;
     }
-    let txtSigSender = labels.signatureSender || dict.pdfSigSender || 'Signature Expéditeur';
-    let txtSigRecipient = labels.signatureRecipient || dict.pdfSigRecipient || 'Signature & Cachet';
+  }
 
-    // Strict ICE -> NIF mapping for Spanish
-    const taxIdLabel = dict.ice || (lang === 'es' ? 'NIF' : (lang === 'en' ? 'Tax ID' : 'ICE'));
+  const subTotalAfterDiscount = subTotal - discountAmount;
 
-    let primaryColor = settings.primaryColor || '#10b981';
-    if (primaryColor.includes('oklch')) primaryColor = '#10b981';
-    
-    const dateStr = new Date(doc.date).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
-    
-    let amountInLetters = '';
-    if (lang === 'fr') {
-        amountInLetters = numberToWordsFr(totalAmount);
-    } else if (lang === 'en') {
-        amountInLetters = numberToWordsEn(totalAmount);
-    } else if (lang === 'es') {
-        amountInLetters = numberToWordsEs(totalAmount);
-    } else {
-        amountInLetters = `${totalAmount.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} MAD`;
+  const vatAmount = doc.lineItems.reduce((acc, item) => {
+    const itemTotalHT =
+      item.unitPrice * item.quantity * getLineMultiplier(item);
+    const itemDiscount =
+      subTotal > 0 ? (itemTotalHT / subTotal) * discountAmount : 0;
+    const itemBaseForVat = itemTotalHT - itemDiscount;
+    return acc + itemBaseForVat * (item.vat / 100);
+  }, 0);
+
+  const totalAmount = subTotalAfterDiscount + vatAmount;
+
+  // Extract custom labels with defaults from translations
+  const labels = settings.documentLabels || {};
+
+  // Core Labels for Totals using the specific pdf prefixes
+  let txtTotalHt = labels.totalHt || dict.pdfTotalHT || "Total HT";
+  let txtTotalTax = labels.totalTax || dict.pdfTotalTax || "Total TVA";
+  let txtTotalNet = labels.totalNet || dict.pdfTotalNet || "Net à Payer";
+
+  let txtAmountInWords =
+    labels.amountInWordsPrefix ||
+    dict.pdfAmountPrefix ||
+    "Arrêté le présent document à la somme de :";
+  if (docType === "Facture") {
+    txtAmountInWords = txtAmountInWords.replace(
+      "le présent document",
+      "la présente facture",
+    );
+  } else {
+    txtAmountInWords = txtAmountInWords.replace(
+      "document",
+      docType.toLowerCase(),
+    );
+  }
+  let txtSigSender =
+    labels.signatureSender || dict.pdfSigSender || "Signature Expéditeur";
+  let txtSigRecipient =
+    labels.signatureRecipient || dict.pdfSigRecipient || "Signature & Cachet";
+
+  // Strict ICE -> NIF mapping for Spanish
+  const taxIdLabel =
+    dict.ice || (lang === "es" ? "NIF" : lang === "en" ? "Tax ID" : "ICE");
+
+  let primaryColor = settings.primaryColor || "#10b981";
+  if (primaryColor.includes("oklch")) primaryColor = "#10b981";
+
+  const dateStr = new Date(doc.date).toLocaleDateString(
+    lang === "es" ? "es-ES" : lang === "en" ? "en-US" : "fr-FR",
+  );
+
+  let amountInLetters = "";
+  if (lang === "fr") {
+    amountInLetters = numberToWordsFr(totalAmount);
+  } else if (lang === "en") {
+    amountInLetters = numberToWordsEn(totalAmount);
+  } else if (lang === "es") {
+    amountInLetters = numberToWordsEs(totalAmount);
+  } else {
+    amountInLetters = `${totalAmount.toLocaleString("fr-MA", { minimumFractionDigits: 2 })} MAD`;
+  }
+
+  const displayId = doc.documentId || doc.id;
+  const isDeliveryNote = docType === "Bon de Livraison";
+
+  // Document Titles translation
+  let titleDisplay = docType.toUpperCase();
+  if (lang === "es") {
+    if (docType === "Facture") titleDisplay = "FACTURA";
+    else if (docType === "Devis") titleDisplay = "PRESUPUESTO";
+    else if (docType === "Bon de Livraison") titleDisplay = "ALBARÁN";
+    else if (docType === "Bon de Commande") titleDisplay = "PEDIDO";
+    else if (docType === "Avoir") titleDisplay = "NOTA DE CRÉDITO";
+  } else if (lang === "en") {
+    if (docType === "Facture") titleDisplay = "INVOICE";
+    else if (docType === "Devis") titleDisplay = "QUOTE";
+    else if (docType === "Bon de Livraison") titleDisplay = "DELIVERY NOTE";
+    else if (docType === "Bon de Commande") titleDisplay = "PURCHASE ORDER";
+    else if (docType === "Avoir") titleDisplay = "CREDIT NOTE";
+  } else if (docType === "Avoir") {
+    titleDisplay = "FACTURE D’AVOIR";
+  }
+
+  let activeColumns =
+    settings.documentColumns && settings.documentColumns.length > 0
+      ? settings.documentColumns
+          .filter(
+            (c) =>
+              c.visible ||
+              (c.id === "reference" &&
+                doc.lineItems.some((item) => !!item.productCode)),
+          )
+          .sort((a, b) => a.order - b.order)
+      : DEFAULT_COLUMNS.filter(
+          (c) =>
+            c.visible ||
+            (c.id === "reference" &&
+              doc.lineItems.some((item) => !!item.productCode)),
+        );
+
+  if (isDeliveryNote && !showPrices) {
+    activeColumns = activeColumns.filter(
+      (c) => c.id === "name" || c.id === "quantity" || c.id === "reference",
+    );
+  }
+
+  if (isM2) {
+    const qtyIndex = activeColumns.findIndex((c) => c.id === "quantity");
+    if (qtyIndex !== -1) {
+      activeColumns.splice(
+        qtyIndex + 1,
+        0,
+        {
+          id: "length" as any,
+          label: lang === "es" ? "Ancho" : lang === "en" ? "Width" : "Larg.",
+          visible: true,
+          order: 2.1,
+        },
+        {
+          id: "height" as any,
+          label: lang === "es" ? "Alto" : lang === "en" ? "Height" : "Haut.",
+          visible: true,
+          order: 2.2,
+        },
+        { id: "m2" as any, label: "M²", visible: true, order: 2.3 },
+      );
     }
-    
-    const displayId = doc.documentId || doc.id;
-    const isDeliveryNote = docType === 'Bon de Livraison';
-
-    // Document Titles translation
-    let titleDisplay = docType.toUpperCase();
-    if (lang === 'es') {
-        if (docType === 'Facture') titleDisplay = "FACTURA";
-        else if (docType === 'Devis') titleDisplay = "PRESUPUESTO";
-        else if (docType === 'Bon de Livraison') titleDisplay = "ALBARÁN";
-        else if (docType === 'Bon de Commande') titleDisplay = "PEDIDO";
-        else if (docType === 'Avoir') titleDisplay = "NOTA DE CRÉDITO";
-    } else if (lang === 'en') {
-        if (docType === 'Facture') titleDisplay = "INVOICE";
-        else if (docType === 'Devis') titleDisplay = "QUOTE";
-        else if (docType === 'Bon de Livraison') titleDisplay = "DELIVERY NOTE";
-        else if (docType === 'Bon de Commande') titleDisplay = "PURCHASE ORDER";
-        else if (docType === 'Avoir') titleDisplay = "CREDIT NOTE";
-    } else if (docType === 'Avoir') {
-        titleDisplay = "FACTURE D’AVOIR";
+  } else if (isML) {
+    const qtyIndex = activeColumns.findIndex((c) => c.id === "quantity");
+    if (qtyIndex !== -1) {
+      activeColumns.splice(
+        qtyIndex + 1,
+        0,
+        {
+          id: "length" as any,
+          label: lang === "es" ? "Largo" : lang === "en" ? "Length" : "Long.",
+          visible: true,
+          order: 2.1,
+        },
+        { id: "ml" as any, label: "ML", visible: true, order: 2.2 },
+      );
     }
-
-    let activeColumns = (settings.documentColumns && settings.documentColumns.length > 0) 
-        ? settings.documentColumns.filter(c => c.visible || (c.id === 'reference' && doc.lineItems.some(item => !!item.productCode))).sort((a, b) => a.order - b.order)
-        : DEFAULT_COLUMNS.filter(c => c.visible || (c.id === 'reference' && doc.lineItems.some(item => !!item.productCode)));
-
-    if (isDeliveryNote && !showPrices) {
-        activeColumns = activeColumns.filter(c => c.id === 'name' || c.id === 'quantity' || c.id === 'reference');
+  } else if (isKg) {
+    const qtyIndex = activeColumns.findIndex((c) => c.id === "quantity");
+    if (qtyIndex !== -1) {
+      activeColumns.splice(
+        qtyIndex + 1,
+        0,
+        {
+          id: "weight",
+          label:
+            lang === "es"
+              ? "Peso (kg)"
+              : lang === "en"
+                ? "Weight (kg)"
+                : "Poids (kg)",
+          visible: true,
+          order: 2.1,
+        },
+        { id: "totalWeight", label: "Total (kg)", visible: true, order: 2.2 },
+      );
     }
-
-    if (isM2) {
-        const qtyIndex = activeColumns.findIndex(c => c.id === 'quantity');
-        if (qtyIndex !== -1) {
-            activeColumns.splice(qtyIndex + 1, 0, 
-                { id: 'length' as any, label: lang === 'es' ? 'Ancho' : (lang === 'en' ? 'Width' : 'Larg.'), visible: true, order: 2.1 },
-                { id: 'height' as any, label: lang === 'es' ? 'Alto' : (lang === 'en' ? 'Height' : 'Haut.'), visible: true, order: 2.2 },
-                { id: 'm2' as any, label: 'M²', visible: true, order: 2.3 }
-            );
-        }
-    } else if (isML) {
-        const qtyIndex = activeColumns.findIndex(c => c.id === 'quantity');
-        if (qtyIndex !== -1) {
-            activeColumns.splice(qtyIndex + 1, 0, 
-                { id: 'length' as any, label: lang === 'es' ? 'Largo' : (lang === 'en' ? 'Length' : 'Long.'), visible: true, order: 2.1 },
-                { id: 'ml' as any, label: 'ML', visible: true, order: 2.2 }
-            );
-        }
-    } else if (isKg) {
-        const qtyIndex = activeColumns.findIndex(c => c.id === 'quantity');
-        if (qtyIndex !== -1) {
-            activeColumns.splice(qtyIndex + 1, 0, 
-                { id: 'weight', label: lang === 'es' ? 'Peso (kg)' : (lang === 'en' ? 'Weight (kg)' : 'Poids (kg)'), visible: true, order: 2.1 },
-                { id: 'totalWeight', label: 'Total (kg)', visible: true, order: 2.2 }
-            );
-        }
-    } else if (isDays) {
-        const qtyIndex = activeColumns.findIndex(c => c.id === 'quantity');
-        if (qtyIndex !== -1) {
-            activeColumns.splice(qtyIndex + 1, 0, 
-                { id: 'days', label: lang === 'es' ? 'Días' : (lang === 'en' ? 'Days' : dict.uDay || 'Jours'), visible: true, order: 2.1 }
-            );
-        }
+  } else if (isDays) {
+    const qtyIndex = activeColumns.findIndex((c) => c.id === "quantity");
+    if (qtyIndex !== -1) {
+      activeColumns.splice(qtyIndex + 1, 0, {
+        id: "days",
+        label:
+          lang === "es"
+            ? "Días"
+            : lang === "en"
+              ? "Days"
+              : dict.uDay || "Jours",
+        visible: true,
+        order: 2.1,
+      });
     }
+  }
 
-    // Override labels for Language context
-    activeColumns = activeColumns.map(col => {
-        let label = col.label;
-        if (isDeliveryNote && !showPrices) {
-            if (col.id === 'unitPrice' || col.id === 'vat' || col.id === 'total') return null;
-        }
-        
-        if (col.id === 'quantity' && isKg) {
-            label = lang === 'es' ? 'Peso (kg)' : (lang === 'en' ? 'Weight (kg)' : 'Poids (kg)');
-        } else if (lang === 'es') {
-            if (col.id === 'unitPrice') label = isModeTTC ? 'P.U. Total' : 'P.U. Base';
-            if (col.id === 'total') label = isModeTTC ? 'Total con IVA' : 'Base imponible';
-            if (col.id === 'vat') label = 'IVA';
-            if (col.id === 'name') label = 'Descripción';
-            if (col.id === 'quantity') label = 'Cant.';
-        } else if (lang === 'en') {
-            if (col.id === 'unitPrice') label = isModeTTC ? 'Unit Price (Incl.)' : 'Unit Price';
-            if (col.id === 'total') label = isModeTTC ? 'Total (Incl.)' : 'Total';
-            if (col.id === 'vat') label = 'VAT';
-            if (col.id === 'name') label = 'Description';
-            if (col.id === 'quantity') label = 'Qty';
-        } else if (isModeTTC) {
-            if (col.id === 'unitPrice' && (col.label === 'P.U. HT' || col.label === 'P.U.')) label = 'P.U. TTC';
-            if (col.id === 'total' && (col.label === 'Total HT' || col.label === 'Total')) label = 'Total TTC';
-        }
-        return { ...col, label };
-    }).filter(Boolean) as DocumentColumn[];
+  // Override labels for Language context
+  activeColumns = activeColumns
+    .map((col) => {
+      let label = col.label;
+      if (isDeliveryNote && !showPrices) {
+        if (col.id === "unitPrice" || col.id === "vat" || col.id === "total")
+          return null;
+      }
 
-    let extraDateLabel = '';
-    let extraDateValue = '';
-    if (docType === 'Bon de Commande' && (doc.expectedDate || doc.lineItems[0]?.expectedDate)) {
-        const dateVal = doc.expectedDate || doc.lineItems[0]?.expectedDate;
-        extraDateLabel = lang === 'es' ? 'Entrega prevista' : (lang === 'en' ? 'Expected delivery' : 'Livraison prévue');
-        extraDateValue = new Date(dateVal).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
-    } else if (docType === 'Devis' && (doc.expiryDate || doc.lineItems[0]?.expiryDate)) {
-        const dateVal = doc.expiryDate || doc.lineItems[0]?.expiryDate;
-        extraDateLabel = lang === 'es' ? 'Válido hasta' : (lang === 'en' ? 'Valid until' : 'Valable jusqu\'au');
-        extraDateValue = new Date(dateVal).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
-    } else if (docType === 'Facture' && (doc.dueDate || doc.lineItems[0]?.dueDate)) {
-        const dateVal = doc.dueDate || doc.lineItems[0]?.dueDate;
-        extraDateLabel = lang === 'es' ? 'Vencimiento' : (lang === 'en' ? 'Due date' : 'Échéance');
-        extraDateValue = new Date(dateVal).toLocaleDateString(lang === 'es' ? 'es-ES' : (lang === 'en' ? 'en-US' : 'fr-FR'));
-    }
+      if (col.id === "quantity" && isKg) {
+        label =
+          lang === "es"
+            ? "Peso (kg)"
+            : lang === "en"
+              ? "Weight (kg)"
+              : "Poids (kg)";
+      } else if (lang === "es") {
+        if (col.id === "unitPrice")
+          label = isModeTTC ? "P.U. Total" : "P.U. Base";
+        if (col.id === "total")
+          label = isModeTTC ? "Total con IVA" : "Base imponible";
+        if (col.id === "vat") label = "IVA";
+        if (col.id === "name") label = "Descripción";
+        if (col.id === "quantity") label = "Cant.";
+      } else if (lang === "en") {
+        if (col.id === "unitPrice")
+          label = isModeTTC ? "Unit Price (Incl.)" : "Unit Price";
+        if (col.id === "total") label = isModeTTC ? "Total (Incl.)" : "Total";
+        if (col.id === "vat") label = "VAT";
+        if (col.id === "name") label = "Description";
+        if (col.id === "quantity") label = "Qty";
+      } else if (isModeTTC) {
+        if (
+          col.id === "unitPrice" &&
+          (col.label === "P.U. HT" || col.label === "P.U.")
+        )
+          label = "P.U. TTC";
+        if (
+          col.id === "total" &&
+          (col.label === "Total HT" || col.label === "Total")
+        )
+          label = "Total TTC";
+      }
+      return { ...col, label };
+    })
+    .filter(Boolean) as DocumentColumn[];
 
-    const logoHtml = settings.logo 
-        ? `<img src="${settings.logo}" style="max-height: 120px; max-width: ${settings.logoWidth || 200}px; object-fit: contain;" />` 
-        : `<h1 style="font-size: 24px; font-weight: bold; color: ${primaryColor}; margin: 0;">${settings.companyName}</h1>`;
+  let extraDateLabel = "";
+  let extraDateValue = "";
+  if (
+    docType === "Bon de Commande" &&
+    (doc.expectedDate || doc.lineItems[0]?.expectedDate)
+  ) {
+    const dateVal = doc.expectedDate || doc.lineItems[0]?.expectedDate;
+    extraDateLabel =
+      lang === "es"
+        ? "Entrega prevista"
+        : lang === "en"
+          ? "Expected delivery"
+          : "Livraison prévue";
+    extraDateValue = new Date(dateVal).toLocaleDateString(
+      lang === "es" ? "es-ES" : lang === "en" ? "en-US" : "fr-FR",
+    );
+  } else if (
+    docType === "Devis" &&
+    (doc.expiryDate || doc.lineItems[0]?.expiryDate)
+  ) {
+    const dateVal = doc.expiryDate || doc.lineItems[0]?.expiryDate;
+    extraDateLabel =
+      lang === "es"
+        ? "Válido hasta"
+        : lang === "en"
+          ? "Valid until"
+          : "Valable jusqu'au";
+    extraDateValue = new Date(dateVal).toLocaleDateString(
+      lang === "es" ? "es-ES" : lang === "en" ? "en-US" : "fr-FR",
+    );
+  } else if (
+    docType === "Facture" &&
+    (doc.dueDate || doc.lineItems[0]?.dueDate)
+  ) {
+    const dateVal = doc.dueDate || doc.lineItems[0]?.dueDate;
+    extraDateLabel =
+      lang === "es" ? "Vencimiento" : lang === "en" ? "Due date" : "Échéance";
+    extraDateValue = new Date(dateVal).toLocaleDateString(
+      lang === "es" ? "es-ES" : lang === "en" ? "en-US" : "fr-FR",
+    );
+  }
 
-    const recipientName = recipient.name;
-    const recipientCompany = recipient.company ? `<div style="font-weight: bold;">${recipient.company}</div>` : '';
-    const recipientEmail = recipient.email ? `<div>${recipient.email}</div>` : '';
-    const recipientPhone = recipient.phone ? `<div>${recipient.phone}</div>` : '';
-    const recipientAddress = recipient.address ? `<div style="margin-bottom:4px;">${recipient.address.replace(/\n/g, '<br/>')}</div>` : '';
-    const recipientIce = recipient.ice ? `<div>${taxIdLabel}: ${recipient.ice}</div>` : '';
+  const logoHtml = settings.logo
+    ? `<img src="${settings.logo}" style="max-height: 120px; max-width: ${settings.logoWidth || 200}px; object-fit: contain;" />`
+    : `<h1 style="font-size: 24px; font-weight: bold; color: ${primaryColor}; margin: 0;">${settings.companyName}</h1>`;
 
-    const companyAddress = settings.address ? settings.address.replace(/\n/g, '<br/>') : '';
-    const companyContact = [settings.phone, settings.email, settings.website].filter(Boolean).join(' | ');
+  const recipientName = recipient.name;
+  const recipientCompany = recipient.company
+    ? `<div style="font-weight: bold;">${recipient.company}</div>`
+    : "";
+  const recipientEmail = recipient.email ? `<div>${recipient.email}</div>` : "";
+  const recipientPhone = recipient.phone ? `<div>${recipient.phone}</div>` : "";
+  const recipientAddress = recipient.address
+    ? `<div style="margin-bottom:2px;">${recipient.address.replace(/\n/g, "<br/>")}</div>`
+    : "";
+  const recipientIce = recipient.ice
+    ? `<div>${taxIdLabel}: ${recipient.ice}</div>`
+    : "";
 
-    const capitalDisplay = settings.capital ? `Capital: ${settings.capital}` : '';
-    const legalIds = [
-        settings.ice ? `${taxIdLabel}: ${settings.ice}` : '',
-        settings.rc ? `RC: ${settings.rc}` : '',
-        settings.fiscalId ? `IF: ${settings.fiscalId}` : '',
-        settings.patente ? `TP: ${settings.patente}` : '',
-        settings.cnss ? `CNSS: ${settings.cnss}` : '',
-        capitalDisplay
-    ].filter(Boolean).join(' &nbsp;|&nbsp; ');
+  const companyAddress = settings.address
+    ? settings.address.replace(/\n/g, "<br/>")
+    : "";
+  const companyContact = [settings.phone, settings.email, settings.website]
+    .filter(Boolean)
+    .join(" | ");
 
-    // Helper to identify the days/jours column robustly
-    const isDaysCol = (c: any) => {
-        const cid = String(c.id || '').toLowerCase();
-        const clbl = String(c.label || '').toLowerCase();
-        // Matching: any ID or Label containing 'jour', 'day', 'día', 'dias', 'يوم', or 'أيام'
-        return cid.includes('day') || cid.includes('jour') || 
-               clbl.includes('jour') || clbl.includes('day') || 
-               clbl.includes('día') || clbl.includes('dias') ||
-               clbl.includes('يوم') || clbl.includes('أيام');
-    };
+  const capitalDisplay = settings.capital ? `Capital: ${settings.capital}` : "";
+  const legalIds = [
+    settings.ice ? `${taxIdLabel}: ${settings.ice}` : "",
+    settings.rc ? `RC: ${settings.rc}` : "",
+    settings.fiscalId ? `IF: ${settings.fiscalId}` : "",
+    settings.patente ? `TP: ${settings.patente}` : "",
+    settings.cnss ? `CNSS: ${settings.cnss}` : "",
+    capitalDisplay,
+  ]
+    .filter(Boolean)
+    .join(" &nbsp;|&nbsp; ");
 
-    const headerRowHtml = activeColumns.map((col, idx) => {
-        let align = 'left';
-        let width = '';
-        if (col.id === 'reference') { align = 'left'; width = 'width: 12%;'; }
-        else if (col.id === 'quantity') { align = 'center'; width = 'width: 11%;'; }
-        else if (isDaysCol(col)) { align = 'center'; width = 'width: 10%;'; }
-        else if (col.id === 'length') { align = 'center'; width = 'width: 10%;'; }
-        else if (col.id === 'height') { align = 'center'; width = 'width: 10%;'; }
-        else if (col.id === 'm2') { align = 'center'; width = 'width: 10%;'; }
-        else if (col.id === 'ml') { align = 'center'; width = 'width: 10%;'; }
-        else if (col.id === 'weight') { align = 'center'; width = 'width: 10%;'; }
-        else if (col.id === 'totalWeight') { align = 'center'; width = 'width: 10%;'; }
-        else if (col.id === 'vat') { align = 'center'; width = 'width: 11%;'; }
-        else if (col.id === 'unitPrice') { align = 'right'; width = 'width: 18%;'; }
-        else if (col.id === 'total') { align = 'right'; width = 'width: 18%;'; }
-        
-        const isFirst = idx === 0;
-        const isLast = idx === activeColumns.length - 1;
-        const borderStyle = '';
+  // Helper to identify the days/jours column robustly
+  const isDaysCol = (c: any) => {
+    const cid = String(c.id || "").toLowerCase();
+    const clbl = String(c.label || "").toLowerCase();
+    // Matching: any ID or Label containing 'jour', 'day', 'día', 'dias', 'يوم', or 'أيام'
+    return (
+      cid.includes("day") ||
+      cid.includes("jour") ||
+      clbl.includes("jour") ||
+      clbl.includes("day") ||
+      clbl.includes("día") ||
+      clbl.includes("dias") ||
+      clbl.includes("يوم") ||
+      clbl.includes("أيام")
+    );
+  };
 
-        return `<th style="padding: 6px 12px 16px 12px; text-align: ${align}; vertical-align: middle; line-height: 1.2; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${borderStyle} ${width}">${col.label}</th>`;
-    }).join('');
+  const headerRowHtml = activeColumns
+    .map((col, idx) => {
+      let align = "left";
+      let width = "";
+      if (col.id === "reference") {
+        align = "left";
+        width = "width: 12%;";
+      } else if (col.id === "quantity") {
+        align = "center";
+        width = "width: 11%;";
+      } else if (isDaysCol(col)) {
+        align = "center";
+        width = "width: 10%;";
+      } else if (col.id === "length") {
+        align = "center";
+        width = "width: 10%;";
+      } else if (col.id === "height") {
+        align = "center";
+        width = "width: 10%;";
+      } else if (col.id === "m2") {
+        align = "center";
+        width = "width: 10%;";
+      } else if (col.id === "ml") {
+        align = "center";
+        width = "width: 10%;";
+      } else if (col.id === "weight") {
+        align = "center";
+        width = "width: 10%;";
+      } else if (col.id === "totalWeight") {
+        align = "center";
+        width = "width: 10%;";
+      } else if (col.id === "vat") {
+        align = "center";
+        width = "width: 11%;";
+      } else if (col.id === "unitPrice") {
+        align = "right";
+        width = "width: 18%;";
+      } else if (col.id === "total") {
+        align = "right";
+        width = "width: 18%;";
+      }
 
-    const rowsHtml = doc.lineItems.map((item, index) => {
-        const cellsHtml = activeColumns.map((col, cIdx) => {
-            let content = '';
-            let align = 'left';
-            let style = '';
+      const isFirst = idx === 0;
+      const isLast = idx === activeColumns.length - 1;
+      const borderStyle = "";
 
-            const isFirst = cIdx === 0;
-            const isLast = cIdx === activeColumns.length - 1;
-            const cellBorder = isLast ? '' : 'border-right: 0.5px solid #d1d5db;';
+      return `<th style="padding: 10px 12px; text-align: ${align}; vertical-align: middle; line-height: 1.2; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${borderStyle} ${width}">${col.label}</th>`;
+    })
+    .join("");
 
-            const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
-            const totalTTC = (item.quantity * getLineMultiplier(item) * item.unitPrice) * (1 + item.vat / 100);
+  const rowsHtml = doc.lineItems
+    .map((item, index) => {
+      const cellsHtml = activeColumns
+        .map((col, cIdx) => {
+          let content = "";
+          let align = "left";
+          let style = "";
 
-            // SYNC DISPLAY VALUE WITH CALCULATION MULTIPLIER
-            const multiplier = getLineMultiplier(item);
-            const isItemInDaysMode = item.calculationMode === 'days' || doc.lineItems[0]?.calculationMode === 'days';
-            
-            // Aggressive extraction for display fallback
-            const extraction = item.days || (item as any).jours || (item as any).jour || (item as any).itemDays || (item as any).nb_jours || 0;
-            const fallbackDaysValue = Number(extraction) > 0 ? Number(extraction) : 1;
-            
-            // If the calculation mode is days, we MUST use the multiplier that produced the correct total
-            const finalDaysDisplayValue = isItemInDaysMode ? multiplier : fallbackDaysValue;
+          const isFirst = cIdx === 0;
+          const isLast = cIdx === activeColumns.length - 1;
+          const cellBorder = isLast ? "" : "border-right: 0.5px solid #d1d5db;";
 
-            if (isDaysCol(col)) {
-                content = String(finalDaysDisplayValue);
-                align = 'center';
-                style = 'font-size: 12.3px; font-weight: 700; color: #111827;';
-            } else {
-                switch (col.id) {
-                    case 'reference':
-                        content = item.productCode || '-';
-                        align = 'left';
-                        style = 'font-size: 12.3px; color: #4b5563;';
-                        break;
-                    case 'name':
-                        content = `
+          const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
+          const totalTTC =
+            item.quantity *
+            getLineMultiplier(item) *
+            item.unitPrice *
+            (1 + item.vat / 100);
+
+          // SYNC DISPLAY VALUE WITH CALCULATION MULTIPLIER
+          const multiplier = getLineMultiplier(item);
+          const isItemInDaysMode =
+            item.calculationMode === "days" ||
+            doc.lineItems[0]?.calculationMode === "days";
+
+          // Aggressive extraction for display fallback
+          const extraction =
+            item.days ||
+            (item as any).jours ||
+            (item as any).jour ||
+            (item as any).itemDays ||
+            (item as any).nb_jours ||
+            0;
+          const fallbackDaysValue =
+            Number(extraction) > 0 ? Number(extraction) : 1;
+
+          // If the calculation mode is days, we MUST use the multiplier that produced the correct total
+          const finalDaysDisplayValue = isItemInDaysMode
+            ? multiplier
+            : fallbackDaysValue;
+
+          if (isDaysCol(col)) {
+            content = String(finalDaysDisplayValue);
+            align = "center";
+            style = "font-size: 12.3px; font-weight: 700; color: #111827;";
+          } else {
+            switch (col.id) {
+              case "reference":
+                content = item.productCode || "-";
+                align = "left";
+                style = "font-size: 12.3px; color: #4b5563;";
+                break;
+              case "name":
+                content = `
                             <div style="font-weight: 700; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
-                            ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 1px; line-height: 1.1;">${item.description}</div>` : ''}
+                            ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 1px; line-height: 1.1;">${item.description}</div>` : ""}
                         `;
-                        break;
-                    case 'quantity':
-                        content = item.quantity.toString();
-                        align = 'center';
-                        style = 'font-weight: 700; font-size: 12.3px;';
-                        break;
-                    case 'length':
-                        content = (item.length || 1).toString();
-                        align = 'center';
-                        style = 'font-size: 12.3px;';
-                        break;
-                    case 'height':
-                        content = (item.height || 1).toString();
-                        align = 'center';
-                        style = 'font-size: 12.3px;';
-                        break;
-                    case 'm2':
-                        content = ((item.quantity * (Number(item.length) || 1) * (Number(item.height) || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
-                        align = 'center';
-                        style = 'font-size: 12.3px; font-weight: 500;';
-                        break;
-                    case 'ml':
-                        content = ((item.quantity * (Number(item.length) || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
-                        align = 'center';
-                        style = 'font-size: 12.3px; font-weight: 500;';
-                        break;
-                    case 'weight':
-                        content = (item.weight || 1).toString();
-                        align = 'center';
-                        style = 'font-size: 12.3px;';
-                        break;
-                    case 'totalWeight':
-                        content = ((item.quantity * (Number(item.weight) || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
-                        align = 'center';
-                        style = 'font-size: 12.3px; font-weight: 500;';
-                        break;
-                    case 'unitPrice':
-                        content = (isModeTTC ? unitPriceTTC : item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
-                        align = 'right';
-                        style = 'font-size: 12.3px;';
-                        break;
-                    case 'vat':
-                        content = `${item.vat}%`;
-                        align = 'center';
-                        style = 'font-size: 12.3px;';
-                        break;
-                    case 'total':
-                        const subTotalItem = item.quantity * multiplier * item.unitPrice;
-                        content = (isModeTTC ? totalTTC : subTotalItem).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
-                        align = 'right';
-                        style = 'font-weight: 700; font-size: 12.3px;';
-                        break;
-                    case 'days':
-                        content = String(finalDaysDisplayValue);
-                        align = 'center';
-                        style = 'font-size: 12.3px; font-weight: 700;';
-                        break;
-                    default:
-                        content = '-';
-                        break;
-                }
+                break;
+              case "quantity":
+                content = item.quantity.toString();
+                align = "center";
+                style = "font-weight: 700; font-size: 12.3px;";
+                break;
+              case "length":
+                content = (item.length || 1).toString();
+                align = "center";
+                style = "font-size: 12.3px;";
+                break;
+              case "height":
+                content = (item.height || 1).toString();
+                align = "center";
+                style = "font-size: 12.3px;";
+                break;
+              case "m2":
+                content = (
+                  item.quantity *
+                  (Number(item.length) || 1) *
+                  (Number(item.height) || 1)
+                ).toLocaleString("fr-MA", { maximumFractionDigits: 2 });
+                align = "center";
+                style = "font-size: 12.3px; font-weight: 500;";
+                break;
+              case "ml":
+                content = (
+                  item.quantity * (Number(item.length) || 1)
+                ).toLocaleString("fr-MA", { maximumFractionDigits: 2 });
+                align = "center";
+                style = "font-size: 12.3px; font-weight: 500;";
+                break;
+              case "weight":
+                content = (item.weight || 1).toString();
+                align = "center";
+                style = "font-size: 12.3px;";
+                break;
+              case "totalWeight":
+                content = (
+                  item.quantity * (Number(item.weight) || 1)
+                ).toLocaleString("fr-MA", { maximumFractionDigits: 2 });
+                align = "center";
+                style = "font-size: 12.3px; font-weight: 500;";
+                break;
+              case "unitPrice":
+                content = (
+                  isModeTTC ? unitPriceTTC : item.unitPrice
+                ).toLocaleString("fr-MA", { minimumFractionDigits: 2 });
+                align = "right";
+                style = "font-size: 12.3px;";
+                break;
+              case "vat":
+                content = `${item.vat}%`;
+                align = "center";
+                style = "font-size: 12.3px;";
+                break;
+              case "total":
+                const subTotalItem =
+                  item.quantity * multiplier * item.unitPrice;
+                content = (isModeTTC ? totalTTC : subTotalItem).toLocaleString(
+                  "fr-MA",
+                  { minimumFractionDigits: 2 },
+                );
+                align = "right";
+                style = "font-weight: 700; font-size: 12.3px;";
+                break;
+              case "days":
+                content = String(finalDaysDisplayValue);
+                align = "center";
+                style = "font-size: 12.3px; font-weight: 700;";
+                break;
+              default:
+                content = "-";
+                break;
             }
+          }
 
-            return `<td style="padding: 8px 12px 16px 12px; border-bottom: 0.5px solid #d1d5db; ${cellBorder} text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
-        }).join('');
+          return `<td style="padding: 10px 12px; border-bottom: 0.5px solid #d1d5db; ${cellBorder} text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
+        })
+        .join("");
 
-        return `<tr class="item-row" style="background-color: ${index % 2 === 0 ? '#fff' : '#f9fafb'};">${cellsHtml}</tr>`;
-    }).join('');
+      return `<tr class="item-row" style="background-color: ${index % 2 === 0 ? "#fff" : "#f9fafb"};">${cellsHtml}</tr>`;
+    })
+    .join("");
 
-    let paymentInfoHtml = '';
-    if ((docType === 'Facture' || docType === 'Bon de Livraison') && showPrices) {
-        const paid = doc.amountPaid || doc.paymentAmount || 0;
-        const remaining = totalAmount - paid;
-        if (paid > 0) {
-            paymentInfoHtml = `
+  let paymentInfoHtml = "";
+  if ((docType === "Facture" || docType === "Bon de Livraison") && showPrices) {
+    const paid = doc.amountPaid || doc.paymentAmount || 0;
+    const remaining = totalAmount - paid;
+    if (paid > 0) {
+      paymentInfoHtml = `
                 <div style="margin-top: 10px; font-size: 12px; color: #059669;">
-                    ${lang === 'es' ? 'Ya pagado' : (lang === 'en' ? 'Already paid' : 'Déjà réglé')} : <b>${paid.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</b>
-                    ${remaining > 0 ? `<br/><span style="color: #d97706;">${lang === 'es' ? 'Importe pendiente' : (lang === 'en' ? 'Balance due' : 'Reste à payer')} : <b>${remaining.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</b></span>` : `<br/><span style="color: #059669; font-weight: bold;">${lang === 'es' ? 'Liquidado' : (lang === 'en' ? 'Settled' : 'Soldé')}</span>`}
+                    ${lang === "es" ? "Ya pagado" : lang === "en" ? "Already paid" : "Déjà réglé"} : <b>${paid.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</b>
+                    ${remaining > 0 ? `<br/><span style="color: #d97706;">${lang === "es" ? "Importe pendiente" : lang === "en" ? "Balance due" : "Reste à payer"} : <b>${remaining.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</b></span>` : `<br/><span style="color: #059669; font-weight: bold;">${lang === "es" ? "Liquidado" : lang === "en" ? "Settled" : "Soldé"}</span>`}
                 </div>
             `;
-        }
     }
+  }
 
-    const isInfoOnLeft = settings.documentInfoPosition === 'left';
+  const isInfoOnLeft = settings.documentInfoPosition === "left";
 
-    const docInfoHtml = `
+  const docInfoHtml = `
         <div style="font-size: 26px; font-weight: bold; text-transform: uppercase; color: ${primaryColor}; margin-bottom: 10px;">${titleDisplay}</div>
         <div style="font-size: 16px; font-weight: 600; color: #111827;">N° ${displayId}</div>
         <div style="margin-top: 10px; font-size: 12px;">
-            <div>${dict.date || 'Date'} : <b>${dateStr}</b></div>
-            ${extraDateLabel ? `<div>${extraDateLabel} : <b>${extraDateValue}</b></div>` : ''}
-            ${doc.purchaseOrderNumber ? `<div>${dict.purchaseOrderNumber || 'N° BC'} : <b>${doc.purchaseOrderNumber}</b></div>` : ''}
-            ${doc.reference ? `<div>${dict.reference || 'Réf'} : <b>${doc.reference}</b></div>` : ''}
-            ${doc.invoiceId ? `<div>${lang === 'es' ? 'Ref. Factura' : (lang === 'en' ? 'Invoice Ref' : 'Réf. Facture')} : <b>${doc.invoiceId}</b></div>` : ''}
+            <div>${dict.date || "Date"} : <b>${dateStr}</b></div>
+            ${extraDateLabel ? `<div>${extraDateLabel} : <b>${extraDateValue}</b></div>` : ""}
+            ${doc.purchaseOrderNumber ? `<div>${dict.purchaseOrderNumber || "N° BC"} : <b>${doc.purchaseOrderNumber}</b></div>` : ""}
+            ${doc.reference ? `<div>${dict.reference || "Réf"} : <b>${doc.reference}</b></div>` : ""}
+            ${doc.invoiceId ? `<div>${lang === "es" ? "Ref. Factura" : lang === "en" ? "Invoice Ref" : "Réf. Facture"} : <b>${doc.invoiceId}</b></div>` : ""}
         </div>
     `;
 
-    const topHeaderHtml = isInfoOnLeft ? `
+  const topHeaderHtml = isInfoOnLeft
+    ? `
         <div style="margin-bottom: 20px;">
             <div style="width: 100%; margin-bottom: 20px;">
                 ${logoHtml}
@@ -574,7 +838,8 @@ const generateDocumentHTML = (
                 ${docInfoHtml}
             </div>
         </div>
-    ` : `
+    `
+    : `
         <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
             <div style="width: 50%;">
                 ${logoHtml}
@@ -590,28 +855,35 @@ const generateDocumentHTML = (
         </div>
     `;
 
-    const clientInfoHtml = `
+  const clientInfoHtml = `
         <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
-            <div style="width: 45%; background-color: #f9fafb; padding: 14px 16px 16px; border-radius: 6px; border: 1px solid #e5e7eb; line-height: 1.4;">
-                <div style="font-size: 10px; text-transform: uppercase; font-weight: 700; color: #9ca3af; margin-bottom: 6px; line-height: 1;">${dict.pdfAddressedTo || 'Adressé à'}</div>
+            <div style="width: 45%; background-color: #f9fafb; padding: 12px 16px; border-radius: 6px; border: 1px solid #e5e7eb; line-height: 1.4; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 10px; text-transform: uppercase; font-weight: 700; color: #9ca3af; margin-bottom: 6px; line-height: 1;">${dict.pdfAddressedTo || "Adressé à"}</div>
                 <div style="font-size: 14px; color: #111827; font-weight: 600;">
                     ${recipientCompany}
-                    ${recipientName ? `<div style="${recipientCompany ? 'font-weight: normal; margin-top: 2px;' : ''} line-height: 1.2;">${recipientName}</div>` : ''}
+                    ${recipientName ? `<div style="${recipientCompany ? "font-weight: normal; margin-top: 2px;" : ""} line-height: 1.2;">${recipientName}</div>` : ""}
                 </div>
-                ${(recipientAddress || recipientIce || recipientEmail || recipientPhone) ? `
+                ${
+                  recipientAddress ||
+                  recipientIce ||
+                  recipientEmail ||
+                  recipientPhone
+                    ? `
                 <div style="margin-top: 6px; font-size: 12px; color: #4b5563;">
                     ${recipientAddress}
                     ${recipientIce}
                     ${recipientEmail}
                     ${recipientPhone}
                 </div>
-                ` : ''}
+                `
+                    : ""
+                }
             </div>
         </div>
     `;
 
-    const itemsTableHtml = `
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+  const itemsTableHtml = `
+        <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px;">
             <thead>
                 <tr style="background-color: ${primaryColor}; color: white; -webkit-print-color-adjust: exact;">
                     ${headerRowHtml}
@@ -623,210 +895,270 @@ const generateDocumentHTML = (
         </table>
     `;
 
-    // Financials Block
-    const financialsHtml = `
+  // Financials Block
+  const financialsHtml = `
         <div class="totals-section" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
             <div style="width: 55%; padding-top: 10px;">
-                ${showAmountInWords ? `
-                    <div style="background-color: #f3f4f6; padding: 6px 10px 14px 10px; border-radius: 4px; border-left: 3px solid ${primaryColor};">
+                ${
+                  showAmountInWords
+                    ? `
+                    <div style="background-color: #f3f4f6; padding: 10px 12px; border-radius: 4px; border-left: 3px solid ${primaryColor};">
                         <div style="font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: bold; margin-bottom: 4px; line-height: 1.2;">${txtAmountInWords}</div>
                         <div style="font-size: 13px; color: #111827; font-weight: 600; font-style: italic; line-height: 1.2;">
                             ${amountInLetters}
                         </div>
                     </div>
-                ` : ''}
-                ${settings.defaultPaymentTerms ? `
+                `
+                    : ""
+                }
+                ${
+                  settings.defaultPaymentTerms
+                    ? `
                     <div style="margin-top: 10px; font-size: 11px; color: #4b5563;">
                         ${settings.defaultPaymentTerms}
                     </div>
-                ` : ''}
-                ${doc.notes ? `
+                `
+                    : ""
+                }
+                ${
+                  doc.notes
+                    ? `
                     <div style="margin-top: 15px; font-size: 11px; color: #6b7280;">
-                        <span style="font-weight: 600;">${dict.notes || 'Notes'}:</span> ${doc.notes}
+                        <span style="font-weight: 600;">${dict.notes || "Notes"}:</span> ${doc.notes}
                     </div>
-                ` : ''}
+                `
+                    : ""
+                }
             </div>
             <div style="width: 40%;">
                 <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb;">
                     <span>${txtTotalHt}</span>
-                    <span style="font-weight: 600;">${subTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                    <span style="font-weight: 600;">${subTotal.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</span>
                 </div>
-                ${discountAmount > 0 ? `
+                ${
+                  discountAmount > 0
+                    ? `
                 <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb;">
-                    <span>${dict.globalDiscount || 'Remise exceptionnelle'} ${doc.discountType === 'percentage' ? `(-${doc.discountValue}%)` : ''}</span>
-                    <span style="font-weight: 600; color: #dc2626;">- ${discountAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                    <span>${dict.globalDiscount || "Remise exceptionnelle"} ${doc.discountType === "percentage" ? `(-${doc.discountValue}%)` : ""}</span>
+                    <span style="font-weight: 600; color: #dc2626;">- ${discountAmount.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</span>
                 </div>
-                ` : ''}
+                `
+                    : ""
+                }
                 <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb;">
                     <span>${txtTotalTax}</span>
-                    <span>${vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                    <span>${vatAmount.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; padding: 12px 0 4px 0; font-size: 16px; color: #000000; font-weight: bold; margin-top: 4px;">
                     <span>${txtTotalNet}</span>
-                    <span>${totalAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                    <span>${totalAmount.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</span>
                 </div>
                 ${paymentInfoHtml}
             </div>
         </div>
     `;
 
-    const notesOnlyHtml = doc.notes ? `
+  const notesOnlyHtml = doc.notes
+    ? `
         <div style="margin-bottom: 20px; font-size: 11px; color: #6b7280;">
-            <span style="font-weight: 600;">${dict.notes || 'Notes'}:</span> ${doc.notes}
+            <span style="font-weight: 600;">${dict.notes || "Notes"}:</span> ${doc.notes}
         </div>
-    ` : '';
+    `
+    : "";
 
-    const signaturesHtml = `
+  const signaturesHtml = `
         <div class="totals-section" style="display: flex; justify-content: flex-end; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 15px;">
             <div style="width: 45%; text-align: center;">
                 <div style="font-weight: bold; margin-bottom: 5px; text-decoration: underline;">${txtSigRecipient}</div>
-                ${settings.showSignatureRecipient && settings.stamp ? `<img src="${settings.stamp}" style="max-height: 110px; max-width: 220px; object-fit: contain; margin-top: 2px;" />` : settings.showSignatureRecipient ? '<div style="height: 80px;"></div>' : ''}
+                ${settings.showSignatureRecipient && settings.stamp ? `<img src="${settings.stamp}" style="max-height: 110px; max-width: 220px; object-fit: contain; margin-top: 2px;" />` : settings.showSignatureRecipient ? '<div style="height: 80px;"></div>' : ""}
             </div>
         </div>
     `;
 
-    let totalsHtml = '';
-    if (isDeliveryNote && !showPrices) {
-        totalsHtml = notesOnlyHtml + (settings?.showSignatureRecipient ? signaturesHtml : '');
-    } else if (docType === 'Facture' || docType === 'Devis' || docType === 'Avoir' || isDeliveryNote) {
-        totalsHtml = financialsHtml + (settings?.showSignatureRecipient ? signaturesHtml : '');
-    } else {
-        totalsHtml = financialsHtml;
-    }
+  let totalsHtml = "";
+  if (isDeliveryNote && !showPrices) {
+    totalsHtml =
+      notesOnlyHtml + (settings?.showSignatureRecipient ? signaturesHtml : "");
+  } else if (
+    docType === "Facture" ||
+    docType === "Devis" ||
+    docType === "Avoir" ||
+    isDeliveryNote
+  ) {
+    totalsHtml =
+      financialsHtml + (settings?.showSignatureRecipient ? signaturesHtml : "");
+  } else {
+    totalsHtml = financialsHtml;
+  }
 
-    const footerHtml = `
+  const footerHtml = `
         <div style="text-align: center; padding-top: 2px; margin-top: auto;">
-            ${settings.footerNotes ? `<div style="font-size: 11px; color: #000000; margin-bottom: 4px; white-space: pre-wrap; font-style: normal;">${settings.footerNotes}</div>` : ''}
+            ${settings.footerNotes ? `<div style="font-size: 11px; color: #000000; margin-bottom: 4px; white-space: pre-wrap; font-style: normal;">${settings.footerNotes}</div>` : ""}
             <div style="font-size: 10px; color: #000000; font-weight: normal; letter-spacing: 0.02em;">
                 ${legalIds}
             </div>
         </div>
     `;
 
-    // --- Pagination Logic ---
-    const items = [...doc.lineItems];
+  // --- Pagination Logic ---
+  const items = [...doc.lineItems];
 
-    const getCellsHtml = (item: any) => {
-        return activeColumns.map((col, cIdx) => {
-            let content = '';
-            let align = 'left';
-            let style = '';
+  const getCellsHtml = (item: any) => {
+    return activeColumns
+      .map((col, cIdx) => {
+        let content = "";
+        let align = "left";
+        let style = "";
 
-            const isFirst = cIdx === 0;
-            const isLast = cIdx === activeColumns.length - 1;
-            const cellBorder = isLast ? '' : 'border-right: 0.5px solid #d1d5db;';
+        const isFirst = cIdx === 0;
+        const isLast = cIdx === activeColumns.length - 1;
+        const cellBorder = isLast ? "" : "border-right: 0.5px solid #d1d5db;";
 
-            const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
-            const totalTTC = (item.quantity * getLineMultiplier(item) * item.unitPrice) * (1 + item.vat / 100);
+        const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
+        const totalTTC =
+          item.quantity *
+          getLineMultiplier(item) *
+          item.unitPrice *
+          (1 + item.vat / 100);
 
-            // SYNC DISPLAY VALUE WITH CALCULATION MULTIPLIER
-            const multiplier = getLineMultiplier(item);
-            const isItemInDaysMode = item.calculationMode === 'days' || doc.lineItems[0]?.calculationMode === 'days';
-            const extraction = item.days || (item as any).jours || (item as any).jour || (item as any).itemDays || (item as any).nb_jours || 0;
-            const fallbackDaysValue = Number(extraction) > 0 ? Number(extraction) : 1;
-            const finalDaysDisplayValue = isItemInDaysMode ? multiplier : fallbackDaysValue;
+        // SYNC DISPLAY VALUE WITH CALCULATION MULTIPLIER
+        const multiplier = getLineMultiplier(item);
+        const isItemInDaysMode =
+          item.calculationMode === "days" ||
+          doc.lineItems[0]?.calculationMode === "days";
+        const extraction =
+          item.days ||
+          (item as any).jours ||
+          (item as any).jour ||
+          (item as any).itemDays ||
+          (item as any).nb_jours ||
+          0;
+        const fallbackDaysValue =
+          Number(extraction) > 0 ? Number(extraction) : 1;
+        const finalDaysDisplayValue = isItemInDaysMode
+          ? multiplier
+          : fallbackDaysValue;
 
-            if (isDaysCol(col)) {
-                content = String(finalDaysDisplayValue);
-                align = 'center';
-                style = 'font-size: 12.3px; font-weight: 700; color: #111827;';
-            } else {
-                switch (col.id) {
-                    case 'reference':
-                    content = item.productCode || '-';
-                    align = 'left';
-                    style = 'font-size: 12.3px; color: #4b5563;';
-                    break;
-                case 'name':
-                    content = `
+        if (isDaysCol(col)) {
+          content = String(finalDaysDisplayValue);
+          align = "center";
+          style = "font-size: 12.3px; font-weight: 700; color: #111827;";
+        } else {
+          switch (col.id) {
+            case "reference":
+              content = item.productCode || "-";
+              align = "left";
+              style = "font-size: 12.3px; color: #4b5563;";
+              break;
+            case "name":
+              content = `
                         <div style="font-weight: 700; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
-                        ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 1px; line-height: 1.1;">${item.description}</div>` : ''}
+                        ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 1px; line-height: 1.1;">${item.description}</div>` : ""}
                     `;
-                    break;
-                case 'quantity':
-                    content = item.quantity.toString();
-                    align = 'center';
-                    style = 'font-weight: 700; font-size: 12.3px;';
-                    break;
-                case 'length' as any:
-                    content = (item.length || 1).toString();
-                    align = 'center';
-                    style = 'font-size: 12.3px;';
-                    break;
-                case 'height' as any:
-                    content = (item.height || 1).toString();
-                    align = 'center';
-                    style = 'font-size: 12.3px;';
-                    break;
-                case 'm2' as any:
-                    content = ((item.quantity * (item.length || 1) * (item.height || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
-                    align = 'center';
-                    style = 'font-size: 12.3px; font-weight: 500;';
-                    break;
-                case 'ml' as any:
-                    content = ((item.quantity * (item.length || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
-                    align = 'center';
-                    style = 'font-size: 12.3px; font-weight: 500;';
-                    break;
-                case 'weight' as any:
-                    content = (item.weight || 1).toString();
-                    align = 'center';
-                    style = 'font-size: 12.3px;';
-                    break;
-                case 'totalWeight' as any:
-                    content = ((item.quantity * (item.weight || 1))).toLocaleString('fr-MA', { maximumFractionDigits: 2 });
-                    align = 'center';
-                    style = 'font-size: 12.3px; font-weight: 500;';
-                    break;
-                case 'unitPrice':
-                    content = (isModeTTC ? unitPriceTTC : item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
-                    align = 'right';
-                    style = 'font-size: 12.3px;';
-                    break;
-                case 'vat':
-                    content = `${item.vat}%`;
-                    align = 'center';
-                    style = 'font-size: 12.3px;';
-                    break;
-                case 'total':
-                    content = (isModeTTC ? totalTTC : (item.quantity * getLineMultiplier(item) * item.unitPrice)).toLocaleString('fr-MA', { minimumFractionDigits: 2 });
-                    align = 'right';
-                    style = 'font-weight: 700; font-size: 12.3px;';
-                    break;
-                case 'days':
-                    content = String(finalDaysDisplayValue);
-                    align = 'center';
-                    style = 'font-size: 12.3px; font-weight: 700;';
-                    break;
-                default:
-                    content = '-';
-                    break;
-                }
-            }
+              break;
+            case "quantity":
+              content = item.quantity.toString();
+              align = "center";
+              style = "font-weight: 700; font-size: 12.3px;";
+              break;
+            case "length" as any:
+              content = (item.length || 1).toString();
+              align = "center";
+              style = "font-size: 12.3px;";
+              break;
+            case "height" as any:
+              content = (item.height || 1).toString();
+              align = "center";
+              style = "font-size: 12.3px;";
+              break;
+            case "m2" as any:
+              content = (
+                item.quantity *
+                (item.length || 1) *
+                (item.height || 1)
+              ).toLocaleString("fr-MA", { maximumFractionDigits: 2 });
+              align = "center";
+              style = "font-size: 12.3px; font-weight: 500;";
+              break;
+            case "ml" as any:
+              content = (item.quantity * (item.length || 1)).toLocaleString(
+                "fr-MA",
+                { maximumFractionDigits: 2 },
+              );
+              align = "center";
+              style = "font-size: 12.3px; font-weight: 500;";
+              break;
+            case "weight" as any:
+              content = (item.weight || 1).toString();
+              align = "center";
+              style = "font-size: 12.3px;";
+              break;
+            case "totalWeight" as any:
+              content = (item.quantity * (item.weight || 1)).toLocaleString(
+                "fr-MA",
+                { maximumFractionDigits: 2 },
+              );
+              align = "center";
+              style = "font-size: 12.3px; font-weight: 500;";
+              break;
+            case "unitPrice":
+              content = (
+                isModeTTC ? unitPriceTTC : item.unitPrice
+              ).toLocaleString("fr-MA", { minimumFractionDigits: 2 });
+              align = "right";
+              style = "font-size: 12.3px;";
+              break;
+            case "vat":
+              content = `${item.vat}%`;
+              align = "center";
+              style = "font-size: 12.3px;";
+              break;
+            case "total":
+              content = (
+                isModeTTC
+                  ? totalTTC
+                  : item.quantity * getLineMultiplier(item) * item.unitPrice
+              ).toLocaleString("fr-MA", { minimumFractionDigits: 2 });
+              align = "right";
+              style = "font-weight: 700; font-size: 12.3px;";
+              break;
+            case "days":
+              content = String(finalDaysDisplayValue);
+              align = "center";
+              style = "font-size: 12.3px; font-weight: 700;";
+              break;
+            default:
+              content = "-";
+              break;
+          }
+        }
 
-            return `<td style="padding: 8px 12px 16px 12px; border-bottom: 0.5px solid #d1d5db; ${cellBorder} text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
-        }).join('');
-    };
+        return `<td style="padding: 10px 12px; border-bottom: 0.5px solid #d1d5db; ${cellBorder} text-align: ${align}; vertical-align: middle; ${style}">${content}</td>`;
+      })
+      .join("");
+  };
 
-    // 1. EXACT DOM MEASUREMENT PAGINATION
-    const allRowsHtml = items.map(item => `<tr>${getCellsHtml(item)}</tr>`).join('');
+  // 1. EXACT DOM MEASUREMENT PAGINATION
+  const allRowsHtml = items
+    .map((item) => `<tr>${getCellsHtml(item)}</tr>`)
+    .join("");
 
-    const measureBox = document.createElement('div');
-    measureBox.style.position = 'absolute';
-    measureBox.style.left = '-9999px';
-    measureBox.style.visibility = 'hidden';
-    measureBox.style.width = '210mm'; 
-    measureBox.innerHTML = `
+  const measureBox = document.createElement("div");
+  measureBox.style.position = "absolute";
+  measureBox.style.left = "-9999px";
+  measureBox.style.visibility = "hidden";
+  measureBox.style.width = "210mm";
+  measureBox.innerHTML = `
         <div style="width: 210mm; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; box-sizing: border-box; padding: 15mm 15mm 45mm 15mm;">
             <div id="measure-header" style="position: relative; z-index: 2;">
                 ${topHeaderHtml}
                 ${clientInfoHtml}
                 <div style="display: flex; gap: 40px; margin-bottom: 15px;">
-                    ${doc.subject ? `<div><span style="font-weight: 600;">Objet :</span> ${doc.subject}</div>` : ''}
-                    ${doc.paymentMethod ? `<div><span style="font-weight: 600;">Mode de paiement :</span> ${doc.paymentMethod}</div>` : ''}
+                    ${doc.subject ? `<div><span style="font-weight: 600;">Objet :</span> ${doc.subject}</div>` : ""}
+                    ${doc.paymentMethod ? `<div><span style="font-weight: 600;">Mode de paiement :</span> ${doc.paymentMethod}</div>` : ""}
                 </div>
             </div>
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px;">
                 <thead id="measure-thead">
                     <tr>${headerRowHtml}</tr>
                 </thead>
@@ -842,97 +1174,114 @@ const generateDocumentHTML = (
         <div id="measure-padd" style="height: 60mm;"></div>
     `;
 
-    document.body.appendChild(measureBox);
+  document.body.appendChild(measureBox);
 
-    const headerHeight = document.getElementById('measure-header')?.offsetHeight || 0;
-    const theadHeight = document.getElementById('measure-thead')?.offsetHeight || 0;
-    const totalsHeight = document.getElementById('measure-totals')?.offsetHeight || 0;
-    
-    const tbody = document.getElementById('measure-tbody');
-    const rowHeightsPx = tbody ? Array.from(tbody.children).map(el => (el as HTMLElement).offsetHeight) : items.map(() => 40);
-    
-    const a4FullHeight = document.getElementById('measure-a4')?.offsetHeight || 1120;
-    const paddingHeights = document.getElementById('measure-padd')?.offsetHeight || 226;
+  const headerHeight =
+    document.getElementById("measure-header")?.offsetHeight || 0;
+  const theadHeight =
+    document.getElementById("measure-thead")?.offsetHeight || 0;
+  const totalsHeight =
+    document.getElementById("measure-totals")?.offsetHeight || 0;
 
-    document.body.removeChild(measureBox);
+  const tbody = document.getElementById("measure-tbody");
+  const rowHeightsPx = tbody
+    ? Array.from(tbody.children).map((el) => (el as HTMLElement).offsetHeight)
+    : items.map(() => 40);
 
-    // True Usable Pixel Height
-    const maxUsableHeight = a4FullHeight - paddingHeights;
-    const SAFETY_MARGIN = 2; // small threshold in pixels
+  const a4FullHeight =
+    document.getElementById("measure-a4")?.offsetHeight || 1120;
+  const paddingHeights =
+    document.getElementById("measure-padd")?.offsetHeight || 226;
 
-    // 2. Pack items into chunks optimally
-    const itemChunks: any[][] = [];
-    let tempIndex = 0;
+  document.body.removeChild(measureBox);
+
+  // True Usable Pixel Height
+  const maxUsableHeight = a4FullHeight - paddingHeights;
+  const SAFETY_MARGIN = 2; // small threshold in pixels
+
+  // 2. Pack items into chunks optimally
+  const itemChunks: any[][] = [];
+  let tempIndex = 0;
+
+  while (tempIndex < items.length) {
+    let currentHeight = headerHeight + theadHeight + 20; // 20px for table margin-bottom
+    const chunk: any[] = [];
 
     while (tempIndex < items.length) {
-        let currentHeight = headerHeight + theadHeight + 20; // 20px for table margin-bottom
-        const chunk: any[] = [];
-        
-        while (tempIndex < items.length) {
-            const item = items[tempIndex];
-            const rh = rowHeightsPx[tempIndex] || 35;
-            
-            if (currentHeight + rh + SAFETY_MARGIN > maxUsableHeight && chunk.length > 0) {
-                break;
-            }
-            
-            chunk.push(item);
-            currentHeight += rh;
-            tempIndex++;
-        }
-        itemChunks.push(chunk);
+      const item = items[tempIndex];
+      const rh = rowHeightsPx[tempIndex] || 35;
+
+      if (
+        currentHeight + rh + SAFETY_MARGIN > maxUsableHeight &&
+        chunk.length > 0
+      ) {
+        break;
+      }
+
+      chunk.push(item);
+      currentHeight += rh;
+      tempIndex++;
     }
+    itemChunks.push(chunk);
+  }
 
-    // 3. Check if Totals fit on the last page
-    const lastChunk = itemChunks[itemChunks.length - 1] || [];
-    let lastChunkHeight = headerHeight + theadHeight + 20;
-    const lastChunkStartIndex = items.length - lastChunk.length;
-    for (let i = 0; i < lastChunk.length; i++) {
-        lastChunkHeight += rowHeightsPx[lastChunkStartIndex + i];
-    }
+  // 3. Check if Totals fit on the last page
+  const lastChunk = itemChunks[itemChunks.length - 1] || [];
+  let lastChunkHeight = headerHeight + theadHeight + 20;
+  const lastChunkStartIndex = items.length - lastChunk.length;
+  for (let i = 0; i < lastChunk.length; i++) {
+    lastChunkHeight += rowHeightsPx[lastChunkStartIndex + i];
+  }
 
-    if (lastChunkHeight + totalsHeight + SAFETY_MARGIN > maxUsableHeight) {
-        itemChunks.push([]); // Totals get pushed to their own new page
-    }
+  if (lastChunkHeight + totalsHeight + SAFETY_MARGIN > maxUsableHeight) {
+    itemChunks.push([]); // Totals get pushed to their own new page
+  }
 
+  const totalPages = itemChunks.length;
+  const pages: string[] = [];
 
-    const totalPages = itemChunks.length;
-    const pages: string[] = [];
+  itemChunks.forEach((pageItems, index) => {
+    const pageNum = index + 1;
+    const isLastPage = pageNum === totalPages;
 
-    itemChunks.forEach((pageItems, index) => {
-        const pageNum = index + 1;
-        const isLastPage = pageNum === totalPages;
+    const pageRowsHtml = pageItems
+      .map((item, idx) => {
+        const cellsHtml = getCellsHtml(item);
+        return `<tr class="item-row" style="background-color: ${idx % 2 === 0 ? "#fff" : "#f9fafb"};">${cellsHtml}</tr>`;
+      })
+      .join("");
 
-        const pageRowsHtml = pageItems.map((item, idx) => {
-            const cellsHtml = getCellsHtml(item);
-            return `<tr class="item-row" style="background-color: ${idx % 2 === 0 ? '#fff' : '#f9fafb'};">${cellsHtml}</tr>`;
-        }).join('');
-
-        const pageHtml = `
-            <div class="pdf-page" style="width: 210mm; height: 296.5mm; background: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; display: flex; flex-direction: column; box-sizing: border-box; padding: 15mm 15mm 45mm 15mm; position: relative; overflow: hidden; ${isLastPage ? '' : 'page-break-after: always;'}">
+    const pageHtml = `
+            <div class="pdf-page" style="width: 210mm; height: 296.5mm; background: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; display: flex; flex-direction: column; box-sizing: border-box; padding: 15mm 15mm 45mm 15mm; position: relative; overflow: hidden; ${isLastPage ? "" : "page-break-after: always;"}">
                 <style>
                     * { box-sizing: border-box; }
                     .content-grow { flex: 1; z-index: 2; position: relative; }
                 </style>
                 
-                ${settings.logo ? `
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; z-index: 0; opacity: 0.08; pointer-events: none;">
-                        <img src="${settings.logo}" style="width: 100%; height: auto; object-fit: contain; filter: grayscale(100%);" />
+                ${
+                  settings.logo
+                    ? `
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; z-index: 0; opacity: 0.07; pointer-events: none;">
+                        <img src="${settings.logo}" style="width: 100%; height: auto; object-fit: contain;" />
                     </div>
-                ` : ''}
+                `
+                    : ""
+                }
 
                 <div style="position: relative; z-index: 2;">
                     ${topHeaderHtml}
                     ${clientInfoHtml}
                     <div style="display: flex; gap: 40px; margin-bottom: 15px;">
-                        ${doc.subject ? `<div style="font-weight: 600;">${dict.pdfSubject || 'Objet'} : <span style="font-weight: normal;">${doc.subject}</span></div>` : ''}
-                        ${doc.paymentMethod ? `<div style="font-weight: 600;">${dict.paymentMethod || 'Mode de paiement'} : <span style="font-weight: normal;">${doc.paymentMethod}</span></div>` : ''}
+                        ${doc.subject ? `<div style="font-weight: 600;">${dict.pdfSubject || "Objet"} : <span style="font-weight: normal;">${doc.subject}</span></div>` : ""}
+                        ${doc.paymentMethod ? `<div style="font-weight: 600;">${dict.paymentMethod || "Mode de paiement"} : <span style="font-weight: normal;">${doc.paymentMethod}</span></div>` : ""}
                     </div>
                 </div>
 
                 <div class="content-grow">
-                    ${pageItems.length > 0 ? `
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                    ${
+                      pageItems.length > 0
+                        ? `
+                    <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px;">
                         <thead>
                             <tr style="background-color: ${primaryColor}; color: white; -webkit-print-color-adjust: exact;">
                                 ${headerRowHtml}
@@ -942,8 +1291,10 @@ const generateDocumentHTML = (
                             ${pageRowsHtml}
                         </tbody>
                     </table>
-                    ` : ''}
-                    ${isLastPage ? totalsHtml : ''}
+                    `
+                        : ""
+                    }
+                    ${isLastPage ? totalsHtml : ""}
                 </div>
 
                 <div style="position: absolute; bottom: 4mm; left: 15mm; right: 15mm; padding-top: 4px; border-top: 1px solid #000000; z-index: 2; background: white;">
@@ -952,84 +1303,99 @@ const generateDocumentHTML = (
                 </div>
             </div>
         `;
-        
-        pages.push(pageHtml);
-    });
 
-    return `<div id="pdf-container">${pages.join('')}</div>`;
+    pages.push(pageHtml);
+  });
+
+  return `<div id="pdf-container">${pages.join("")}</div>`;
 };
 
 export const generatePDF = async (
-    docType: DocumentType,
-    doc: DocumentData,
-    settings: CompanySettings | null,
-    recipient: Client | Supplier | undefined,
-    options?: PDFOptions
+  docType: DocumentType,
+  doc: DocumentData,
+  settings: CompanySettings | null,
+  recipient: Client | Supplier | undefined,
+  options?: PDFOptions,
 ): Promise<void> => {
-    const template = generateDocumentHTML(docType, doc, settings, recipient, options);
-    const displayId = doc.documentId || doc.id;
+  const template = generateDocumentHTML(
+    docType,
+    doc,
+    settings,
+    recipient,
+    options,
+  );
+  const displayId = doc.documentId || doc.id;
 
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px'; 
-    container.style.top = '0';
-    container.innerHTML = template;
-    
-    document.body.appendChild(container);
+  const container = document.createElement("div");
+  container.style.position = "absolute";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.innerHTML = template;
 
-    try {
-        const contentElement = container.firstElementChild;
-        
-        const opt: any = {
-            margin: 0,
-            filename: `${docType.toLowerCase()}_${displayId}.pdf`,
-            image: { type: 'jpeg', quality: 1 },
-            pagebreak: { mode: ['css', 'legacy'] },
-            html2canvas: { 
-                scale: 2, 
-                useCORS: true, 
-                logging: false,
-                letterRendering: true,
-                onclone: (clonedDoc: Document) => {
-                    // Remove all oklch color references from styles to prevent html2canvas crash
-                    const styleTags = clonedDoc.getElementsByTagName('style');
-                    for (let i = 0; i < styleTags.length; i++) {
-                        styleTags[i].innerHTML = styleTags[i].innerHTML.replace(/oklch\([^)]+\)/g, '#000000');
-                    }
-                    // Also check for link tags that might contain oklch
-                    const linkTags = clonedDoc.getElementsByTagName('link');
-                    for (let i = linkTags.length - 1; i >= 0; i--) {
-                        if (linkTags[i].rel === 'stylesheet') {
-                            linkTags[i].parentNode?.removeChild(linkTags[i]);
-                        }
-                    }
-                }
-            },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
+  document.body.appendChild(container);
 
-        await (html2pdf() as any).set(opt).from(contentElement).save();
-    } finally {
-        document.body.removeChild(container);
-    }
+  try {
+    const contentElement = container.firstElementChild;
+
+    const opt: any = {
+      margin: 0,
+      filename: `${docType.toLowerCase()}_${displayId}.pdf`,
+      image: { type: "jpeg", quality: 1 },
+      pagebreak: { mode: ["css", "legacy"] },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        letterRendering: true,
+        onclone: (clonedDoc: Document) => {
+          // Remove all oklch color references from styles to prevent html2canvas crash
+          const styleTags = clonedDoc.getElementsByTagName("style");
+          for (let i = 0; i < styleTags.length; i++) {
+            styleTags[i].innerHTML = styleTags[i].innerHTML.replace(
+              /oklch\([^)]+\)/g,
+              "#000000",
+            );
+          }
+          // Also check for link tags that might contain oklch
+          const linkTags = clonedDoc.getElementsByTagName("link");
+          for (let i = linkTags.length - 1; i >= 0; i--) {
+            if (linkTags[i].rel === "stylesheet") {
+              linkTags[i].parentNode?.removeChild(linkTags[i]);
+            }
+          }
+        },
+      },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    };
+
+    await (html2pdf() as any).set(opt).from(contentElement).save();
+  } finally {
+    document.body.removeChild(container);
+  }
 };
 
 export const printDocument = (
-    docType: DocumentType,
-    doc: DocumentData,
-    settings: CompanySettings | null,
-    recipient: Client | Supplier | undefined,
-    options?: PDFOptions
+  docType: DocumentType,
+  doc: DocumentData,
+  settings: CompanySettings | null,
+  recipient: Client | Supplier | undefined,
+  options?: PDFOptions,
 ): void => {
-    const lang = localStorage.getItem('app_language') || 'fr';
-    const dict = (translations as any)[lang] || translations['fr'];
-    const htmlContent = generateDocumentHTML(docType, doc, settings, recipient, options);
-    const displayId = doc.documentId || doc.id;
+  const lang = localStorage.getItem("app_language") || "fr";
+  const dict = (translations as any)[lang] || translations["fr"];
+  const htmlContent = generateDocumentHTML(
+    docType,
+    doc,
+    settings,
+    recipient,
+    options,
+  );
+  const displayId = doc.documentId || doc.id;
 
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-        printWindow.document.open();
-        printWindow.document.write(`
+  const printWindow = window.open("", "_blank");
+  if (printWindow) {
+    printWindow.document.open();
+    printWindow.document.write(`
             <html>
                 <head>
                     <title>${docType} #${displayId}</title>
@@ -1047,120 +1413,194 @@ export const printDocument = (
                 </body>
             </html>
         `);
-        printWindow.document.close();
-        
-        printWindow.focus();
-        setTimeout(() => {
-            printWindow.print();
-            printWindow.close();
-        }, 500);
-    } else {
-        alert("Veuillez autoriser les pop-ups pour utiliser la fonction d'impression directe.");
-    }
+    printWindow.document.close();
+
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  } else {
+    alert(
+      "Veuillez autoriser les pop-ups pour utiliser la fonction d'impression directe.",
+    );
+  }
 };
 
 // --- English Number to Words ---
 const numberToWordsEn = (amount: number): string => {
-    const units = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
-    const teens = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
-    const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
-    const scales = ['', 'thousand', 'million', 'billion'];
+  const units = [
+    "",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+  ];
+  const teens = [
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen",
+  ];
+  const tens = [
+    "",
+    "",
+    "twenty",
+    "thirty",
+    "forty",
+    "fifty",
+    "sixty",
+    "seventy",
+    "eighty",
+    "ninety",
+  ];
+  const scales = ["", "thousand", "million", "billion"];
 
-    const convertGroup = (n: number): string => {
-        if (n === 0) return '';
-        let res = '';
-        if (n >= 100) {
-            res += units[Math.floor(n / 100)] + ' hundred ';
-            n %= 100;
-        }
-        if (n >= 20) {
-            res += tens[Math.floor(n / 10)] + (n % 10 !== 0 ? '-' + units[n % 10] : '');
-        } else if (n >= 10) {
-            res += teens[n - 10];
-        } else if (n > 0) {
-            res += units[n];
-        }
-        return res.trim();
-    };
-
-    if (amount === 0) return 'Zero dirhams';
-    const integerPart = Math.floor(Math.abs(amount));
-    const decimalPart = Math.round((Math.abs(amount) - integerPart) * 100);
-
-    let words = '';
-    let num = integerPart;
-    let scaleIdx = 0;
-
-    while (num > 0) {
-        const group = num % 1000;
-        if (group > 0) {
-            words = convertGroup(group) + (scales[scaleIdx] ? ' ' + scales[scaleIdx] : '') + (words ? ' ' + words : '');
-        }
-        num = Math.floor(num / 1000);
-        scaleIdx++;
+  const convertGroup = (n: number): string => {
+    if (n === 0) return "";
+    let res = "";
+    if (n >= 100) {
+      res += units[Math.floor(n / 100)] + " hundred ";
+      n %= 100;
     }
-
-    let result = words.trim() + (integerPart === 1 ? ' dirham' : ' dirhams');
-    if (decimalPart > 0) {
-        result += ' and ' + convertGroup(decimalPart) + ' centimes';
+    if (n >= 20) {
+      res +=
+        tens[Math.floor(n / 10)] + (n % 10 !== 0 ? "-" + units[n % 10] : "");
+    } else if (n >= 10) {
+      res += teens[n - 10];
+    } else if (n > 0) {
+      res += units[n];
     }
+    return res.trim();
+  };
 
-    return result.charAt(0).toUpperCase() + result.slice(1);
+  if (amount === 0) return "Zero dirhams";
+  const integerPart = Math.floor(Math.abs(amount));
+  const decimalPart = Math.round((Math.abs(amount) - integerPart) * 100);
+
+  let words = "";
+  let num = integerPart;
+  let scaleIdx = 0;
+
+  while (num > 0) {
+    const group = num % 1000;
+    if (group > 0) {
+      words =
+        convertGroup(group) +
+        (scales[scaleIdx] ? " " + scales[scaleIdx] : "") +
+        (words ? " " + words : "");
+    }
+    num = Math.floor(num / 1000);
+    scaleIdx++;
+  }
+
+  let result = words.trim() + (integerPart === 1 ? " dirham" : " dirhams");
+  if (decimalPart > 0) {
+    result += " and " + convertGroup(decimalPart) + " centimes";
+  }
+
+  return result.charAt(0).toUpperCase() + result.slice(1);
 };
 
 // --- Spanish Number to Words ---
 const numberToWordsEs = (amount: number): string => {
-    const units = ['', 'un', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
-    const tens = ['', 'diez', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
-    const special = {
-        11: 'once', 12: 'doce', 13: 'trece', 14: 'catorce', 15: 'quince',
-        21: 'veintiuno', 22: 'veintidós', 23: 'veintitrés', 24: 'veinticuatro', 25: 'veinticinco'
-    };
+  const units = [
+    "",
+    "un",
+    "dos",
+    "tres",
+    "cuatro",
+    "cinco",
+    "seis",
+    "siete",
+    "ocho",
+    "nueve",
+  ];
+  const tens = [
+    "",
+    "diez",
+    "veinte",
+    "treinta",
+    "cuarenta",
+    "cincuenta",
+    "sesenta",
+    "setenta",
+    "ochenta",
+    "noventa",
+  ];
+  const special = {
+    11: "once",
+    12: "doce",
+    13: "trece",
+    14: "catorce",
+    15: "quince",
+    21: "veintiuno",
+    22: "veintidós",
+    23: "veintitrés",
+    24: "veinticuatro",
+    25: "veinticinco",
+  };
 
-    const convertGroup = (n: number): string => {
-        if (n === 0) return '';
-        if (n === 100) return 'cien';
-        let res = '';
-        if (n >= 100) {
-            const h = Math.floor(n / 100);
-            if (h === 1) res += 'ciento ';
-            else if (h === 5) res += 'quinientos ';
-            else if (h === 7) res += 'setecientos ';
-            else if (h === 9) res += 'novecientos ';
-            else res += units[h] + 'cientos ';
-            n %= 100;
-        }
-        if (n > 0) {
-            if ((special as any)[n]) res += (special as any)[n];
-            else if (n >= 10 && n < 20) res += 'dieci' + units[n - 10];
-            else if (n >= 20 && n < 30) res += 'veinti' + units[n - 20];
-            else if (n >= 30) {
-                res += tens[Math.floor(n / 10)] + (n % 10 !== 0 ? ' y ' + units[n % 10] : '');
-            } else {
-                res += units[n];
-            }
-        }
-        return res.trim();
-    };
-
-    if (amount === 0) return 'Cero dirhams';
-    const integerPart = Math.floor(Math.abs(amount));
-    const decimalPart = Math.round((Math.abs(amount) - integerPart) * 100);
-
-    let words = '';
-    if (integerPart === 0) words = 'cero';
-    else if (integerPart === 1) words = 'un';
-    else if (integerPart < 1000) words = convertGroup(integerPart);
-    else {
-        const thousands = Math.floor(integerPart / 1000);
-        const remainder = integerPart % 1000;
-        words = (thousands === 1 ? 'mil' : convertGroup(thousands) + ' mil') + ' ' + convertGroup(remainder);
+  const convertGroup = (n: number): string => {
+    if (n === 0) return "";
+    if (n === 100) return "cien";
+    let res = "";
+    if (n >= 100) {
+      const h = Math.floor(n / 100);
+      if (h === 1) res += "ciento ";
+      else if (h === 5) res += "quinientos ";
+      else if (h === 7) res += "setecientos ";
+      else if (h === 9) res += "novecientos ";
+      else res += units[h] + "cientos ";
+      n %= 100;
     }
-
-    let result = words.trim() + (integerPart === 1 ? ' dirham' : ' dirhams');
-    if (decimalPart > 0) {
-        result += ' con ' + convertGroup(decimalPart) + ' céntimos';
+    if (n > 0) {
+      if ((special as any)[n]) res += (special as any)[n];
+      else if (n >= 10 && n < 20) res += "dieci" + units[n - 10];
+      else if (n >= 20 && n < 30) res += "veinti" + units[n - 20];
+      else if (n >= 30) {
+        res +=
+          tens[Math.floor(n / 10)] +
+          (n % 10 !== 0 ? " y " + units[n % 10] : "");
+      } else {
+        res += units[n];
+      }
     }
+    return res.trim();
+  };
 
-    return result.charAt(0).toUpperCase() + result.slice(1);
+  if (amount === 0) return "Cero dirhams";
+  const integerPart = Math.floor(Math.abs(amount));
+  const decimalPart = Math.round((Math.abs(amount) - integerPart) * 100);
+
+  let words = "";
+  if (integerPart === 0) words = "cero";
+  else if (integerPart === 1) words = "un";
+  else if (integerPart < 1000) words = convertGroup(integerPart);
+  else {
+    const thousands = Math.floor(integerPart / 1000);
+    const remainder = integerPart % 1000;
+    words =
+      (thousands === 1 ? "mil" : convertGroup(thousands) + " mil") +
+      " " +
+      convertGroup(remainder);
+  }
+
+  let result = words.trim() + (integerPart === 1 ? " dirham" : " dirhams");
+  if (decimalPart > 0) {
+    result += " con " + convertGroup(decimalPart) + " céntimos";
+  }
+
+  return result.charAt(0).toUpperCase() + result.slice(1);
 };

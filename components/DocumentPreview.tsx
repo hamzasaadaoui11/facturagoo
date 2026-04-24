@@ -101,8 +101,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                     <img 
                         src={settings.logo} 
                         alt="Watermark" 
-                        className="w-[80%] max-h-[60%] object-contain opacity-[0.08] translate-y-16"
-                        style={{ filter: 'grayscale(100%)' }} 
+                        className="w-[80%] max-h-[60%] object-contain opacity-[0.07] translate-y-16"
                     />
                 </div>
             )}
@@ -173,35 +172,35 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
 
                 {/* Line Items Table */}
                 <section className="mt-6">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
+                    <table className="w-full text-left" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+                        <thead className="overflow-hidden">
                             <tr style={{ backgroundColor: primaryColor, color: 'white' }}>
-                                <th className="p-3 font-semibold uppercase text-xs rounded-tl-lg rounded-bl-lg">{t('description')}</th>
-                                <th className="p-3 text-center font-semibold uppercase text-xs w-16">{t('quantity')}</th>
+                                <th className="py-3 px-4 align-middle font-semibold uppercase text-xs rounded-tl-lg rounded-bl-lg">{t('description')}</th>
+                                <th className="py-3 px-4 align-middle text-center font-semibold uppercase text-xs w-16">{t('quantity')}</th>
                                 {isM2 && (
                                     <>
-                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">Larg.</th>
-                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">Haut.</th>
-                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">M²</th>
+                                        <th className="py-3 px-4 align-middle text-center font-semibold uppercase text-xs w-16">Larg.</th>
+                                        <th className="py-3 px-4 align-middle text-center font-semibold uppercase text-xs w-16">Haut.</th>
+                                        <th className="py-3 px-4 align-middle text-center font-semibold uppercase text-xs w-16">M²</th>
                                     </>
                                 )}
                                 {isML && (
                                     <>
-                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">Long.</th>
-                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">ML</th>
+                                        <th className="py-3 px-4 align-middle text-center font-semibold uppercase text-xs w-16">Long.</th>
+                                        <th className="py-3 px-4 align-middle text-center font-semibold uppercase text-xs w-16">ML</th>
                                     </>
                                 )}
                                 {isKg && (
                                     <>
-                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">Poids (kg)</th>
-                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">Total kg</th>
+                                        <th className="py-3 px-4 align-middle text-center font-semibold uppercase text-xs w-16">Poids (kg)</th>
+                                        <th className="py-3 px-4 align-middle text-center font-semibold uppercase text-xs w-16">Total kg</th>
                                     </>
                                 )}
                                 {!isDeliveryNote && (
                                     <>
-                                        <th className="p-3 text-right font-semibold uppercase text-xs w-28">{t('unitPrice')}</th>
-                                        <th className="p-3 text-center font-semibold uppercase text-xs w-16">{t('vat')}</th>
-                                        <th className="p-3 text-right font-semibold uppercase text-xs w-28 rounded-tr-lg rounded-br-lg">{t('totalHT')}</th>
+                                        <th className="py-3 px-4 align-middle text-right font-semibold uppercase text-xs w-28">{t('unitPrice')}</th>
+                                        <th className="py-3 px-4 align-middle text-center font-semibold uppercase text-xs w-16">{t('vat')}</th>
+                                        <th className="py-3 px-4 align-middle text-right font-semibold uppercase text-xs w-28 rounded-tr-lg rounded-br-lg">{t('totalHT')}</th>
                                     </>
                                 )}
                             </tr>
@@ -209,35 +208,35 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                         <tbody className="divide-y divide-neutral-200">
                             {document.lineItems.map(item => (
                                 <tr key={item.id} className="text-neutral-700">
-                                    <td className="p-3">
+                                    <td className="py-3 px-4 align-middle">
                                         <p className="text-[12px] font-semibold text-neutral-900">{item.name}</p>
                                         {item.description && <p className="text-[10px] text-neutral-500 mt-0.5">{item.description}</p>}
                                     </td>
-                                    <td className="p-3 text-center align-top font-bold text-[12px]">{item.quantity}</td>
+                                    <td className="py-3 px-4 text-center align-middle font-bold text-[12px]">{item.quantity}</td>
                                     {isM2 && (
                                         <>
-                                            <td className="p-3 text-center align-top text-[12px]">{item.length || 1}</td>
-                                            <td className="p-3 text-center align-top text-[12px]">{item.height || 1}</td>
-                                            <td className="p-3 text-center align-top text-[12px] font-medium">{(item.quantity * (item.length || 1) * (item.height || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
+                                            <td className="py-3 px-4 text-center align-middle text-[12px]">{item.length || 1}</td>
+                                            <td className="py-3 px-4 text-center align-middle text-[12px]">{item.height || 1}</td>
+                                            <td className="py-3 px-4 text-center align-middle text-[12px] font-medium">{(item.quantity * (item.length || 1) * (item.height || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                     {isML && (
                                         <>
-                                            <td className="p-3 text-center align-top text-[12px]">{item.length || 1}</td>
-                                            <td className="p-3 text-center align-top text-[12px] font-medium">{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
+                                            <td className="py-3 px-4 text-center align-middle text-[12px]">{item.length || 1}</td>
+                                            <td className="py-3 px-4 text-center align-middle text-[12px] font-medium">{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                     {isKg && (
                                         <>
-                                            <td className="p-3 text-center align-top text-[12px]">{item.weight || 1}</td>
-                                            <td className="p-3 text-center align-top text-[12px] font-medium">{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
+                                            <td className="py-3 px-4 text-center align-middle text-[12px]">{item.weight || 1}</td>
+                                            <td className="py-3 px-4 text-center align-middle text-[12px] font-medium">{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                     {!isDeliveryNote && (
                                         <>
-                                            <td className="p-3 text-right align-top text-[12px]">{item.unitPrice.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
-                                            <td className="p-3 text-center align-top text-[11px] text-neutral-500">{item.vat}%</td>
-                                            <td className="p-3 text-right align-top font-medium text-neutral-900 text-[12px]">{(item.quantity * getLineMultiplier(item) * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
+                                            <td className="py-3 px-4 text-right align-middle text-[12px]">{item.unitPrice.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
+                                            <td className="py-3 px-4 text-center align-middle text-[11px] text-neutral-500">{item.vat}%</td>
+                                            <td className="py-3 px-4 text-right align-middle font-medium text-neutral-900 text-[12px]">{(item.quantity * getLineMultiplier(item) * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                 </tr>

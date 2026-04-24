@@ -463,14 +463,6 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                             <Printer size={16} className={`text-neutral-500 group-hover:text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('print')}
                         </button>
 
-                        <button 
-                            onClick={() => { handleDownload(activeNote); setActiveMenuId(null); }}
-                            disabled={isDownloading}
-                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group disabled:opacity-50"
-                        >
-                            {isDownloading ? <Loader2 size={16} className={`animate-spin ${isRTL ? 'ml-3' : 'mr-3'}`} /> : <Download size={16} className={`text-neutral-500 group-hover:text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} />} {t('download')}
-                        </button>
-
                         <div className="border-t border-slate-100 my-1 mx-2"></div>
 
                         <button 
