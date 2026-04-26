@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 
@@ -10,6 +10,8 @@ interface RichTextEditorProps {
 }
 
 const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeholder, className }) => {
+    const quillRef = useRef<ReactQuill>(null);
+
     const modules = {
         toolbar: [
             ['bold', 'italic', 'underline'],
@@ -25,11 +27,21 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         'size'
     ];
 
+    const handleContainerClick = () => {
+        if (quillRef.current) {
+            quillRef.current.focus();
+        }
+    };
+
     return (
-        <div className={`rich-text-editor ${className || ''}`}>
+        <div 
+            className={`rich-text-editor ${className || ''} rounded-xl overflow-hidden border border-slate-200 focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all`}
+            onClick={handleContainerClick}
+        >
             <ReactQuill 
+                ref={quillRef}
                 theme="snow"
-                value={value}
+                value={value || ''}
                 onChange={onChange}
                 modules={modules}
                 formats={formats}
@@ -37,19 +49,27 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
             />
             <style>{`
                 .rich-text-editor .ql-container {
+                    border: none !important;
                     border-bottom-left-radius: 0.75rem;
                     border-bottom-right-radius: 0.75rem;
-                    font-size: 11px;
+                    font-size: 13px;
+                    background: white;
                 }
                 .rich-text-editor .ql-toolbar {
-                    border-top-left-radius: 0.75rem;
-                    border-top-right-radius: 0.75rem;
-                    padding: 4px 8px;
+                    border: none !important;
+                    border-bottom: 1px solid #e2e8f0 !important;
+                    padding: 6px 10px;
                     background: #f8fafc;
                 }
                 .rich-text-editor .ql-editor {
-                    min-height: 48px;
-                    padding: 8px 12px;
+                    min-height: 80px;
+                    padding: 12px 16px;
+                }
+                .rich-text-editor .ql-editor.ql-blank::before {
+                    left: 16px;
+                    font-style: normal;
+                    color: #94a3b8;
+                    font-size: 13px;
                 }
             `}</style>
         </div>

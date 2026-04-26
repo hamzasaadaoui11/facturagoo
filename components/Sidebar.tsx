@@ -15,7 +15,8 @@ import {
     BarChart3,
     LogOut,
     UserCircle,
-    CreditCard
+    CreditCard,
+    Wallet
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -71,6 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
             ],
         },
         { id: 'stock', name: t('stock'), href: '/stock', icon: Archive },
+        { id: 'expenses', name: t('expenses'), href: '/expenses', icon: Wallet },
         { type: 'divider' },
         { id: 'clients', name: t('clients'), href: '/clients', icon: Users },
         { id: 'suppliers', name: t('suppliers'), href: '/suppliers', icon: Building },

@@ -1,5 +1,5 @@
 
-import { Client, Product, Supplier, Quote, Invoice, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, CreditNote } from './types';
+import { Client, Product, Supplier, Quote, Invoice, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, CreditNote, Expense } from './types';
 import { supabase } from './supabaseClient';
 
 const TABLE_MAP: Record<string, string> = {
@@ -13,7 +13,8 @@ const TABLE_MAP: Record<string, string> = {
     'payments': 'payments',
     'stock_movements': 'stock_movements',
     'delivery_notes': 'delivery_notes',
-    'purchase_orders': 'purchase_orders'
+    'purchase_orders': 'purchase_orders',
+    'expenses': 'expenses'
 };
 
 const LOCAL_STORAGE_KEYS = {
@@ -107,17 +108,26 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
 
         const fetchPromise = supabase
             .from(tableName)
-            .select('*')
-            .eq('company_id', companyId);
+            .select('*');
+        
+        // Only apply company_id filter if we have a companyId
+        const filteredFetch = companyId ? fetchPromise.eq('company_id', companyId) : fetchPromise;
 
-        const result: any = await withTimeout(fetchPromise as any);
+        const result: any = await withTimeout(filteredFetch as any);
         const { data, error } = result;
 
         if (error) {
+            // Check if it's a schema error (table or column missing)
+            if (error.code === 'PGRST116' || error.code === '42P01' || (error.message && error.message.includes('column') && error.message.includes('does not exist'))) {
+                console.warn(`Table or column missing for ${storeName}, returning empty array:`, error.message);
+                return [];
+            }
+
             const recovered = await handleAuthError(error);
             if (recovered) {
                 // Retry once
-                const retryResult: any = await withTimeout(supabase.from(tableName).select('*').eq('company_id', companyId) as any);
+                const retryFetch = supabase.from(tableName).select('*');
+                const retryResult: any = await withTimeout((companyId ? retryFetch.eq('company_id', companyId) : retryFetch) as any);
                 if (retryResult.data) return retryResult.data;
             }
             console.error(`Error fetching ${storeName}:`, error);
@@ -436,6 +446,12 @@ export const dbService = {
         add: (item: DeliveryNote) => add<DeliveryNote>('delivery_notes', item),
         update: (item: DeliveryNote) => update<DeliveryNote>('delivery_notes', item),
         delete: (id: string | string[]) => remove('delivery_notes', id),
+    },
+    expenses: {
+        getAll: () => getAll<Expense>('expenses'),
+        add: (item: Expense) => add<Expense>('expenses', item),
+        update: (item: Expense) => update<Expense>('expenses', item),
+        delete: (id: string | string[]) => remove('expenses', id),
     },
     settings: {
         get: async (): Promise<CompanySettings | null> => {

@@ -207,6 +207,16 @@ export interface StockMovement {
     reference?: string; // Invoice ID or Delivery Note ID
 }
 
+export interface Expense {
+    id: string;
+    category: string;
+    description: string;
+    amount: number;
+    date: string;
+    reference?: string;
+    notes?: string;
+}
+
 export interface DeliveryNote {
     id: string;
     documentId?: string; // Human readable ID (BL00001)

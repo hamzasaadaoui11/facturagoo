@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
-import { Invoice, InvoiceStatus, Client, Product, CompanySettings, CreditNote, CreditNoteStatus } from '../types';
+import { Invoice, InvoiceStatus, Client, Product, CompanySettings, CreditNote, CreditNoteStatus, Expense } from '../types';
 import { Users, Package, FileText, AlertCircle, AlertTriangle, DollarSign, Archive, CheckCircle, ArrowRight, UserPlus, ChevronRight, TrendingUp, CalendarDays, Filter, Clock, UserCheck, Layers, BarChart3, Receipt, Users2, Box, ShieldAlert, Wallet } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -12,6 +12,7 @@ interface DashboardProps {
     products: Product[];
     companySettings?: CompanySettings | null;
     creditNotes?: CreditNote[];
+    expenses?: Expense[];
 }
 
 const StatCard: React.FC<{
@@ -46,7 +47,7 @@ const ShortcutCard = ({ icon: Icon, label, desc, onClick, colorClass }: { icon: 
 
 type ChartPeriod = 'day' | 'week' | 'month' | 'year' | 'custom';
 
-const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, companySettings, creditNotes = [] }) => {
+const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, companySettings, creditNotes = [], expenses = [] }) => {
     const navigate = useNavigate();
     const { t, language } = useLanguage();
     const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('year');
@@ -60,8 +61,11 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
         day: 'numeric' 
     });
 
-    const { totalRevenue, unpaidInvoicesCount, unpaidAmount } = useMemo(() => {
+    const { totalRevenue, unpaidInvoicesCount, unpaidAmount, monthlyExpenses } = useMemo(() => {
         const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+        
         let totalRevenue = 0;
         let unpaidInvoicesCount = 0;
         let unpaidAmount = 0;
@@ -82,8 +86,15 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
         
         unpaidAmount = Math.max(0, unpaidAmount - validatedCreditNotesAmount);
 
-        return { totalRevenue, unpaidInvoicesCount, unpaidAmount };
-    }, [invoices, creditNotes]);
+        const monthlyExpenses = expenses
+            .filter(exp => {
+                const expDate = new Date(exp.date);
+                return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
+            })
+            .reduce((sum, exp) => sum + exp.amount, 0);
+
+        return { totalRevenue, unpaidInvoicesCount, unpaidAmount, monthlyExpenses };
+    }, [invoices, creditNotes, expenses]);
 
     const stats = [
         { 
@@ -93,6 +104,14 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
             color: 'bg-emerald-500',
             iconColor: 'text-emerald-600',
             desc: t('totalRevenueDesc')
+        },
+        { 
+            name: t('expenses'), 
+            stat: monthlyExpenses.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }), 
+            icon: Wallet, 
+            color: 'bg-rose-500',
+            iconColor: 'text-rose-600',
+            desc: t('totalMonthlyExpenses')
         },
         { 
             name: t('unpaidInvoices'), 
@@ -109,14 +128,6 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
             color: 'bg-blue-500',
             iconColor: 'text-blue-600',
             desc: t('clientsDatabase')
-        },
-        { 
-            name: t('catalog'), 
-            stat: products.length, 
-            icon: Package, 
-            color: 'bg-purple-500',
-            iconColor: 'text-purple-600',
-            desc: t('catalogDesc')
         },
     ];
 

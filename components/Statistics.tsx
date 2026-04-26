@@ -9,7 +9,7 @@ import {
     CreditCard, ShoppingBag, ArrowUpRight, ArrowDownRight, Filter, PieChart as PieIcon, Activity,
     ArrowRightLeft, UserCheck, Truck, BarChart2, User, Target, Info, FileText
 } from 'lucide-react';
-import { Invoice, Payment, PurchaseOrder, Product, PurchaseOrderStatus, InvoiceStatus, CreditNote, CreditNoteStatus } from '../types';
+import { Invoice, Payment, PurchaseOrder, Product, PurchaseOrderStatus, InvoiceStatus, CreditNote, CreditNoteStatus, Expense } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface StatisticsProps {
@@ -17,12 +17,13 @@ interface StatisticsProps {
     payments: Payment[];
     purchaseOrders: PurchaseOrder[];
     products: Product[];
+    expenses: Expense[];
     creditNotes?: CreditNote[];
 }
 
 type DateRangeType = 'today' | 'week' | 'month' | 'year' | 'custom';
 
-const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrders, products, creditNotes = [] }) => {
+const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrders, products, expenses = [], creditNotes = [] }) => {
     const { t, isRTL, language } = useLanguage();
     
     const [rangeType, setRangeType] = useState<DateRangeType>('month');
@@ -120,6 +121,9 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             const periodCreditNotes = creditNotes.filter(cn => (cn.status === CreditNoteStatus.Validated || cn.status === CreditNoteStatus.Refunded) && isInRange(cn.date, s, e));
             const totalCreditNotes = periodCreditNotes.reduce((sum, cn) => sum + (useTTC ? cn.amount : (cn.amount / 1.2)), 0); // Approx HT if not stored
             
+            const periodExpenses = expenses.filter(exp => isInRange(exp.date, s, e));
+            const totalOperationalExpenses = periodExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
             const finalReceived = receivedRevenue; // Payments are always total received
             const finalBilled = billedRevenue - totalCreditNotes;
             
@@ -127,8 +131,9 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                 revenue: finalReceived,        // Used for "Recettes Encaissées" (Optional now)
                 billedRevenue: finalBilled,    // Used for "CA Facturé"
                 expenses: cogsPaid,            // Used for "Coûts d'Achats (Paid Docs)"
+                operationalExpenses: totalOperationalExpenses,
                 inventoryValue,                // Used for "Valeur Stock"
-                profit: finalBilled - cogsAll   // Theoretical net profit
+                profit: finalBilled - cogsAll - totalOperationalExpenses   // Theoretical net profit
             };
         };
 
@@ -348,64 +353,76 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                <div className="bg-white rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-sm border border-slate-100 relative group hover:shadow-md transition-all">
-                    <div className="flex justify-between items-start mb-3 md:mb-4">
-                        <div className="p-2.5 md:p-3 bg-indigo-100 text-indigo-600 rounded-xl md:rounded-2xl"><ShoppingBag size={20} className="md:w-6 md:h-6" /></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-5">
+                <div className="bg-white rounded-2xl md:rounded-3xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all">
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="p-2.5 bg-slate-50 text-slate-600 rounded-xl"><ShoppingBag size={20} /></div>
                     </div>
-                    <p className="text-slate-500 text-xs md:text-sm font-medium">Valeur Totale Stock (Achat)</p>
-                    <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mt-1">{formatMoney(currentMetrics.inventoryValue)}</h3>
+                    <p className="text-slate-500 text-[11px] md:text-xs font-semibold uppercase tracking-wider">Valeur Totale Stock</p>
+                    <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-1">{formatMoney(currentMetrics.inventoryValue)}</h3>
                 </div>
 
-                <div className="bg-white rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-sm border border-slate-100 relative group hover:shadow-md transition-all">
-                    <div className="flex justify-between items-start mb-3 md:mb-4">
-                        <div className="p-2.5 md:p-3 bg-blue-100 text-blue-600 rounded-xl md:rounded-2xl"><FileText size={20} className="md:w-6 md:h-6" /></div>
+                <div className="bg-white rounded-2xl md:rounded-3xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all">
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><FileText size={20} /></div>
                         {(() => {
                             const growth = calculateGrowth(currentMetrics.billedRevenue, previousMetrics.billedRevenue);
-                            return <span className={`flex items-center gap-1 text-[10px] md:text-xs font-bold px-2 py-1 rounded-full ${growth >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{growth >= 0 ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}{Math.abs(growth).toFixed(1)}%</span>;
+                            return <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${growth >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{growth >= 0 ? <ArrowUpRight size={10}/> : <ArrowDownRight size={10}/>}{Math.abs(growth).toFixed(0)}%</span>;
                         })()}
                     </div>
-                    <p className="text-slate-500 text-xs md:text-sm font-medium">Ventes Facturées ({useTTC ? 'TTC' : 'HT'})</p>
-                    <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mt-1">{formatMoney(currentMetrics.billedRevenue)}</h3>
+                    <p className="text-slate-500 text-[11px] md:text-xs font-semibold uppercase tracking-wider">Ventes Facturées</p>
+                    <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-1">{formatMoney(currentMetrics.billedRevenue)}</h3>
                 </div>
 
-                <div className="bg-white rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-sm border border-slate-100 relative group hover:shadow-md transition-all">
-                    <div className="flex justify-between items-start mb-3 md:mb-4">
-                        <div className="p-2.5 md:p-3 bg-rose-100 text-rose-600 rounded-xl md:rounded-2xl"><TrendingDown size={20} className="md:w-6 md:h-6" /></div>
+                <div className="bg-white rounded-2xl md:rounded-3xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all">
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="p-2.5 bg-rose-50 text-rose-600 rounded-xl"><TrendingDown size={20} /></div>
                         {(() => {
                             const growth = calculateGrowth(currentMetrics.expenses, previousMetrics.expenses);
-                            return <span className={`flex items-center gap-1 text-[10px] md:text-xs font-bold px-2 py-1 rounded-full ${growth <= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{growth > 0 ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}{Math.abs(growth).toFixed(1)}%</span>;
+                            return <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${growth <= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{growth > 0 ? <ArrowUpRight size={10}/> : <ArrowDownRight size={10}/>}{Math.abs(growth).toFixed(0)}%</span>;
                         })()}
                     </div>
-                    <p className="text-slate-500 text-xs md:text-sm font-medium">Coût Achats (Sur Factures Payées)</p>
-                    <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mt-1">{formatMoney(currentMetrics.expenses)}</h3>
+                    <p className="text-slate-500 text-[11px] md:text-xs font-semibold uppercase tracking-wider">Coût d'Achats</p>
+                    <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-1">{formatMoney(currentMetrics.expenses)}</h3>
                 </div>
 
-                <div className="bg-gradient-to-br from-emerald-600 to-teal-600 rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-lg text-white">
-                    <div className="flex justify-between items-start mb-3 md:mb-4">
-                        <div className="p-2.5 md:p-3 bg-white/20 backdrop-blur-sm rounded-xl md:rounded-2xl"><TrendingUp size={20} className="md:w-6 md:h-6" /></div>
-                        <span className="text-[10px] md:text-xs font-bold bg-white/20 px-2 py-1 rounded-full">Marge Nette: {currentMetrics.billedRevenue > 0 ? ((currentMetrics.profit / currentMetrics.billedRevenue) * 100).toFixed(1) : 0}%</span>
+                <div className="bg-white rounded-2xl md:rounded-3xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all">
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="p-2.5 bg-orange-50 text-orange-600 rounded-xl"><DollarSign size={20} /></div>
+                        {(() => {
+                            const growth = calculateGrowth(currentMetrics.operationalExpenses, previousMetrics.operationalExpenses);
+                            return <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${growth <= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{growth > 0 ? <ArrowUpRight size={10}/> : <ArrowDownRight size={10}/>}{Math.abs(growth).toFixed(0)}%</span>;
+                        })()}
                     </div>
-                    <p className="text-emerald-100 text-xs md:text-sm font-medium">Bénéfice Net Global</p>
-                    <h3 className="text-2xl md:text-3xl font-extrabold mt-1">{formatMoney(currentMetrics.profit)}</h3>
+                    <p className="text-slate-500 text-[11px] md:text-xs font-semibold uppercase tracking-wider">Charges / Dépenses</p>
+                    <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-1">{formatMoney(currentMetrics.operationalExpenses)}</h3>
+                </div>
+
+                <div className="bg-gradient-to-br from-emerald-500/10 via-white to-teal-500/10 rounded-2xl md:rounded-3xl p-5 shadow-md border-2 border-emerald-500/20 hover:border-emerald-500 transition-all">
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="p-2.5 bg-emerald-500 text-white rounded-xl shadow-sm shadow-emerald-500/40"><TrendingUp size={20} /></div>
+                        <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full ring-1 ring-emerald-500/20">Marge: {currentMetrics.billedRevenue > 0 ? ((currentMetrics.profit / currentMetrics.billedRevenue) * 100).toFixed(1) : 0}%</span>
+                    </div>
+                    <p className="text-emerald-700 text-[11px] md:text-xs font-black uppercase tracking-wider">Bénéfice Net</p>
+                    <h3 className="text-xl md:text-2xl font-black text-emerald-900 mt-1">{formatMoney(currentMetrics.profit)}</h3>
                 </div>
             </div>
 
             {/* SECTION: CLIENT PROFITABILITY ANALYSIS */}
-            <div className="bg-white rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-                <div className="px-5 md:px-8 py-4 md:py-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="px-6 py-5 border-b border-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl"><Target size={20} /></div>
+                        <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl"><Target size={20} /></div>
                         <div>
-                            <h3 className="text-base md:text-lg font-bold text-slate-900">Rentabilité par Client</h3>
-                            <p className="text-[10px] md:text-xs text-slate-500">Calcul basé uniquement sur les paiements reçus</p>
+                            <h3 className="text-lg font-bold text-slate-900 leading-none">Rentabilité par Client</h3>
+                            <p className="text-xs text-slate-400 mt-1">Calcul basé sur les paiements reçus</p>
                         </div>
                     </div>
-                    <div className="w-full md:w-64">
+                    <div className="w-full md:w-72">
                         <select 
                             value={selectedClientId} 
                             onChange={(e) => setSelectedClientId(e.target.value)}
-                            className="block w-full rounded-xl border-slate-200 bg-white shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-10 md:h-11"
+                            className="block w-full rounded-xl border-slate-200 bg-slate-50/50 focus:border-emerald-500 focus:ring-emerald-500 text-sm h-11"
                         >
                             <option value="">-- Sélectionner un client --</option>
                             {clientsList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -414,25 +431,44 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                 </div>
 
                 {clientProfitability ? (
-                    <div className="p-5 md:p-8 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-                            <div className="p-4 md:p-5 bg-emerald-50 rounded-xl md:rounded-2xl border border-emerald-100">
-                                <p className="text-[9px] md:text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Total Encaissé</p>
-                                <p className="text-xl md:text-2xl font-black text-emerald-900">{formatMoney(clientProfitability.totalEncaisse)}</p>
+                    <div className="p-6 md:p-8 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Encaissé</p>
+                                    <p className="text-2xl font-black text-slate-900">{formatMoney(clientProfitability.totalEncaisse)}</p>
+                                </div>
+                                <div className="mt-4 flex items-center gap-2">
+                                    <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
+                                        <div className="bg-emerald-500 h-full" style={{ width: '100%' }}></div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="p-4 md:p-5 bg-red-50 rounded-xl md:rounded-2xl border border-red-100">
-                                <p className="text-[9px] md:text-[10px] font-black text-red-600 uppercase tracking-widest mb-1">Coût Réel Livré</p>
-                                <p className="text-xl md:text-2xl font-black text-red-900">{formatMoney(clientProfitability.totalCoutAchat)}</p>
+                            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Coût Réel</p>
+                                    <p className="text-2xl font-black text-slate-900">{formatMoney(clientProfitability.totalCoutAchat)}</p>
+                                </div>
+                                <div className="mt-4 flex items-center gap-2">
+                                    <div className="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
+                                        <div className="bg-rose-400 h-full" style={{ width: `${Math.min(100, (clientProfitability.totalCoutAchat / Math.max(1, clientProfitability.totalEncaisse)) * 100)}%` }}></div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className={`p-4 md:p-5 rounded-xl md:rounded-2xl border ${clientProfitability.profitNette >= 0 ? 'bg-indigo-50 border-indigo-100' : 'bg-rose-50 border-rose-100'}`}>
-                                <p className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-1 ${clientProfitability.profitNette >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>Marge Nette (Cash)</p>
-                                <p className={`text-xl md:text-2xl font-black ${clientProfitability.profitNette >= 0 ? 'text-indigo-900' : 'text-rose-900'}`}>{formatMoney(clientProfitability.profitNette)}</p>
+                            <div className={`p-5 rounded-2xl border flex flex-col justify-between ${clientProfitability.profitNette >= 0 ? 'bg-emerald-50 border-emerald-100/50' : 'bg-rose-50 border-rose-100/50'}`}>
+                                <div>
+                                    <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${clientProfitability.profitNette >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>Marge Nette (Cash)</p>
+                                    <p className={`text-2xl font-black ${clientProfitability.profitNette >= 0 ? 'text-emerald-900' : 'text-rose-900'}`}>{formatMoney(clientProfitability.profitNette)}</p>
+                                </div>
+                                <div className="mt-4 text-[10px] font-bold opacity-60">
+                                    Rentabilité: {clientProfitability.marginPercent.toFixed(1)}%
+                                </div>
                             </div>
                         </div>
 
-                        <div className="border border-slate-100 rounded-xl md:rounded-2xl overflow-hidden">
+                        <div className="border border-slate-50 rounded-2xl overflow-hidden">
                             {/* Mobile Card View for Client Profitability */}
-                            <div className="md:hidden divide-y divide-slate-100">
+                            <div className="md:hidden divide-y divide-slate-50">
                                 {clientProfitability.products.map((p, idx) => (
                                     <div key={idx} className="p-4 space-y-2 hover:bg-slate-50 transition-colors">
                                         <div className="flex justify-between items-start">
@@ -441,12 +477,12 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                         </div>
                                         <div className="grid grid-cols-3 gap-2 text-[11px]">
                                             <div>
-                                                <p className="text-slate-400 uppercase font-bold text-[9px]">Encaissé</p>
-                                                <p className="text-emerald-600 font-bold">{formatMoney(p.revenue)}</p>
+                                                <p className="text-slate-400 uppercase font-bold text-[9px]">CA</p>
+                                                <p className="text-slate-900 font-bold">{formatMoney(p.revenue)}</p>
                                             </div>
                                             <div>
                                                 <p className="text-slate-400 uppercase font-bold text-[9px]">Coût</p>
-                                                <p className="text-red-500 font-bold">{formatMoney(p.cost)}</p>
+                                                <p className="text-slate-900 font-bold">{formatMoney(p.cost)}</p>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-slate-400 uppercase font-bold text-[9px]">Marge</p>
@@ -459,24 +495,24 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
 
                             {/* Desktop Table View for Client Profitability */}
                             <div className="hidden md:block overflow-x-auto">
-                                <table className="min-w-full divide-y divide-slate-100">
-                                    <thead className="bg-slate-50">
+                                <table className="min-w-full divide-y divide-slate-50">
+                                    <thead className="bg-slate-50/50">
                                         <tr>
-                                            <th className="px-4 md:px-6 py-3 text-left text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Produit</th>
-                                            <th className="px-4 md:px-6 py-3 text-center text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Qté</th>
-                                            <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">CA Facturé</th>
-                                            <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Coût</th>
-                                            <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Marge</th>
+                                            <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Produit</th>
+                                            <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">Qté</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">CA Facturé</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Coût</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Marge</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-slate-50">
                                         {clientProfitability.products.map((p, idx) => (
-                                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                                <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm font-bold text-slate-900 truncate max-w-[100px] md:max-w-none">{p.name}</td>
-                                                <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-center text-slate-600 font-medium">{p.qty}</td>
-                                                <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-right text-emerald-600 font-bold">{formatMoney(p.revenue)}</td>
-                                                <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-right text-red-500">{formatMoney(p.cost)}</td>
-                                                <td className={`px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-right font-black ${p.revenue - p.cost >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatMoney(p.revenue - p.cost)}</td>
+                                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="px-6 py-4 text-sm font-bold text-slate-900">{p.name}</td>
+                                                <td className="px-6 py-4 text-sm text-center text-slate-600 font-medium">{p.qty}</td>
+                                                <td className="px-6 py-4 text-sm text-right text-slate-900 font-bold">{formatMoney(p.revenue)}</td>
+                                                <td className="px-6 py-4 text-sm text-right text-slate-500">{formatMoney(p.cost)}</td>
+                                                <td className={`px-6 py-4 text-sm text-right font-black ${p.revenue - p.cost >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatMoney(p.revenue - p.cost)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -485,111 +521,81 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                         </div>
                     </div>
                 ) : (
-                    <div className="px-5 md:px-8 py-12 md:py-16 text-center text-slate-400">
-                        <User className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 opacity-20" />
-                        <p className="text-xs md:text-sm font-medium">Sélectionnez un client pour voir son analyse de rentabilité réelle.</p>
+                    <div className="px-8 py-20 text-center bg-slate-50/30 rounded-b-3xl">
+                        <div className="inline-flex items-center justify-center w-20 h-20 bg-white shadow-sm border border-slate-100 text-slate-400 rounded-2xl mb-6 transform rotate-3">
+                            <User size={32} strokeWidth={1.5} />
+                        </div>
+                        <h4 className="text-base font-bold text-slate-900">Sélectionnez un client</h4>
+                        <p className="text-sm text-slate-400 mt-2 max-w-[280px] mx-auto">Choisissez un client dans la liste déroulante ci-dessus pour voir son profil de rentabilité.</p>
                     </div>
                 )}
             </div>
 
             {/* SECTION: CATEGORY PROFITABILITY ANALYSIS */}
-            <div className="bg-white rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 overflow-hidden mt-6 md:mt-8">
-                <div className="px-5 md:px-8 py-4 md:py-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="px-6 py-5 border-b border-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl"><PieIcon size={20} /></div>
+                        <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl"><PieIcon size={20} /></div>
                         <div>
-                            <h3 className="text-base md:text-lg font-bold text-slate-900">Rentabilité par Catégorie</h3>
-                            <p className="text-[10px] md:text-xs text-slate-500">Calcul des bénéfices nets encaissés par catégorie</p>
+                            <h3 className="text-lg font-bold text-slate-900 leading-none">Par Catégorie</h3>
+                            <p className="text-xs text-slate-400 mt-1">Bénéfices nets encaissés par catégorie</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 w-full md:w-auto">
-                        <span className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Filtrer:</span>
-                        <div className="w-full md:w-64">
-                            <select 
-                                value={selectedCategory} 
-                                onChange={(e) => setSelectedCategory(e.target.value)}
-                                className="block w-full rounded-xl border-slate-200 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10 md:h-11"
-                            >
-                                <option value="">-- Sélectionner la catégorie --</option>
-                                <option value="all">Toutes les catégories</option>
-                                {categoryProfitability.map(p => (
-                                    <option key={p.category} value={p.category}>{p.category}</option>
-                                ))}
-                            </select>
-                        </div>
+                    <div className="w-full md:w-72">
+                        <select 
+                            value={selectedCategory} 
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            className="block w-full rounded-xl border-slate-200 bg-slate-50/50 focus:border-indigo-500 focus:ring-indigo-500 text-sm h-11"
+                        >
+                            <option value="">-- Toutes les catégories --</option>
+                            <option value="all">Tout afficher</option>
+                            {categoryProfitability.map(p => (
+                                <option key={p.category} value={p.category}>{p.category}</option>
+                            ))}
+                        </select>
                     </div>
                 </div>
 
                 {selectedCategory ? (
                     <div className="p-0 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="border border-slate-100 rounded-xl md:rounded-nne overflow-hidden">
-                            {/* Mobile Card View */}
-                            <div className="md:hidden divide-y divide-slate-100">
-                                {filteredCategoryProfitability.length > 0 ? (
-                                    filteredCategoryProfitability.map((p, idx) => (
-                                        <div key={idx} className="p-4 space-y-2 hover:bg-slate-50 transition-colors">
-                                            <div className="flex justify-between items-start">
-                                                <div className="text-sm font-bold text-slate-900 truncate max-w-[200px]">{p.category}</div>
-                                                <div className="text-xs font-medium text-slate-500">Qté: {p.qty}</div>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-2 text-[11px]">
-                                                <div>
-                                                    <p className="text-slate-400 uppercase font-bold text-[9px]">CA Facturé</p>
-                                                    <p className="text-emerald-600 font-bold">{formatMoney(p.revenue)}</p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-slate-400 uppercase font-bold text-[9px]">Coût</p>
-                                                    <p className="text-red-500 font-bold">{formatMoney(p.cost)}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-slate-400 uppercase font-bold text-[9px]">Marge</p>
-                                                    <p className={`font-black ${p.revenue - p.cost >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>{formatMoney(p.revenue - p.cost)}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="p-8 text-center text-slate-400 text-sm">Aucune donnée pour cette période</div>
-                                )}
-                            </div>
-
-                            {/* Desktop Table View */}
-                            <div className="hidden md:block overflow-x-auto">
-                                <table className="min-w-full divide-y divide-slate-100">
-                                    <thead className="bg-slate-50">
-                                        <tr>
-                                            <th className="px-4 md:px-6 py-3 text-left text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Catégorie</th>
-                                            <th className="px-4 md:px-6 py-3 text-center text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Qté Vendue</th>
-                                            <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Chiffre d'Affaires</th>
-                                            <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Coût d'Achat</th>
-                                            <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Bénéfice Net</th>
-                                            <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Marge %</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-slate-50">
-                                        {filteredCategoryProfitability.length > 0 ? (
-                                            filteredCategoryProfitability.map((p, idx) => (
-                                                <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm font-bold text-slate-900">{p.category}</td>
-                                                    <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-center text-slate-600 font-medium">{p.qty}</td>
-                                                    <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-right text-emerald-600 font-bold">{formatMoney(p.revenue)}</td>
-                                                    <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-right text-red-500">{formatMoney(p.cost)}</td>
-                                                    <td className={`px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-right font-black ${p.revenue - p.cost >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>{formatMoney(p.revenue - p.cost)}</td>
-                                                    <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-right text-slate-500 font-mono">{p.marginPercent.toFixed(1)}%</td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400 text-sm">Aucune donnée pour cette période</td></tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-slate-50">
+                                <thead className="bg-slate-50/50">
+                                    <tr>
+                                        <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest">Catégorie</th>
+                                        <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Ventes</th>
+                                        <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Chiffre d'Affaires</th>
+                                        <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Coût Achat</th>
+                                        <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Net</th>
+                                        <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Marge %</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-slate-50">
+                                    {filteredCategoryProfitability.length > 0 ? (
+                                        filteredCategoryProfitability.map((p, idx) => (
+                                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="px-6 py-4 text-sm font-bold text-slate-900">{p.category}</td>
+                                                <td className="px-6 py-4 text-sm text-center text-slate-600 font-medium">{p.qty}</td>
+                                                <td className="px-6 py-4 text-sm text-right text-emerald-600 font-bold">{formatMoney(p.revenue)}</td>
+                                                <td className="px-6 py-4 text-sm text-right text-slate-500">{formatMoney(p.cost)}</td>
+                                                <td className={`px-6 py-4 text-sm text-right font-black ${p.revenue - p.cost >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>{formatMoney(p.revenue - p.cost)}</td>
+                                                <td className="px-6 py-4 text-sm text-right text-slate-400 font-mono">{p.marginPercent.toFixed(1)}%</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-300 text-sm italic">Aucune donnée trouvée.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 ) : (
-                    <div className="px-5 md:px-8 py-12 md:py-16 text-center text-slate-400">
-                        <PieIcon className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 opacity-20" />
-                        <p className="text-xs md:text-sm font-medium">Sélectionnez une catégorie pour voir son analyse de rentabilité réelle.</p>
+                    <div className="px-8 py-20 text-center bg-slate-50/30 rounded-b-3xl">
+                        <div className="inline-flex items-center justify-center w-20 h-20 bg-white shadow-sm border border-slate-100 text-slate-400 rounded-2xl mb-6 transform -rotate-3">
+                            <PieIcon size={32} strokeWidth={1.5} />
+                        </div>
+                        <h4 className="text-base font-bold text-slate-900">Sélectionnez une catégorie</h4>
+                        <p className="text-sm text-slate-400 mt-2 max-w-[280px] mx-auto">Analysez les marges et profits générés par segment de produits pour optimiser votre catalogue.</p>
                     </div>
                 )}
             </div>
@@ -597,7 +603,12 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             {/* Global Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
                 <div className="bg-white p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100">
-                    <h3 className="text-base md:text-lg font-bold text-slate-900 mb-6 md:mb-8">Évolution des Recettes</h3>
+                    <h3 className="text-base md:text-lg font-bold text-slate-900 mb-6 md:mb-8 flex items-center justify-between">
+                        Évolution des Recettes
+                        <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                            <TrendingUp size={10} /> {t('financialAnalysis')}
+                        </span>
+                    </h3>
                     <div className="h-64 md:h-80 w-full">
                         {evolutionData.length > 0 ? (
                              <ResponsiveContainer width="100%" height="100%">
@@ -616,16 +627,44 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                 </div>
 
                 <div className="bg-white p-5 md:p-8 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100">
-                    <h3 className="text-base md:text-lg font-bold text-slate-900 mb-6 md:mb-8">Performance par Produit</h3>
+                    <h3 className="text-base md:text-lg font-bold text-slate-900 mb-6 md:mb-8 flex items-center justify-between">
+                        Performance par Produit
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-1 bg-slate-50 rounded-lg">TOP 5</span>
+                    </h3>
                     <div className="h-64 md:h-80 w-full">
                          {productPerformance.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={productPerformance.slice(0, 5)} layout="vertical">
+                                <BarChart data={productPerformance.slice(0, 5)} layout="vertical" margin={{ left: 20, right: 30, top: 0, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                                     <XAxis type="number" hide />
-                                    <YAxis type="category" dataKey="name" width={80} tick={{fontSize: 9}} axisLine={false} tickLine={false} />
-                                    <Tooltip formatter={(value: number) => formatMoney(value)} />
-                                    <Bar dataKey="revenue" name="Revenu Encaissé" radius={[0, 4, 4, 0]}>
-                                        {productPerformance.slice(0, 5).map((_, index) => <Cell key={index} fill={['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444'][index % 5]} />)}
+                                    <YAxis 
+                                        type="category" 
+                                        dataKey="name" 
+                                        width={100} 
+                                        tick={{fontSize: 10, fontWeight: 600, fill: '#64748b'}} 
+                                        axisLine={false} 
+                                        tickLine={false}
+                                        tickFormatter={(val) => val.length > 15 ? val.substring(0, 15) + '...' : val}
+                                    />
+                                    <Tooltip 
+                                        cursor={{fill: '#f8fafc'}}
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                                        formatter={(value: number) => [<span className="font-bold text-slate-900">{formatMoney(value)}</span>, <span className="text-xs text-slate-500">Revenu</span>]} 
+                                    />
+                                    <Bar 
+                                        dataKey="revenue" 
+                                        name="Revenu Encaissé" 
+                                        radius={[0, 10, 10, 0]} 
+                                        barSize={24}
+                                        background={{ fill: '#f8fafc', radius: 10 }}
+                                    >
+                                        {productPerformance.slice(0, 5).map((_, index) => (
+                                            <Cell 
+                                                key={index} 
+                                                fill={['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444'][index % 5]} 
+                                                fillOpacity={0.8}
+                                            />
+                                        ))}
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
