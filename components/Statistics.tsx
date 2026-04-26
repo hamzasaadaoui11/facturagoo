@@ -7,7 +7,7 @@ import {
 import { 
     Calendar, TrendingUp, TrendingDown, DollarSign, 
     CreditCard, ShoppingBag, ArrowUpRight, ArrowDownRight, Filter, PieChart as PieIcon, Activity,
-    ArrowRightLeft, UserCheck, Truck, BarChart2, User, Target, Info
+    ArrowRightLeft, UserCheck, Truck, BarChart2, User, Target, Info, FileText
 } from 'lucide-react';
 import { Invoice, Payment, PurchaseOrder, Product, PurchaseOrderStatus, InvoiceStatus, CreditNote, CreditNoteStatus } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -28,8 +28,10 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
     const [rangeType, setRangeType] = useState<DateRangeType>('month');
     const [startDate, setStartDate] = useState<string>('');
     const [endDate, setEndDate] = useState<string>('');
+    const [useTTC, setUseTTC] = useState<boolean>(true);
     
     const [selectedClientId, setSelectedClientId] = useState<string>('');
+    const [selectedCategory, setSelectedCategory] = useState<string>('');
 
     const getDatesFromRange = (type: DateRangeType, customStart?: string, customEnd?: string) => {
         const end = new Date();
@@ -76,15 +78,58 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
         const calculateFinancials = (s: Date, e: Date) => {
             // Cash-based revenue: Sum of payments actually received
             const periodPayments = payments.filter(p => isInRange(p.date, s, e));
-            const revenue = periodPayments.reduce((sum, p) => sum + p.amount, 0);
+            const receivedRevenue = periodPayments.reduce((sum, p) => sum + p.amount, 0);
             
+            // Revenue: Sum of invoices issued (Excluding Draft)
+            const periodInvoices = invoices.filter(inv => inv.status !== InvoiceStatus.Draft && isInRange(inv.date, s, e));
+            
+            // Helper to get invoice amount (HT or TTC)
+            const getInvAmount = (inv: Invoice) => {
+                if (useTTC) return inv.amount || 0;
+                
+                // If subTotal is available, use it minus global discount
+                if (inv.subTotal !== undefined && inv.subTotal > 0) {
+                    const discount = (inv.discountType === 'percentage' ? (inv.subTotal * (inv.discountValue || 0) / 100) : (inv.discountValue || 0));
+                    return inv.subTotal - discount;
+                }
+                
+                // Fallback: estimate HT from TTC assuming 20% VAT if no subtotal stored
+                return (inv.amount || 0) / 1.2;
+            };
+
+            const billedRevenue = periodInvoices.reduce((sum, inv) => sum + getInvAmount(inv), 0);
+
+            // Cost of goods sold (COGS): Theoretical purchase cost of items billed
+            let cogsAll = 0;
+            let cogsPaid = 0;
+            
+            periodInvoices.forEach(inv => {
+                let invoiceCogs = 0;
+                inv.lineItems.forEach(item => {
+                    const productDef = products.find(p => p.id === item.productId);
+                    const purchasePrice = productDef?.purchasePrice || (item as any).purchasePrice || 0;
+                    invoiceCogs += item.quantity * purchasePrice;
+                });
+                cogsAll += invoiceCogs;
+                cogsPaid += invoiceCogs; // Since we filtered periodInvoices to only Paid ones
+            });
+
+            // Total Inventory Value (Global, not range dependent usually, but here we can show current)
+            const inventoryValue = products.reduce((sum, p) => sum + ((p.stockQuantity || 0) * (p.purchasePrice || 0)), 0);
+
             const periodCreditNotes = creditNotes.filter(cn => (cn.status === CreditNoteStatus.Validated || cn.status === CreditNoteStatus.Refunded) && isInRange(cn.date, s, e));
-            const totalCreditNotes = periodCreditNotes.reduce((sum, cn) => sum + cn.amount, 0);
+            const totalCreditNotes = periodCreditNotes.reduce((sum, cn) => sum + (useTTC ? cn.amount : (cn.amount / 1.2)), 0); // Approx HT if not stored
             
-            const periodExpenses = purchaseOrders.filter(po => (po.status === PurchaseOrderStatus.Received || po.status === PurchaseOrderStatus.Sent) && isInRange(po.date, s, e));
-            const expenses = periodExpenses.reduce((sum, po) => sum + po.totalAmount, 0);
+            const finalReceived = receivedRevenue; // Payments are always total received
+            const finalBilled = billedRevenue - totalCreditNotes;
             
-            return { revenue: revenue - totalCreditNotes, expenses, profit: (revenue - totalCreditNotes) - expenses };
+            return { 
+                revenue: finalReceived,        // Used for "Recettes Encaissées" (Optional now)
+                billedRevenue: finalBilled,    // Used for "CA Facturé"
+                expenses: cogsPaid,            // Used for "Coûts d'Achats (Paid Docs)"
+                inventoryValue,                // Used for "Valeur Stock"
+                profit: finalBilled - cogsAll   // Theoretical net profit
+            };
         };
 
         const current = calculateFinancials(start, end);
@@ -124,12 +169,14 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                     const stat = productStats.get(item.productId)!;
                     stat.qty += item.quantity;
                     
-                    // Actual revenue is the line total multiplied by how much the client actually paid for the overall invoice
-                    const lineTotal = item.quantity * item.unitPrice;
+                    // Actual revenue is weighted by payment ratio for cash-flow tracking
+                    const lineUnitPrice = useTTC ? (item.unitPrice * (1 + (item.vat || 0) / 100)) : item.unitPrice;
+                    const lineTotal = item.quantity * lineUnitPrice;
                     stat.revenue += (lineTotal * paymentRatio);
 
                     const productDef = products.find(p => p.id === item.productId);
-                    stat.cost += (item.quantity * (productDef?.purchasePrice || 0));
+                    const purchasePrice = productDef?.purchasePrice || (item as any).purchasePrice || 0;
+                    stat.cost += (item.quantity * purchasePrice);
                 }
             });
         });
@@ -137,7 +184,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
         const productPerformance = Array.from(productStats.values()).map(p => ({ ...p, profit: p.revenue - p.cost, margin: p.revenue > 0 ? ((p.revenue - p.cost) / p.revenue) * 100 : 0 })).sort((a, b) => b.revenue - a.revenue);
 
         return { currentMetrics: current, previousMetrics: previous, evolutionData: Array.from(chartDataMap.values()).sort((a, b) => a.date.localeCompare(b.date)), productPerformance, financeBreakdown, clientsList };
-    }, [invoices, payments, purchaseOrders, products, creditNotes, rangeType, startDate, endDate]);
+    }, [invoices, payments, purchaseOrders, products, creditNotes, rangeType, startDate, endDate, useTTC]);
 
     // Client Profitability Calculation - Now fully Cash-Based
     const clientProfitability = useMemo(() => {
@@ -153,19 +200,14 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
         const productsBought = new Map<string, { name: string, qty: number, cost: number, revenue: number }>();
 
         clientInvoices.forEach(inv => {
-            // Ratio of payment for this specific invoice
-            const paymentRatio = inv.amount > 0 ? (inv.amountPaid / inv.amount) : 0;
-
             inv.lineItems.forEach(item => {
                 if (item.productId) {
                     const productDef = products.find(p => p.id === item.productId);
-                    const purchasePrice = productDef?.purchasePrice || 0;
+                    const purchasePrice = productDef?.purchasePrice || (item as any).purchasePrice || 0;
                     
+                    const lineUnitPrice = useTTC ? (item.unitPrice * (1 + (item.vat || 0) / 100)) : item.unitPrice;
                     const lineCost = item.quantity * purchasePrice;
-                    const lineBilledRevenue = item.quantity * item.unitPrice;
-                    
-                    // Real revenue for this product = (Billed * Ratio of payment on invoice)
-                    const lineRealRevenue = lineBilledRevenue * paymentRatio;
+                    const lineBilledRevenue = item.quantity * lineUnitPrice;
                     
                     totalCoutAchat += lineCost;
 
@@ -175,20 +217,76 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                     const pData = productsBought.get(item.productId)!;
                     pData.qty += item.quantity;
                     pData.cost += lineCost;
-                    pData.revenue += lineRealRevenue; // This now reflects ONLY what was paid
+                    pData.revenue += lineBilledRevenue; // This now reflects billed amount (HT or TTC)
                 }
             });
         });
 
+        const totalEncaisseReal = Array.from(productsBought.values()).reduce((sum, p) => sum + p.revenue, 0);
+
         return {
             clientName: clientsList.find(c => c.id === selectedClientId)?.name || '',
-            totalEncaisse,
+            totalEncaisse: totalEncaisseReal,
             totalCoutAchat,
-            profitNette: totalEncaisse - totalCoutAchat,
-            marginPercent: totalEncaisse > 0 ? ((totalEncaisse - totalCoutAchat) / totalEncaisse) * 100 : 0,
+            profitNette: totalEncaisseReal - totalCoutAchat,
+            marginPercent: totalEncaisseReal > 0 ? ((totalEncaisseReal - totalCoutAchat) / totalEncaisseReal) * 100 : 0,
             products: Array.from(productsBought.values()).sort((a, b) => b.revenue - a.revenue)
         };
-    }, [selectedClientId, invoices, payments, products, clientsList]);
+    }, [selectedClientId, invoices, payments, products, clientsList, useTTC]);
+
+    const categoryProfitability = useMemo(() => {
+        const { start, end } = getDatesFromRange(rangeType, startDate, endDate);
+        const isInRange = (dateStr: string, s: Date, e: Date) => {
+            const d = new Date(dateStr);
+            const time = d.getTime();
+            return time >= Math.min(s.getTime(), e.getTime()) && time <= Math.max(s.getTime(), e.getTime());
+        };
+
+        const revenueByCategory = new Map<string, { category: string, qty: number, cost: number, revenue: number }>();
+
+        const filteredInvoices = invoices.filter(inv => inv.status !== InvoiceStatus.Draft && isInRange(inv.date, start, end));
+
+        filteredInvoices.forEach(inv => {
+            const paymentRatio = inv.amount > 0 ? (inv.amountPaid / inv.amount) : 0;
+
+            inv.lineItems.forEach(item => {
+                const pid = item.productId;
+                if (pid) {
+                    const productDef = products.find(p => p.id === pid);
+                    let category = productDef?.category?.trim() || 'Non catégorisé';
+                    if (category === '') category = 'Non catégorisé';
+                    const purchasePrice = productDef?.purchasePrice || (item as any).purchasePrice || 0;
+                    
+                    const lineUnitPrice = useTTC ? (item.unitPrice * (1 + (item.vat || 0) / 100)) : item.unitPrice;
+                    const lineCost = item.quantity * purchasePrice;
+                    const lineBilledRevenue = item.quantity * lineUnitPrice;
+                    
+                    if (!revenueByCategory.has(category)) {
+                        revenueByCategory.set(category, { category, qty: 0, cost: 0, revenue: 0 });
+                    }
+                    const cData = revenueByCategory.get(category)!;
+                    cData.qty += item.quantity;
+                    cData.cost += lineCost;
+                    cData.revenue += (lineBilledRevenue * paymentRatio); // Real cash collected
+                }
+            });
+        });
+
+        return Array.from(revenueByCategory.values())
+            .map(c => ({
+                ...c,
+                profit: c.revenue - c.cost,
+                marginPercent: c.revenue > 0 ? ((c.revenue - c.cost) / c.revenue) * 100 : 0
+            }))
+            .filter(c => c.revenue > 0 || c.cost > 0)
+            .sort((a, b) => b.profit - a.profit);
+    }, [invoices, products, rangeType, startDate, endDate, useTTC]);
+
+    const filteredCategoryProfitability = useMemo(() => {
+        if (!selectedCategory) return [];
+        if (selectedCategory === 'all') return categoryProfitability;
+        return categoryProfitability.filter(p => p.category === selectedCategory);
+    }, [categoryProfitability, selectedCategory]);
 
     const calculateGrowth = (current: number, previous: number) => {
         if (previous === 0) return current > 0 ? 100 : 0;
@@ -212,6 +310,21 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                     </div>
 
                     <div className="bg-white/10 backdrop-blur-md border border-white/10 p-1 rounded-xl md:rounded-2xl flex flex-col sm:flex-row gap-2 shadow-lg w-full lg:w-auto">
+                        <div className="flex bg-slate-800/50 rounded-lg md:rounded-xl p-1">
+                            <button
+                                onClick={() => setUseTTC(false)}
+                                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${!useTTC ? 'bg-indigo-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                            >
+                                HT
+                            </button>
+                            <button
+                                onClick={() => setUseTTC(true)}
+                                className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${useTTC ? 'bg-indigo-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                            >
+                                TTC
+                            </button>
+                        </div>
+
                         <div className="flex bg-slate-800/50 rounded-lg md:rounded-xl p-1 overflow-x-auto no-scrollbar">
                             {(['today', 'week', 'month', 'year'] as DateRangeType[]).map((type) => (
                                 <button
@@ -235,37 +348,45 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 <div className="bg-white rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-sm border border-slate-100 relative group hover:shadow-md transition-all">
                     <div className="flex justify-between items-start mb-3 md:mb-4">
-                        <div className="p-2.5 md:p-3 bg-emerald-100 text-emerald-600 rounded-xl md:rounded-2xl"><DollarSign size={20} className="md:w-6 md:h-6" /></div>
-                        {(() => {
-                            const growth = calculateGrowth(currentMetrics.revenue, previousMetrics.revenue);
-                            return <span className={`flex items-center gap-1 text-[10px] md:text-xs font-bold px-2 py-1 rounded-full ${growth >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{growth >= 0 ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}{Math.abs(growth).toFixed(1)}%</span>;
-                        })()}
+                        <div className="p-2.5 md:p-3 bg-indigo-100 text-indigo-600 rounded-xl md:rounded-2xl"><ShoppingBag size={20} className="md:w-6 md:h-6" /></div>
                     </div>
-                    <p className="text-slate-500 text-xs md:text-sm font-medium">Recettes Encaissées</p>
-                    <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mt-1">{formatMoney(currentMetrics.revenue)}</h3>
+                    <p className="text-slate-500 text-xs md:text-sm font-medium">Valeur Totale Stock (Achat)</p>
+                    <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mt-1">{formatMoney(currentMetrics.inventoryValue)}</h3>
                 </div>
 
                 <div className="bg-white rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-sm border border-slate-100 relative group hover:shadow-md transition-all">
                     <div className="flex justify-between items-start mb-3 md:mb-4">
-                        <div className="p-2.5 md:p-3 bg-red-100 text-red-600 rounded-xl md:rounded-2xl"><ShoppingBag size={20} className="md:w-6 md:h-6" /></div>
+                        <div className="p-2.5 md:p-3 bg-blue-100 text-blue-600 rounded-xl md:rounded-2xl"><FileText size={20} className="md:w-6 md:h-6" /></div>
+                        {(() => {
+                            const growth = calculateGrowth(currentMetrics.billedRevenue, previousMetrics.billedRevenue);
+                            return <span className={`flex items-center gap-1 text-[10px] md:text-xs font-bold px-2 py-1 rounded-full ${growth >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{growth >= 0 ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}{Math.abs(growth).toFixed(1)}%</span>;
+                        })()}
+                    </div>
+                    <p className="text-slate-500 text-xs md:text-sm font-medium">Ventes Facturées ({useTTC ? 'TTC' : 'HT'})</p>
+                    <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mt-1">{formatMoney(currentMetrics.billedRevenue)}</h3>
+                </div>
+
+                <div className="bg-white rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-sm border border-slate-100 relative group hover:shadow-md transition-all">
+                    <div className="flex justify-between items-start mb-3 md:mb-4">
+                        <div className="p-2.5 md:p-3 bg-rose-100 text-rose-600 rounded-xl md:rounded-2xl"><TrendingDown size={20} className="md:w-6 md:h-6" /></div>
                         {(() => {
                             const growth = calculateGrowth(currentMetrics.expenses, previousMetrics.expenses);
                             return <span className={`flex items-center gap-1 text-[10px] md:text-xs font-bold px-2 py-1 rounded-full ${growth <= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>{growth > 0 ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}{Math.abs(growth).toFixed(1)}%</span>;
                         })()}
                     </div>
-                    <p className="text-slate-500 text-xs md:text-sm font-medium">Coûts d'Achats (Sorties Stock)</p>
+                    <p className="text-slate-500 text-xs md:text-sm font-medium">Coût Achats (Sur Factures Payées)</p>
                     <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 mt-1">{formatMoney(currentMetrics.expenses)}</h3>
                 </div>
 
-                <div className="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-lg text-white sm:col-span-2 md:col-span-1">
+                <div className="bg-gradient-to-br from-emerald-600 to-teal-600 rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-lg text-white">
                     <div className="flex justify-between items-start mb-3 md:mb-4">
                         <div className="p-2.5 md:p-3 bg-white/20 backdrop-blur-sm rounded-xl md:rounded-2xl"><TrendingUp size={20} className="md:w-6 md:h-6" /></div>
-                        <span className="text-[10px] md:text-xs font-medium bg-white/20 px-2 py-1 rounded-full">Bénéfice Réel: {currentMetrics.revenue > 0 ? ((currentMetrics.profit / currentMetrics.revenue) * 100).toFixed(1) : 0}%</span>
+                        <span className="text-[10px] md:text-xs font-bold bg-white/20 px-2 py-1 rounded-full">Marge Nette: {currentMetrics.billedRevenue > 0 ? ((currentMetrics.profit / currentMetrics.billedRevenue) * 100).toFixed(1) : 0}%</span>
                     </div>
-                    <p className="text-indigo-100 text-xs md:text-sm font-medium">Résultat Net (Encaissé - Coût)</p>
+                    <p className="text-emerald-100 text-xs md:text-sm font-medium">Bénéfice Net Global</p>
                     <h3 className="text-2xl md:text-3xl font-extrabold mt-1">{formatMoney(currentMetrics.profit)}</h3>
                 </div>
             </div>
@@ -343,7 +464,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                         <tr>
                                             <th className="px-4 md:px-6 py-3 text-left text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Produit</th>
                                             <th className="px-4 md:px-6 py-3 text-center text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Qté</th>
-                                            <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Encaissé Réel</th>
+                                            <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">CA Facturé</th>
                                             <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Coût</th>
                                             <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Marge</th>
                                         </tr>
@@ -367,6 +488,108 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                     <div className="px-5 md:px-8 py-12 md:py-16 text-center text-slate-400">
                         <User className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 opacity-20" />
                         <p className="text-xs md:text-sm font-medium">Sélectionnez un client pour voir son analyse de rentabilité réelle.</p>
+                    </div>
+                )}
+            </div>
+
+            {/* SECTION: CATEGORY PROFITABILITY ANALYSIS */}
+            <div className="bg-white rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 overflow-hidden mt-6 md:mt-8">
+                <div className="px-5 md:px-8 py-4 md:py-6 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl"><PieIcon size={20} /></div>
+                        <div>
+                            <h3 className="text-base md:text-lg font-bold text-slate-900">Rentabilité par Catégorie</h3>
+                            <p className="text-[10px] md:text-xs text-slate-500">Calcul des bénéfices nets encaissés par catégorie</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <span className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Filtrer:</span>
+                        <div className="w-full md:w-64">
+                            <select 
+                                value={selectedCategory} 
+                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                className="block w-full rounded-xl border-slate-200 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm h-10 md:h-11"
+                            >
+                                <option value="">-- Sélectionner la catégorie --</option>
+                                <option value="all">Toutes les catégories</option>
+                                {categoryProfitability.map(p => (
+                                    <option key={p.category} value={p.category}>{p.category}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {selectedCategory ? (
+                    <div className="p-0 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="border border-slate-100 rounded-xl md:rounded-nne overflow-hidden">
+                            {/* Mobile Card View */}
+                            <div className="md:hidden divide-y divide-slate-100">
+                                {filteredCategoryProfitability.length > 0 ? (
+                                    filteredCategoryProfitability.map((p, idx) => (
+                                        <div key={idx} className="p-4 space-y-2 hover:bg-slate-50 transition-colors">
+                                            <div className="flex justify-between items-start">
+                                                <div className="text-sm font-bold text-slate-900 truncate max-w-[200px]">{p.category}</div>
+                                                <div className="text-xs font-medium text-slate-500">Qté: {p.qty}</div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-2 text-[11px]">
+                                                <div>
+                                                    <p className="text-slate-400 uppercase font-bold text-[9px]">CA Facturé</p>
+                                                    <p className="text-emerald-600 font-bold">{formatMoney(p.revenue)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-slate-400 uppercase font-bold text-[9px]">Coût</p>
+                                                    <p className="text-red-500 font-bold">{formatMoney(p.cost)}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-slate-400 uppercase font-bold text-[9px]">Marge</p>
+                                                    <p className={`font-black ${p.revenue - p.cost >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>{formatMoney(p.revenue - p.cost)}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="p-8 text-center text-slate-400 text-sm">Aucune donnée pour cette période</div>
+                                )}
+                            </div>
+
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="min-w-full divide-y divide-slate-100">
+                                    <thead className="bg-slate-50">
+                                        <tr>
+                                            <th className="px-4 md:px-6 py-3 text-left text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Catégorie</th>
+                                            <th className="px-4 md:px-6 py-3 text-center text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Qté Vendue</th>
+                                            <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Chiffre d'Affaires</th>
+                                            <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Coût d'Achat</th>
+                                            <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Bénéfice Net</th>
+                                            <th className="px-4 md:px-6 py-3 text-right text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Marge %</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-slate-50">
+                                        {filteredCategoryProfitability.length > 0 ? (
+                                            filteredCategoryProfitability.map((p, idx) => (
+                                                <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                                    <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm font-bold text-slate-900">{p.category}</td>
+                                                    <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-center text-slate-600 font-medium">{p.qty}</td>
+                                                    <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-right text-emerald-600 font-bold">{formatMoney(p.revenue)}</td>
+                                                    <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-right text-red-500">{formatMoney(p.cost)}</td>
+                                                    <td className={`px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-right font-black ${p.revenue - p.cost >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>{formatMoney(p.revenue - p.cost)}</td>
+                                                    <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-right text-slate-500 font-mono">{p.marginPercent.toFixed(1)}%</td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr><td colSpan={6} className="px-6 py-8 text-center text-slate-400 text-sm">Aucune donnée pour cette période</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="px-5 md:px-8 py-12 md:py-16 text-center text-slate-400">
+                        <PieIcon className="h-10 w-10 md:h-12 md:w-12 mx-auto mb-3 opacity-20" />
+                        <p className="text-xs md:text-sm font-medium">Sélectionnez une catégorie pour voir son analyse de rentabilité réelle.</p>
                     </div>
                 )}
             </div>
@@ -454,7 +677,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                             <tr>
                                 <th className="px-5 md:px-8 py-3 md:py-4 text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wider text-left">{t('pProduct')}</th>
                                 <th className="px-4 md:px-6 py-3 md:py-4 text-center text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wider">Qté</th>
-                                <th className="px-4 md:px-6 py-3 md:py-4 text-right text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Encaissé Réel</th>
+                                <th className="px-4 md:px-6 py-3 md:py-4 text-right text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">CA Facturé</th>
                                 <th className="px-4 md:px-6 py-3 md:py-4 text-right text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Coût Achat</th>
                                 <th className="px-4 md:px-6 py-3 md:py-4 text-right text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Marge</th>
                             </tr>

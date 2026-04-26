@@ -51,6 +51,7 @@ export interface Product {
     vat: number;
     stockQuantity: number; // Real stock tracking
     minStockAlert: number;
+    category?: string;
 }
 
 export enum QuoteStatus {

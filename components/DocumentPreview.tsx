@@ -106,7 +106,17 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                 </div>
             )}
 
-            <div className="relative z-10 flex flex-col flex-1">
+            <style>{`
+                .ql-size-small { font-size: 0.75em; }
+                .ql-size-large { font-size: 1.5em; }
+                .ql-size-huge { font-size: 2.5em; }
+                .ql-align-center { text-align: center; }
+                .ql-align-right { text-align: right; }
+                .ql-align-justify { text-align: justify; }
+                .document-preview-content p { margin: 0 0 4px 0; }
+                .document-preview-content p:last-child { margin-bottom: 0; }
+            `}</style>
+            <div className="relative z-10 flex flex-col flex-1 document-preview-content">
                 {/* Header */}
                 <header className="flex justify-between items-start pb-6 border-b-2" style={{ borderColor: primaryColor }}>
                     <div className="w-1/2">
@@ -209,8 +219,8 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                             {document.lineItems.map(item => (
                                 <tr key={item.id} className="text-neutral-700">
                                     <td className="py-3 px-4 align-middle">
-                                        <p className="text-[12px] font-semibold text-neutral-900">{item.name}</p>
-                                        {item.description && <p className="text-[10px] text-neutral-500 mt-0.5">{item.description}</p>}
+                                        <div className="text-[12px] font-medium text-neutral-900" dangerouslySetInnerHTML={{ __html: item.name }} />
+                                        {item.description && <div className="text-[10px] text-neutral-500 mt-1" dangerouslySetInnerHTML={{ __html: item.description }} />}
                                     </td>
                                     <td className="py-3 px-4 text-center align-middle font-bold text-[12px]">{item.quantity}</td>
                                     {isM2 && (
@@ -245,9 +255,17 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                     </table>
                 </section>
 
-                {/* Totals */}
-                {!isDeliveryNote && (
-                    <section className="flex justify-end mt-8">
+                {/* Notes and Totals */}
+                <section className="flex justify-between items-start mt-8">
+                    <div className="w-1/2">
+                        {document.notes && (
+                            <div className="mt-4">
+                                <p className="text-xs uppercase font-bold text-neutral-500 mb-2">{t('notes')} :</p>
+                                <p className="text-xs text-neutral-600 whitespace-pre-line">{document.notes}</p>
+                            </div>
+                        )}
+                    </div>
+                    {!isDeliveryNote && (
                         <div className="w-full max-w-xs space-y-3">
                             <div className="flex justify-between text-neutral-600">
                                 <span>{t('totalHT')}</span>
@@ -269,8 +287,8 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                 <span>{totalTTC.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
                             </div>
                         </div>
-                    </section>
-                )}
+                    )}
+                </section>
                 
                 {/* Footer */}
                 <footer className="mt-auto pt-8 text-center">

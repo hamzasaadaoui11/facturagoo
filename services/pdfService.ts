@@ -708,8 +708,8 @@ const generateDocumentHTML = (
                 break;
               case "name":
                 content = `
-                            <div style="font-weight: 700; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
-                            ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 1px; line-height: 1.1;">${item.description}</div>` : ""}
+                            <div style="font-weight: 500; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
+                            ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 2px; line-height: 1.1;">${item.description}</div>` : ""}
                         `;
                 break;
               case "quantity":
@@ -924,7 +924,7 @@ const generateDocumentHTML = (
                 ${
                   doc.notes
                     ? `
-                    <div style="margin-top: 15px; font-size: 11px; color: #6b7280;">
+                    <div style="margin-top: 15px; font-size: 11px; color: #6b7280; white-space: pre-wrap;">
                         <span style="font-weight: 600;">${dict.notes || "Notes"}:</span> ${doc.notes}
                     </div>
                 `
@@ -1053,8 +1053,8 @@ const generateDocumentHTML = (
               break;
             case "name":
               content = `
-                        <div style="font-weight: 700; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
-                        ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 1px; line-height: 1.1;">${item.description}</div>` : ""}
+                        <div style="font-weight: 500; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
+                        ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 2px; line-height: 1.1;">${item.description}</div>` : ""}
                     `;
               break;
             case "quantity":
@@ -1257,6 +1257,19 @@ const generateDocumentHTML = (
                 <style>
                     * { box-sizing: border-box; }
                     .content-grow { flex: 1; z-index: 2; position: relative; }
+                    
+                    /* Rich Text Formatting Styles */
+                    p { margin: 0 0 4px 0; padding: 0; }
+                    p:last-child { margin-bottom: 0; }
+                    .ql-size-small { font-size: 0.75em; }
+                    .ql-size-large { font-size: 1.5em; }
+                    .ql-size-huge { font-size: 2.5em; }
+                    .ql-align-center { text-align: center; }
+                    .ql-align-right { text-align: right; }
+                    .ql-align-justify { text-align: justify; }
+                    strong, b { font-weight: bold; }
+                    em, i { font-style: italic; }
+                    u { text-decoration: underline; }
                 </style>
                 
                 ${
@@ -1404,6 +1417,18 @@ export const printDocument = (
                             body { -webkit-print-color-adjust: exact; }
                             tr.item-row { page-break-inside: avoid; }
                         }
+                        /* Rich Text Formatting Styles */
+                        p { margin: 0 0 4px 0; padding: 0; }
+                        p:last-child { margin-bottom: 0; }
+                        .ql-size-small { font-size: 0.75em; }
+                        .ql-size-large { font-size: 1.5em; }
+                        .ql-size-huge { font-size: 2.5em; }
+                        .ql-align-center { text-align: center; }
+                        .ql-align-right { text-align: right; }
+                        .ql-align-justify { text-align: justify; }
+                        strong, b { font-weight: bold; }
+                        em, i { font-style: italic; }
+                        u { text-decoration: underline; }
                     </style>
                 </head>
                 <body>

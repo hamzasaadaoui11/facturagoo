@@ -50,7 +50,8 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
 
     const filteredProducts = products.filter(product => 
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (product.productCode && product.productCode.toLowerCase().includes(searchTerm.toLowerCase()))
+        (product.productCode && product.productCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     const handleSelect = (product: Product) => {
@@ -89,7 +90,14 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
                                     className={`w-full text-left px-4 py-2.5 text-xs flex flex-col hover:bg-emerald-50 transition-colors ${selectedProductId === product.id ? 'bg-emerald-50 border-l-2 border-emerald-500' : ''}`}
                                     onClick={() => handleSelect(product)}
                                 >
-                                    <span className="font-bold text-slate-900">{product.name}</span>
+                                    <div className="flex justify-between items-start">
+                                        <span className="font-bold text-slate-900">{product.name}</span>
+                                        {product.category && (
+                                            <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 rounded-full font-bold uppercase tracking-wider">
+                                                {product.category}
+                                            </span>
+                                        )}
+                                    </div>
                                     {product.productCode && (
                                         <span className="text-[10px] text-slate-500 font-mono">{product.productCode}</span>
                                     )}

@@ -75,9 +75,9 @@ supabase.auth.onAuthStateChange((_event, session) => {
     cachedCompanyId = null; // Reset company cache to force re-fetch
 });
 
-const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number = 8000): Promise<T> => {
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number = 30000): Promise<T> => {
     const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("La requête a expiré. Cela est souvent dû à un problème de permissions (RLS recursion).")), timeoutMs)
+        setTimeout(() => reject(new Error("La requête a expiré. Cela peut être dû à une connexion lente ou à un volume important de données.")), timeoutMs)
     );
     return Promise.race([promise, timeoutPromise]);
 };
@@ -121,6 +121,9 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
                 if (retryResult.data) return retryResult.data;
             }
             console.error(`Error fetching ${storeName}:`, error);
+            if (error.message === 'Failed to fetch') {
+                throw new Error("Erreur de connexion au serveur. Veuillez vérifier votre connexion.");
+            }
             throw error;
         }
 

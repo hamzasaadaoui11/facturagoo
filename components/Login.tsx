@@ -26,7 +26,7 @@ const Login: React.FC = () => {
             });
 
             const timeoutPromise = new Promise<any>((_, reject) => 
-                setTimeout(() => reject(new Error("La connexion prend plus de temps que prévu. Veuillez vérifier votre connexion internet.")), 15000)
+                setTimeout(() => reject(new Error("La connexion prend plus de temps que prévu. Veuillez vérifier votre connexion internet.")), 30000)
             );
 
             const { error } = await Promise.race([loginPromise, timeoutPromise]);

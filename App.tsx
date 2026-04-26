@@ -74,31 +74,43 @@ const MainContent: React.FC = () => {
             try {
                 await initDB();
                 
-                const [clientsData, productsData, suppliersData, quotesData, invoicesData, creditNotesData, settingsData, paymentsData, movementsData, deliveryData, purchaseOrdersData] = await Promise.all([
-                    dbService.clients.getAll(),
-                    dbService.products.getAll(),
-                    dbService.suppliers.getAll(),
-                    dbService.quotes.getAll(),
-                    dbService.invoices.getAll(),
-                    dbService.creditNotes.getAll().catch(() => []),
-                    dbService.settings.get(),
-                    dbService.payments.getAll(),
-                    dbService.stockMovements.getAll(),
-                    dbService.deliveryNotes.getAll(),
-                    dbService.purchaseOrders.getAll()
+                // Group 1: Core setup
+                const [clientsData, productsData, suppliersData, settingsData] = await Promise.all([
+                    dbService.clients.getAll().catch(e => { throw new Error(`Clients: ${e.message}`); }),
+                    dbService.products.getAll().catch(e => { throw new Error(`Produits: ${e.message}`); }),
+                    dbService.suppliers.getAll().catch(e => { throw new Error(`Fournisseurs: ${e.message}`); }),
+                    dbService.settings.get().catch(e => { throw new Error(`Paramètres: ${e.message}`); })
                 ]);
 
                 setClients(clientsData.sort((a,b) => (b.clientCode || '').localeCompare(a.clientCode || '')));
                 setProducts(productsData.sort((a,b) => (b.productCode || '').localeCompare(a.productCode || '')));
                 setSuppliers(suppliersData.sort((a,b) => (b.supplierCode || '').localeCompare(a.supplierCode || '')));
+                setCompanySettings(settingsData);
+
+                // Group 2: Main documents
+                const [quotesData, invoicesData, deliveryData, purchaseOrdersData] = await Promise.all([
+                    dbService.quotes.getAll().catch(e => { throw new Error(`Devis: ${e.message}`); }),
+                    dbService.invoices.getAll().catch(e => { throw new Error(`Factures: ${e.message}`); }),
+                    dbService.deliveryNotes.getAll().catch(e => { throw new Error(`Bons de livraison: ${e.message}`); }),
+                    dbService.purchaseOrders.getAll().catch(e => { throw new Error(`Commandes: ${e.message}`); })
+                ]);
+
                 setQuotes(quotesData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
                 setInvoices(invoicesData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+                setDeliveryNotes(deliveryData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+                setPurchaseOrders(purchaseOrdersData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+
+                // Group 3: Secondary data
+                const [creditNotesData, paymentsData, movementsData] = await Promise.all([
+                    dbService.creditNotes.getAll().catch(() => []), 
+                    dbService.payments.getAll().catch(e => { throw new Error(`Paiements: ${e.message}`); }),
+                    dbService.stockMovements.getAll().catch(e => { throw new Error(`Mouvements Stock: ${e.message}`); })
+                ]);
+
                 setCreditNotes(creditNotesData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
                 setPayments(paymentsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
                 setStockMovements(movementsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-                setDeliveryNotes(deliveryData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
-                setPurchaseOrders(purchaseOrdersData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
-                setCompanySettings(settingsData);
+
             } catch (err: any) {
                 console.error("Failed to load data:", err);
                 

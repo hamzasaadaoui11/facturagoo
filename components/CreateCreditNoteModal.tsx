@@ -5,6 +5,7 @@ import { Client, Product, CreditNote, LineItem, CreditNoteStatus, CompanySetting
 import { useLanguage } from '../contexts/LanguageContext';
 import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
 import SearchableProductSelect from './SearchableProductSelect';
+import RichTextEditor from './RichTextEditor';
 
 interface CreateCreditNoteModalProps {
     isOpen: boolean;
@@ -410,12 +411,11 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Tag size={10} /> {t('designationLabel')} *
                                 </label>
-                                <input 
-                                    type="text" 
+                                <RichTextEditor 
                                     value={tempName} 
-                                    onChange={(e) => setTempName(e.target.value)} 
+                                    onChange={(val) => setTempName(val)} 
                                     placeholder={t('description')} 
-                                    className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-[11px] h-12 font-medium transition-all"
+                                    className="block w-full"
                                 />
                             </div>
                             <div className="col-span-1 md:col-span-12 lg:col-span-3">
@@ -539,12 +539,11 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <input 
-                                                        type="text" 
+                                                    <RichTextEditor 
                                                         value={item.name || ''} 
-                                                        onChange={(e) => updateLineItem(item.id, { name: e.target.value })}
+                                                        onChange={(val) => updateLineItem(item.id, { name: val })}
                                                         placeholder={t('designationLabel')}
-                                                        className="w-full p-1 text-left border-none focus:ring-0 text-[11px] font-bold text-slate-900 bg-transparent"
+                                                        className="w-full text-left"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">

@@ -53,9 +53,18 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
     const [name, setName] = useState('');
     const [productCode, setProductCode] = useState('');
     const [description, setDescription] = useState('');
+    const [category, setCategory] = useState('');
     const [productType, setProductType] = useState<'Produit' | 'Service'>('Produit');
     const [unitOfMeasure, setUnitOfMeasure] = useState('Aucune');
     const [vat, setVat] = useState(20);
+
+    // Extract categories for datalist
+    const categoriesList = useMemo(() => {
+        const cats = products
+            .map(p => p.category)
+            .filter((c): c is string => Boolean(c));
+        return Array.from(new Set(cats)).sort();
+    }, [products]);
 
     // Using string states for all numeric inputs to preserve decimal separators and trailing zeros during typing
     const [salePriceHTStr, setSalePriceHTStr] = useState('0');
@@ -72,6 +81,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
             setName(existingProduct.name);
             setProductCode(existingProduct.productCode);
             setDescription(existingProduct.description || '');
+            setCategory(existingProduct.category || '');
             setProductType(existingProduct.productType || 'Produit');
             setUnitOfMeasure(existingProduct.unitOfMeasure || 'Aucune');
             setVat(existingProduct.vat);
@@ -126,7 +136,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const productData = {
-            name, productCode, description, productType, unitOfMeasure, vat,
+            name, productCode, description, category, productType, unitOfMeasure, vat,
             salePrice: parseDecimalInput(salePriceHTStr),
             purchasePrice: parseDecimalInput(purchasePriceHTStr),
             stockQuantity: parseDecimalInput(stockQuantityStr),
@@ -150,11 +160,36 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                     <div className="grid grid-cols-1 gap-5 md:gap-6 sm:grid-cols-2">
                         <div>
                             <label htmlFor="productName" className="block text-sm font-medium text-neutral-700">{t('name')} *</label>
-                            <input type="text" id="productName" value={name} onChange={e => setName(e.target.value)} placeholder={t('productPlaceholder')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" required/>
+                            <textarea 
+                                id="productName" 
+                                value={name} 
+                                onChange={e => setName(e.target.value)} 
+                                placeholder={t('productPlaceholder')} 
+                                className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm resize-y" 
+                                rows={1}
+                                required
+                            />
                         </div>
                         <div>
                             <label htmlFor="productCode" className="block text-sm font-medium text-neutral-700">{t('reference')}</label>
                             <input type="text" id="productCode" value={productCode} onChange={e => setProductCode(e.target.value)} placeholder={t('refPlaceholder')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm"/>
+                        </div>
+                        <div>
+                            <label htmlFor="category" className="block text-sm font-medium text-neutral-700">Catégorie (Optionnel)</label>
+                            <input 
+                                type="text" 
+                                id="category" 
+                                value={category} 
+                                onChange={e => setCategory(e.target.value)} 
+                                list="categories-list"
+                                placeholder="Sélectionnez ou tapez..." 
+                                className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm"
+                            />
+                            <datalist id="categories-list">
+                                {categoriesList.map(cat => (
+                                    <option key={cat} value={cat} />
+                                ))}
+                            </datalist>
                         </div>
                         <div className="sm:col-span-2">
                             <label htmlFor="description" className="block text-sm font-medium text-neutral-700">{t('description')}</label>
@@ -204,15 +239,18 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                                 <h4 className="text-md font-medium text-neutral-800">{t('salePrice')}</h4>
                                 <Toggle enabled={salePriceIsTTC} setEnabled={setSalePriceIsTTC} htLabel="HT" ttcLabel="TTC" />
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-                                <div>
-                                    <label htmlFor="salePriceHT" className="block text-sm font-medium text-neutral-700">{t('salePrice')} HT</label>
-                                    <input type="text" id="salePriceHT" value={salePriceHTStr} onChange={e => handlePriceInputChange(e.target.value, 'sale', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" />
-                                </div>
-                                <div>
-                                    <label htmlFor="salePriceTTC" className="block text-sm font-medium text-neutral-700">{t('salePrice')} TTC</label>
-                                    <input type="text" id="salePriceTTC" value={salePriceTTCStr} onChange={e => handlePriceInputChange(e.target.value, 'sale', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm bg-neutral-50" />
-                                </div>
+                            <div className="max-w-md">
+                                {salePriceIsTTC ? (
+                                    <div>
+                                        <label htmlFor="salePriceTTC" className="block text-sm font-medium text-neutral-700">{t('salePrice')} TTC</label>
+                                        <input type="text" id="salePriceTTC" value={salePriceTTCStr} onChange={e => handlePriceInputChange(e.target.value, 'sale', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" />
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <label htmlFor="salePriceHT" className="block text-sm font-medium text-neutral-700">{t('salePrice')} HT</label>
+                                        <input type="text" id="salePriceHT" value={salePriceHTStr} onChange={e => handlePriceInputChange(e.target.value, 'sale', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" />
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -222,15 +260,18 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                                 <h4 className="text-md font-medium text-neutral-800">{t('purchasePrice')}</h4>
                                 <Toggle enabled={purchasePriceIsTTC} setEnabled={setPurchasePriceIsTTC} htLabel="HT" ttcLabel="TTC" />
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-                                <div>
-                                    <label htmlFor="purchasePriceHT" className="block text-sm font-medium text-neutral-700">{t('purchasePrice')} HT</label>
-                                    <input type="text" id="purchasePriceHT" value={purchasePriceHTStr} onChange={e => handlePriceInputChange(e.target.value, 'purchase', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" />
-                                </div>
-                                <div>
-                                    <label htmlFor="purchasePriceTTC" className="block text-sm font-medium text-neutral-700">{t('purchasePrice')} TTC</label>
-                                    <input type="text" id="purchasePriceTTC" value={purchasePriceTTCStr} onChange={e => handlePriceInputChange(e.target.value, 'purchase', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm bg-neutral-50" />
-                                </div>
+                            <div className="max-w-md">
+                                {purchasePriceIsTTC ? (
+                                    <div>
+                                        <label htmlFor="purchasePriceTTC" className="block text-sm font-medium text-neutral-700">{t('purchasePrice')} TTC</label>
+                                        <input type="text" id="purchasePriceTTC" value={purchasePriceTTCStr} onChange={e => handlePriceInputChange(e.target.value, 'purchase', 'ttc')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" />
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <label htmlFor="purchasePriceHT" className="block text-sm font-medium text-neutral-700">{t('purchasePrice')} HT</label>
+                                        <input type="text" id="purchasePriceHT" value={purchasePriceHTStr} onChange={e => handlePriceInputChange(e.target.value, 'purchase', 'ht')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" />
+                                    </div>
+                                )}
                             </div>
                         </div>
                         
@@ -285,6 +326,15 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
     const [productIdToDelete, setProductIdToDelete] = useState<string | null>(null);
     const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+    // Categories logic
+    const categories = useMemo(() => {
+        const cats = products
+            .map(p => p.category)
+            .filter((c): c is string => Boolean(c));
+        return Array.from(new Set(cats)).sort();
+    }, [products]);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -292,10 +342,15 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
 
     const filteredProducts = products.filter(product => {
         const term = searchTerm.toLowerCase();
-        return (
+        const matchesSearch = (
             product.name.toLowerCase().includes(term) ||
-            product.productCode.toLowerCase().includes(term)
+            product.productCode.toLowerCase().includes(term) ||
+            (product.category && product.category.toLowerCase().includes(term))
         );
+        
+        const matchesCategory = selectedCategory === null || product.category === selectedCategory;
+        
+        return matchesSearch && matchesCategory;
     });
 
     // Reset to first page when search changes
@@ -416,6 +471,7 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                 <ImportProductsModal 
                     isOpen={isImportOpen}
                     onClose={() => setIsImportOpen(false)}
+                    existingCategories={categories}
                     onImport={(importedProducts) => {
                         importedProducts.forEach(product => onAddProduct(product));
                     }}
@@ -423,6 +479,35 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
             )}
 
             <div className="space-y-4">
+                {/* Category Tabs */}
+                {categories.length > 0 && (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                        <button
+                            onClick={() => setSelectedCategory(null)}
+                            className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${
+                                selectedCategory === null 
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-100' 
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
+                            }`}
+                        >
+                            {language === 'fr' ? 'Tout' : 'All'}
+                        </button>
+                        {categories.map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
+                                className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${
+                                    selectedCategory === cat 
+                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-100' 
+                                    : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
+                                }`}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {/* Search and Bulk Actions */}
                 <div className="bg-white p-4 rounded-xl shadow-sm ring-1 ring-neutral-200 flex flex-col md:flex-row gap-4 items-center justify-between">
                     <div className="flex w-full md:max-w-md gap-2">
@@ -487,6 +572,7 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                                     </th>
                                     <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('reference')}</th>
                                     <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('name')}</th>
+                                    <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>Catégorie</th>
                                     <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('stock')}</th>
                                     <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{t('totalHT')}</th>
                                     <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('vat')}</th>
@@ -506,7 +592,14 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                                                 />
                                             </td>
                                             <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 font-mono ${isRTL ? 'text-right' : 'text-left'}`}>{product.productCode}</td>
-                                            <td className={`whitespace-nowrap px-6 py-4 text-sm font-medium text-neutral-900 ${isRTL ? 'text-right' : 'text-left'}`}>{product.name}</td>
+                                            <td className={`px-6 py-4 text-sm font-medium text-neutral-900 whitespace-pre-line ${isRTL ? 'text-right' : 'text-left'}`}>{product.name}</td>
+                                            <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                                {product.category ? (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                                                        {product.category}
+                                                    </span>
+                                                ) : '-'}
+                                            </td>
                                             <td className={`whitespace-nowrap px-6 py-4 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
                                                 {product.productType === 'Service' ? (
                                                     <span className="text-neutral-400 italic">{t('pService')}</span>
@@ -581,7 +674,7 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                                             />
                                         </div>
                                         <div className="min-w-0">
-                                            <h4 className="text-base font-bold text-neutral-900 truncate">{product.name}</h4>
+                                            <h4 className="text-base font-bold text-neutral-900 whitespace-pre-line">{product.name}</h4>
                                             <p className="text-xs text-neutral-500 font-mono mt-0.5">{product.productCode}</p>
                                             
                                             <div className="mt-2 flex flex-wrap gap-2">

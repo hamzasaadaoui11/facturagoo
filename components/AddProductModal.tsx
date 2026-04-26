@@ -9,9 +9,10 @@ interface AddProductModalProps {
     onClose: () => void;
     onSave: (product: Omit<Product, 'id'>, id?: string) => void;
     productToEdit: Product | null;
+    existingCategories?: string[];
 }
 
-const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSave, productToEdit }) => {
+const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSave, productToEdit, existingCategories = [] }) => {
     const { t } = useLanguage();
     const [name, setName] = useState('');
     const [productCode, setProductCode] = useState('');
@@ -20,6 +21,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
     const [purchasePrice, setPurchasePrice] = useState(0);
     const [purchasePriceTTC, setPurchasePriceTTC] = useState(0);
     const [vat, setVat] = useState(20);
+    const [category, setCategory] = useState('');
 
     const isEditMode = productToEdit !== null;
 
@@ -33,6 +35,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                 setPurchasePrice(productToEdit.purchasePrice);
                 setPurchasePriceTTC(productToEdit.purchasePrice * (1 + productToEdit.vat / 100));
                 setVat(productToEdit.vat);
+                setCategory(productToEdit.category || '');
             } else {
                 setName('');
                 setProductCode('');
@@ -41,6 +44,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                 setPurchasePrice(0);
                 setPurchasePriceTTC(0);
                 setVat(20);
+                setCategory('');
             }
         }
     }, [productToEdit, isOpen]);
@@ -81,6 +85,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
         onSave({ 
             name,
             productCode,
+            category,
             description: productToEdit?.description || '',
             productType: productToEdit?.productType || 'Produit',
             unitOfMeasure: productToEdit?.unitOfMeasure || 'Aucune',
@@ -107,11 +112,34 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                 <form onSubmit={handleSubmit} className="mt-4 space-y-4">
                     <div>
                         <label htmlFor="productName" className="block text-sm font-medium text-slate-700">{t('name')}</label>
-                        <input type="text" id="productName" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                        <textarea 
+                            id="productName" 
+                            value={name} 
+                            onChange={(e) => setName(e.target.value)} 
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm resize-y"
+                            rows={1}
+                        />
                     </div>
                     <div>
                         <label htmlFor="modalProductCode" className="block text-sm font-medium text-slate-700">{t('reference')}</label>
                         <input type="text" id="modalProductCode" value={productCode} onChange={(e) => setProductCode(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                    </div>
+                    <div>
+                        <label htmlFor="modalCategory" className="block text-sm font-medium text-slate-700">Catégorie (Optionnel)</label>
+                        <input 
+                            type="text" 
+                            id="modalCategory" 
+                            value={category} 
+                            onChange={(e) => setCategory(e.target.value)} 
+                            list="modal-categories-list"
+                            placeholder="Sélectionnez ou tapez..."
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" 
+                        />
+                        <datalist id="modal-categories-list">
+                            {existingCategories.map(cat => (
+                                <option key={cat} value={cat} />
+                            ))}
+                        </datalist>
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>

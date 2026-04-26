@@ -9,11 +9,13 @@ interface ImportProductsModalProps {
     isOpen: boolean;
     onClose: () => void;
     onImport: (products: Omit<Product, 'id'>[]) => void;
+    existingCategories?: string[];
 }
 
-const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClose, onImport }) => {
+const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClose, onImport, existingCategories = [] }) => {
     const { t, language } = useLanguage();
     const [file, setFile] = useState<File | null>(null);
+    const [category, setCategory] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
@@ -65,10 +67,12 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                         const description = row.Description || row.description || '';
                         const productType = (row.Type || row.type || 'Produit') as 'Produit' | 'Service';
                         const unitOfMeasure = row.Unité || row.Unit || row.unite || 'Aucune';
+                        const rowCategory = row.Catégorie || row.Category || row.categorie || row.category || category;
 
                         return {
                             name,
                             productCode,
+                            category: rowCategory,
                             purchasePrice: isNaN(purchasePrice) ? 0 : purchasePrice,
                             salePrice: isNaN(salePrice) ? 0 : salePrice,
                             stockQuantity: isNaN(stockQuantity) ? 0 : stockQuantity,
@@ -105,8 +109,8 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
                 <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
@@ -121,7 +125,7 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                     </button>
                 </div>
 
-                <div className="p-6 space-y-6">
+                <div className="p-6 space-y-6 overflow-y-auto flex-1">
                     {!success && (
                         <div className="space-y-4">
                             <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex gap-3">
@@ -132,8 +136,8 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                                     </p>
                                     <p className="mb-2">
                                         {language === 'fr' 
-                                            ? 'Fichier Excel avec colonnes : Nom, Référence, Prix d\'achat, Prix de vente, Quantité, TVA.' 
-                                            : 'Excel file with columns: Name, Reference, Purchase Price, Sale Price, Quantity, VAT.'}
+                                            ? 'Fichier Excel avec colonnes : Nom, Référence, Prix d\'achat, Prix de vente, Quantité, TVA, Catégorie.' 
+                                            : 'Excel file with columns: Name, Reference, Purchase Price, Sale Price, Quantity, VAT, Category.'}
                                     </p>
                                     <button 
                                         onClick={() => {
@@ -145,6 +149,7 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                                                     "Prix de vente": 150,
                                                     "Quantité": 10,
                                                     "TVA": 20,
+                                                    "Catégorie": "Exemple",
                                                     "Description": "Description du produit",
                                                     "Type": "Produit",
                                                     "Unité": "Unité"
@@ -160,6 +165,30 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                                         {language === 'fr' ? 'Télécharger le modèle Excel' : 'Download Excel Template'}
                                     </button>
                                 </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <label className="block text-sm font-bold text-slate-700 mb-2">
+                                    {language === 'fr' ? 'Catégorie pour l\'importation (Optionnel)' : 'Import Category (Optional)'}
+                                </label>
+                                <input 
+                                    type="text"
+                                    value={category}
+                                    onChange={(e) => setCategory(e.target.value)}
+                                    list="import-categories-list"
+                                    placeholder={language === 'fr' ? 'Ex: Matériel, Stock...' : 'Ex: Hardware, Stock...'}
+                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all font-medium"
+                                />
+                                <datalist id="import-categories-list">
+                                    {existingCategories.map(cat => (
+                                        <option key={cat} value={cat} />
+                                    ))}
+                                </datalist>
+                                <p className="text-[10px] text-slate-500 mt-1">
+                                    {language === 'fr' 
+                                        ? 'Si vous spécifiez une catégorie ici, elle sera appliquée à tous les produits qui n\'en ont pas dans le fichier.' 
+                                        : 'If you specify a category here, it will be applied to all products that don\'t have one in the file.'}
+                                </p>
                             </div>
 
                             <div 
