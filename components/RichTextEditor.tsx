@@ -27,16 +27,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         'size'
     ];
 
-    const handleContainerClick = () => {
-        if (quillRef.current) {
-            quillRef.current.focus();
-        }
-    };
-
     return (
         <div 
             className={`rich-text-editor ${className || ''} rounded-xl overflow-hidden border border-slate-200 focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500 transition-all`}
-            onClick={handleContainerClick}
         >
             <ReactQuill 
                 ref={quillRef}
