@@ -9,23 +9,23 @@ interface RichTextEditorProps {
     className?: string;
 }
 
+const modules = {
+    toolbar: [
+        ['bold', 'italic', 'underline'],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'size': ['small', false, 'large', 'huge'] }],
+        ['clean']
+    ],
+};
+
+const formats = [
+    'bold', 'italic', 'underline',
+    'color', 'background',
+    'size'
+];
+
 const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeholder, className }) => {
     const quillRef = useRef<ReactQuill>(null);
-
-    const modules = {
-        toolbar: [
-            ['bold', 'italic', 'underline'],
-            [{ 'color': [] }, { 'background': [] }],
-            [{ 'size': ['small', false, 'large', 'huge'] }],
-            ['clean']
-        ],
-    };
-
-    const formats = [
-        'bold', 'italic', 'underline',
-        'color', 'background',
-        'size'
-    ];
 
     return (
         <div 
