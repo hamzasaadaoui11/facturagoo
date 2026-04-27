@@ -196,6 +196,9 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
         const { data, error } = result;
 
         if (error) {
+            if (error.code === 'PGRST204' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
+                console.error("Missing DB columns. Run SQL in /supabase_schema_update.sql");
+            }
             const recovered = await handleAuthError(error);
             if (recovered) {
                 const retryResult: any = await withTimeout(supabase.from(tableName).insert(itemWithUser).select().single() as any);
@@ -260,6 +263,9 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
         const { data, error } = result;
 
         if (error) {
+            if (error.code === 'PGRST204' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
+                console.error("Missing DB columns. Run SQL in /supabase_schema_update.sql");
+            }
             const recovered = await handleAuthError(error);
             if (recovered) {
                 const retryResult: any = await withTimeout(supabase.from(tableName).update(itemToSave).eq('id', id).eq('company_id', companyId).select().single() as any);
@@ -365,6 +371,9 @@ const bulkAdd = async (storeName: string, items: any[]): Promise<void> => {
             .insert(itemsWithUser);
 
         if (error) {
+            if (error.code === 'PGRST204' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
+                console.error("Missing DB columns in bulk operation. Run SQL in /supabase_schema_update.sql");
+            }
             if (await handleAuthError(error)) {
                 await supabase.from(tableName).insert(itemsWithUser);
                 return;

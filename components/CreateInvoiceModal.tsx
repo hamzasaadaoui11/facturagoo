@@ -44,6 +44,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     const [newPaymentAmount, setNewPaymentAmount] = useState<number>(0); 
     
     const [selectedProductId, setSelectedProductId] = useState('');
+    const [selectedVariantId, setSelectedVariantId] = useState('');
     const [tempName, setTempName] = useState('');
     const [tempDesc, setTempDesc] = useState('');
     const [tempPrice, setTempPrice] = useState<string>('0'); 
@@ -114,6 +115,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
 
     const resetItemForm = () => {
         setSelectedProductId('');
+        setSelectedVariantId('');
         setTempName('');
         setTempDesc('');
         setTempPrice('0');
@@ -140,9 +142,30 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setTempPrice(formatDecimalForInput(priceToDisplay, language));
                 setTempVat(product.vat);
                 setTempProductCode(product.productCode);
+                
+                // Reset variant if product changes
+                setSelectedVariantId('');
             }
         }
     }, [selectedProductId, products, language, isModeTTC]);
+
+    useEffect(() => {
+        if (selectedVariantId && selectedProductId) {
+            const product = products.find(p => p.id === selectedProductId);
+            const variant = product?.variants?.find(v => v.id === selectedVariantId);
+            if (variant && product) {
+                // Prepend or append variant name to designation
+                const baseName = product.description || product.name;
+                setTempName(`${baseName} (${variant.attributeValue})`);
+                
+                // If variant has specific price, use it
+                if (variant.salePrice !== undefined && variant.salePrice > 0) {
+                    const priceToDisplay = isModeTTC ? (variant.salePrice * (1 + product.vat / 100)) : variant.salePrice;
+                    setTempPrice(formatDecimalForInput(priceToDisplay, language));
+                }
+            }
+        }
+    }, [selectedVariantId, selectedProductId, products, language, isModeTTC]);
 
     const isM2 = calculationMode === 'm2';
     const isML = calculationMode === 'ml';
@@ -169,19 +192,39 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             if (selectedProductId) {
                 const product = products.find(p => p.id === selectedProductId);
                 if (product && product.productType === 'Produit') {
-                    const currentQtyInInvoice = lineItems
-                        .filter(li => li.productId === selectedProductId)
-                        .reduce((sum, li) => sum + li.quantity, 0);
-                    const totalRequestedQty = currentQtyInInvoice + qty;
-                    
-                    const savedItem = invoiceToEdit?.lineItems?.find(li => li.productId === selectedProductId);
-                    const savedQty = (savedItem && invoiceToEdit?.status !== InvoiceStatus.Draft) ? savedItem.quantity : 0;
-                    
-                    const availableStock = (product.stockQuantity || 0) + savedQty;
-                    
-                    if (totalRequestedQty > availableStock) {
-                        alert(`Stock insuffisant pour ${product.name}. Stock disponible: ${availableStock}`);
-                        return;
+                    if (selectedVariantId && product.hasVariants && product.variants) {
+                        const variant = product.variants.find(v => v.id === selectedVariantId);
+                        if (variant) {
+                            const currentQtyInInvoice = lineItems
+                                .filter(li => li.productId === selectedProductId && li.variantId === selectedVariantId)
+                                .reduce((sum, li) => sum + li.quantity, 0);
+                            const totalRequestedQty = currentQtyInInvoice + qty;
+                            
+                            const savedItem = invoiceToEdit?.lineItems?.find(li => li.productId === selectedProductId && li.variantId === selectedVariantId);
+                            const savedQty = (savedItem && invoiceToEdit?.status !== InvoiceStatus.Draft) ? savedItem.quantity : 0;
+                            
+                            const availableStock = (variant.stockQuantity || 0) + savedQty;
+                            
+                            if (totalRequestedQty > availableStock) {
+                                alert(`Stock insuffisant pour la variante ${variant.attributeValue} de ${product.name}. Stock disponible: ${availableStock}`);
+                                return;
+                            }
+                        }
+                    } else {
+                        const currentQtyInInvoice = lineItems
+                            .filter(li => li.productId === selectedProductId && !li.variantId)
+                            .reduce((sum, li) => sum + li.quantity, 0);
+                        const totalRequestedQty = currentQtyInInvoice + qty;
+                        
+                        const savedItem = invoiceToEdit?.lineItems?.find(li => li.productId === selectedProductId && !li.variantId);
+                        const savedQty = (savedItem && invoiceToEdit?.status !== InvoiceStatus.Draft) ? savedItem.quantity : 0;
+                        
+                        const availableStock = (product.stockQuantity || 0) + savedQty;
+                        
+                        if (totalRequestedQty > availableStock) {
+                            alert(`Stock insuffisant pour ${product.name}. Stock disponible: ${availableStock}`);
+                            return;
+                        }
                     }
                 }
             }
@@ -197,6 +240,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             const newItem: LineItem = {
                 id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 productId: selectedProductId || null,
+                variantId: selectedVariantId || undefined,
                 productCode: tempProductCode || '',
                 name: tempName,
                 description: tempDesc || '',
@@ -263,24 +307,44 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
         else if (totalPaid > 0) status = InvoiceStatus.Partial;
 
         // Stock check before saving
-        const checkedProductIds = new Set<string>();
+        const checkedVariantKeys = new Set<string>();
         for (const item of lineItems) {
-            if (item.productId && !checkedProductIds.has(item.productId)) {
-                checkedProductIds.add(item.productId);
+            const key = `${item.productId}-${item.variantId || 'none'}`;
+            if (item.productId && !checkedVariantKeys.has(key)) {
+                checkedVariantKeys.add(key);
                 const product = products.find(p => p.id === item.productId);
                 if (product && product.productType === 'Produit') {
-                    const totalQtyInInvoice = lineItems
-                        .filter(li => li.productId === item.productId)
-                        .reduce((sum, li) => sum + li.quantity, 0);
+                    if (item.variantId && product.hasVariants && product.variants) {
+                        const variant = product.variants.find(v => v.id === item.variantId);
+                        if (variant) {
+                            const totalQtyInInvoice = lineItems
+                                .filter(li => li.productId === item.productId && li.variantId === item.variantId)
+                                .reduce((sum, li) => sum + li.quantity, 0);
+                                
+                            const savedItem = invoiceToEdit?.lineItems.find(li => li.productId === item.productId && li.variantId === item.variantId);
+                            const savedQty = (savedItem && invoiceToEdit?.status !== InvoiceStatus.Draft) ? savedItem.quantity : 0;
+                            
+                            const availableStock = (variant.stockQuantity || 0) + savedQty;
+                            
+                            if (totalQtyInInvoice > availableStock) {
+                                alert(`Stock insuffisant pour la variante ${variant.attributeValue} de ${product.name}. Stock disponible: ${availableStock}`);
+                                return;
+                            }
+                        }
+                    } else {
+                        const totalQtyInInvoice = lineItems
+                            .filter(li => li.productId === item.productId && !li.variantId)
+                            .reduce((sum, li) => sum + li.quantity, 0);
+                            
+                        const savedItem = invoiceToEdit?.lineItems.find(li => li.productId === item.productId && !li.variantId);
+                        const savedQty = (savedItem && invoiceToEdit?.status !== InvoiceStatus.Draft) ? savedItem.quantity : 0;
                         
-                    const savedItem = invoiceToEdit?.lineItems.find(li => li.productId === item.productId);
-                    const savedQty = (savedItem && invoiceToEdit?.status !== InvoiceStatus.Draft) ? savedItem.quantity : 0;
-                    
-                    const availableStock = (product.stockQuantity || 0) + savedQty;
-                    
-                    if (totalQtyInInvoice > availableStock) {
-                        alert(`Stock insuffisant pour ${item.name}. Stock disponible: ${availableStock}`);
-                        return;
+                        const availableStock = (product.stockQuantity || 0) + savedQty;
+                        
+                        if (totalQtyInInvoice > availableStock) {
+                            alert(`Stock insuffisant pour ${product.name}. Stock disponible: ${availableStock}`);
+                            return;
+                        }
                     }
                 }
             }
@@ -536,6 +600,30 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                     onSelect={setSelectedProductId}
                                     placeholder={`-- ${t('select')} --`}
                                 />
+                                {selectedProductId && products.find(p => p.id === selectedProductId)?.hasVariants && (
+                                    <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <label className="block text-[9px] font-bold text-emerald-600 uppercase mb-1 ml-1 font-mono">Variante *</label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {products.find(p => p.id === selectedProductId)?.variants?.map(variant => (
+                                                <button
+                                                    key={variant.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedVariantId(variant.id)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                                        selectedVariantId === variant.id
+                                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm scale-[1.02]'
+                                                        : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50'
+                                                    }`}
+                                                >
+                                                    {variant.attributeValue} 
+                                                    <span className={`ml-1.5 opacity-60 font-mono text-[10px] ${selectedVariantId === variant.id ? 'text-white' : 'text-slate-400'}`}>
+                                                        ({variant.stockQuantity || 0})
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="col-span-1 md:col-span-24 lg:col-span-6">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">

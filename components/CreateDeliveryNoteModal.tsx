@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Plus, Trash2, ScanLine, Calculator, CreditCard, Loader2, Package, Square, Ruler, Weight, Hash, Tag, Coins, Layers } from 'lucide-react';
-import { Client, Product, DeliveryNote, LineItem, CompanySettings } from '../types';
+import { Client, Product, DeliveryNote, LineItem, CompanySettings, Invoice, InvoiceStatus } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
 import SearchableProductSelect from './SearchableProductSelect';
@@ -13,11 +13,12 @@ interface CreateDeliveryNoteModalProps {
     onSave: (note: Omit<DeliveryNote, 'id'>, id?: string) => Promise<any> | void;
     clients: Client[];
     products: Product[];
+    invoices: Invoice[];
     noteToEdit?: DeliveryNote | null;
     companySettings?: CompanySettings | null;
 }
 
-const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpen, onClose, onSave, clients, products, noteToEdit, companySettings }) => {
+const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpen, onClose, onSave, clients, products, invoices, noteToEdit, companySettings }) => {
     const { t, isRTL, language } = useLanguage();
     const [isVisible, setIsVisible] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,6 +39,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     const [showPaymentMethodField, setShowPaymentMethodField] = useState(false);
     
     const [selectedProductId, setSelectedProductId] = useState('');
+    const [selectedVariantId, setSelectedVariantId] = useState('');
     const [tempName, setTempName] = useState('');
     const [tempDesc, setTempDesc] = useState('');
     const [tempPrice, setTempPrice] = useState<string>('0');
@@ -97,6 +99,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
 
     const resetItemForm = () => {
         setSelectedProductId('');
+        setSelectedVariantId('');
         setTempName('');
         setTempDesc('');
         setTempPrice('0');
@@ -127,9 +130,26 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setTempPrice(formatDecimalForInput(priceToDisplay, language));
                 setTempVat(product.vat);
                 setTempProductCode(product.productCode);
+                setSelectedVariantId('');
             }
         }
     }, [selectedProductId, products, language, isModeTTC]);
+
+    useEffect(() => {
+        if (selectedVariantId && selectedProductId) {
+            const product = products.find(p => p.id === selectedProductId);
+            const variant = product?.variants?.find(v => v.id === selectedVariantId);
+            if (variant && product) {
+                const baseName = product.description || product.name;
+                setTempName(`${baseName} (${variant.attributeValue})`);
+                
+                if (variant.salePrice !== undefined && variant.salePrice > 0) {
+                    const priceToDisplay = isModeTTC ? (variant.salePrice * (1 + product.vat / 100)) : variant.salePrice;
+                    setTempPrice(formatDecimalForInput(priceToDisplay, language));
+                }
+            }
+        }
+    }, [selectedVariantId, selectedProductId, products, language, isModeTTC]);
 
     const isM2 = calculationMode === 'm2';
     const isML = calculationMode === 'ml';
@@ -151,6 +171,51 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         try {
             if (!tempName) return;
             const qty = parseDecimalInput(itemQuantity);
+
+            // Stock check
+            if (selectedProductId) {
+                const product = products.find(p => p.id === selectedProductId);
+                if (product && product.productType === 'Produit') {
+                    if (selectedVariantId && product.hasVariants && product.variants) {
+                        const variant = product.variants.find(v => v.id === selectedVariantId);
+                        if (variant) {
+                            const currentQtyInDN = lineItems
+                                .filter(li => li.productId === selectedProductId && li.variantId === selectedVariantId)
+                                .reduce((sum, li) => sum + li.quantity, 0);
+                            const totalRequestedQty = currentQtyInDN + qty;
+                            
+                            const savedItem = noteToEdit?.lineItems?.find(li => li.productId === selectedProductId && li.variantId === selectedVariantId);
+                            const sourceInvoice = noteToEdit?.invoiceId ? invoices.find(inv => inv.documentId === noteToEdit.invoiceId || inv.id === noteToEdit.invoiceId) : null;
+                            const stockAlreadyDeductedByInv = sourceInvoice && sourceInvoice.status !== InvoiceStatus.Draft;
+                            
+                            const savedQty = (!stockAlreadyDeductedByInv) ? (savedItem?.quantity || 0) : 0;
+                            const availableStock = (variant.stockQuantity || 0) + savedQty;
+                            
+                            if (totalRequestedQty > availableStock) {
+                                alert(`Stock insuffisant pour la variante ${variant.attributeValue} de ${product.name}. Stock disponible: ${availableStock}`);
+                                return;
+                            }
+                        }
+                    } else {
+                        const currentQtyInDN = lineItems
+                            .filter(li => li.productId === selectedProductId && !li.variantId)
+                            .reduce((sum, li) => sum + li.quantity, 0);
+                        const totalRequestedQty = currentQtyInDN + qty;
+                        
+                        const savedItem = noteToEdit?.lineItems?.find(li => li.productId === selectedProductId && !li.variantId);
+                        const sourceInvoice = noteToEdit?.invoiceId ? invoices.find(inv => inv.documentId === noteToEdit.invoiceId || inv.id === noteToEdit.invoiceId) : null;
+                        const stockAlreadyDeductedByInv = sourceInvoice && sourceInvoice.status !== InvoiceStatus.Draft;
+                        
+                        const savedQty = (!stockAlreadyDeductedByInv) ? (savedItem?.quantity || 0) : 0;
+                        const availableStock = (product.stockQuantity || 0) + savedQty;
+                        
+                        if (totalRequestedQty > availableStock) {
+                            alert(`Stock insuffisant pour ${product.name}. Stock disponible: ${availableStock}`);
+                            return;
+                        }
+                    }
+                }
+            }
             const inputPrice = parseDecimalInput(tempPrice);
             const vatValue = typeof tempVat === 'number' ? tempVat : 20;
             const price = isModeTTC ? (inputPrice / (1 + vatValue / 100)) : inputPrice;
@@ -162,6 +227,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
             const newItem: LineItem = {
                 id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 productId: selectedProductId || null,
+                variantId: selectedVariantId || undefined,
                 productCode: tempProductCode || '',
                 name: tempName,
                 description: tempDesc || '',
@@ -404,6 +470,30 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                     onSelect={setSelectedProductId}
                                     placeholder={`-- ${t('select')} --`}
                                 />
+                                {selectedProductId && products.find(p => p.id === selectedProductId)?.hasVariants && (
+                                    <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <label className="block text-[9px] font-bold text-emerald-600 uppercase mb-1 ml-1 font-mono">Variante *</label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {products.find(p => p.id === selectedProductId)?.variants?.map(variant => (
+                                                <button
+                                                    key={variant.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedVariantId(variant.id)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                                        selectedVariantId === variant.id
+                                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm scale-[1.02]'
+                                                        : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50'
+                                                    }`}
+                                                >
+                                                    {variant.attributeValue} 
+                                                    <span className={`ml-1.5 opacity-60 font-mono text-[10px] ${selectedVariantId === variant.id ? 'text-white' : 'text-slate-400'}`}>
+                                                        ({variant.stockQuantity || 0})
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="col-span-1 md:col-span-24 lg:col-span-6">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">

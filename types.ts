@@ -39,6 +39,15 @@ export interface Supplier {
     address?: string;
 }
 
+export interface ProductVariant {
+    id: string; // SKU or unique ID for the variant
+    name: string; // e.g., "T-shirt - XL - Bleu"
+    attributeValue: string; // e.g., "XL"
+    stockQuantity: number;
+    salePrice?: number; // Optional: if variant has different price
+    purchasePrice?: number; // Optional: if variant has different cost
+}
+
 export interface Product {
     id: string;
     productCode: string;
@@ -49,9 +58,11 @@ export interface Product {
     salePrice: number; // Stored as HT
     purchasePrice: number; // Stored as HT
     vat: number;
-    stockQuantity: number; // Real stock tracking
+    stockQuantity: number; // Real stock tracking (sum of variants if they exist)
     minStockAlert: number;
     category?: string;
+    hasVariants?: boolean;
+    variants?: ProductVariant[];
 }
 
 export enum QuoteStatus {
@@ -73,6 +84,7 @@ export enum PurchaseOrderStatus {
 export interface LineItem {
   id: string;
   productId: string | null;
+  variantId?: string; // Link to specific product variant
   productCode?: string; // Reference/SKU display
   name: string;
   description: string;
@@ -200,6 +212,7 @@ export interface Payment {
 export interface StockMovement {
     id: string;
     productId: string;
+    variantId?: string; // Link to specific product variant
     productName: string;
     date: string;
     quantity: number; // Positive for IN, Negative for OUT

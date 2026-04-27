@@ -3,8 +3,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import Header from './Header';
 import ConfirmationModal from './ConfirmationModal';
-import { Plus, Pencil, Trash2, ArrowLeft, Package, AlertTriangle, Search, Upload, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { Product, CompanySettings } from '../types';
+import { Plus, Pencil, Trash2, ArrowLeft, Package, AlertTriangle, Search, Upload, ChevronLeft, ChevronRight, X, Layers } from 'lucide-react';
+import { Product, CompanySettings, ProductVariant } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatCurrency, parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
 import ImportProductsModal from './ImportProductsModal';
@@ -58,6 +58,10 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
     const [unitOfMeasure, setUnitOfMeasure] = useState('Aucune');
     const [vat, setVat] = useState(20);
 
+    // Variants state
+    const [hasVariants, setHasVariants] = useState(false);
+    const [variants, setVariants] = useState<ProductVariant[]>([]);
+
     // Extract categories for datalist
     const categoriesList = useMemo(() => {
         const cats = products
@@ -84,6 +88,8 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
             setCategory(existingProduct.category || '');
             setProductType(existingProduct.productType || 'Produit');
             setUnitOfMeasure(existingProduct.unitOfMeasure || 'Aucune');
+            setHasVariants(!!existingProduct.hasVariants);
+            setVariants(existingProduct.variants || []);
             setVat(existingProduct.vat);
             
             const sPriceHT = existingProduct.salePrice;
@@ -99,6 +105,14 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
              setVat(language === 'es' ? 21 : 20);
         }
     }, [isEditMode, existingProduct, language]);
+
+    // Update total stock when variants change
+    useEffect(() => {
+        if (hasVariants && variants.length > 0) {
+            const total = variants.reduce((sum, v) => sum + v.stockQuantity, 0);
+            setStockQuantityStr(formatDecimalForInput(total, language));
+        }
+    }, [variants, hasVariants, language]);
 
     // Update TTC strings when VAT changes
     useEffect(() => {
@@ -133,6 +147,24 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
         }
     };
     
+    const addVariant = () => {
+        const newVariant: ProductVariant = {
+            id: `${Date.now()}`,
+            name: `${name} - `,
+            attributeValue: '',
+            stockQuantity: 0
+        };
+        setVariants([...variants, newVariant]);
+    };
+
+    const removeVariant = (id: string) => {
+        setVariants(variants.filter(v => v.id !== id));
+    };
+
+    const updateVariant = (id: string, updates: Partial<ProductVariant>) => {
+        setVariants(variants.map(v => v.id === id ? { ...v, ...updates } : v));
+    };
+    
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const productData = {
@@ -140,7 +172,9 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
             salePrice: parseDecimalInput(salePriceHTStr),
             purchasePrice: parseDecimalInput(purchasePriceHTStr),
             stockQuantity: parseDecimalInput(stockQuantityStr),
-            minStockAlert: 5 
+            minStockAlert: 5,
+            hasVariants,
+            variants: hasVariants ? variants : []
         };
         if (isEditMode && existingProduct) {
             onUpdateProduct({ ...existingProduct, ...productData });
@@ -222,9 +256,79 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                                     id="stockQuantity" 
                                     value={stockQuantityStr} 
                                     onChange={e => setStockQuantityStr(e.target.value)} 
-                                    className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" 
+                                    disabled={hasVariants}
+                                    className={`mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm ${hasVariants ? 'bg-slate-50 text-slate-400 italic cursor-not-allowed' : ''}`} 
                                 />
                                 <p className="mt-1 text-xs text-neutral-500">{t('stockUpdateNote')}</p>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-slate-100">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2 text-neutral-900 font-bold">
+                                <Plus size={20} className="text-emerald-500" />
+                                <span>Gestion des variantes</span>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    className="sr-only peer" 
+                                    checked={hasVariants}
+                                    onChange={(e) => setHasVariants(e.target.checked)}
+                                />
+                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                            </label>
+                        </div>
+
+                        {hasVariants && (
+                            <div className="space-y-4 bg-slate-50 p-4 md:p-6 rounded-xl border border-slate-200 shadow-inner">
+                                <div className="grid grid-cols-12 gap-4 px-2 hidden md:grid">
+                                    <div className="col-span-8 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Valeur / Attribut (ex: XL, Rouge..)</div>
+                                    <div className="col-span-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Quantité Stock</div>
+                                    <div className="col-span-1"></div>
+                                </div>
+                                
+                                {variants.map((variant) => (
+                                    <div key={variant.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center bg-white p-3 md:p-0 md:bg-transparent rounded-lg border border-slate-200 md:border-none shadow-sm md:shadow-none">
+                                        <div className="md:col-span-8">
+                                            <label className="block md:hidden text-[11px] font-bold text-slate-400 uppercase mb-1">Attribut</label>
+                                            <input 
+                                                type="text"
+                                                value={variant.attributeValue}
+                                                onChange={(e) => updateVariant(variant.id, { attributeValue: e.target.value })}
+                                                placeholder="Ex: XL"
+                                                className="w-full px-4 py-2 text-sm rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all outline-none"
+                                            />
+                                        </div>
+                                        <div className="md:col-span-3">
+                                            <label className="block md:hidden text-[11px] font-bold text-slate-400 uppercase mb-1">Stock</label>
+                                            <input 
+                                                type="number"
+                                                value={variant.stockQuantity}
+                                                onChange={(e) => updateVariant(variant.id, { stockQuantity: parseFloat(e.target.value) || 0 })}
+                                                className="w-full px-4 py-2 text-sm rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 text-center transition-all outline-none"
+                                            />
+                                        </div>
+                                        <div className="md:col-span-1 flex justify-end">
+                                            <button 
+                                                type="button" 
+                                                onClick={() => removeVariant(variant.id)}
+                                                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                <button 
+                                    type="button" 
+                                    onClick={addVariant}
+                                    className="w-full mt-2 py-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:text-emerald-600 hover:border-emerald-400 hover:bg-emerald-50 transition-all font-bold text-sm flex items-center justify-center gap-2"
+                                >
+                                    <Plus size={18} /> Ajouter une ligne variante
+                                </button>
                             </div>
                         )}
                     </div>
@@ -582,55 +686,84 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                             <tbody className="divide-y divide-neutral-200 bg-white">
                                 {paginatedProducts.length > 0 ? (
                                     paginatedProducts.map((product: Product) => (
-                                        <tr key={product.id} className={`hover:bg-emerald-50/60 transition-colors duration-200 ${selectedProductIds.includes(product.id) ? 'bg-emerald-50' : ''}`}>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <input
-                                                    type="checkbox"
-                                                    className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                                                    checked={selectedProductIds.includes(product.id)}
-                                                    onChange={() => handleSelectProduct(product.id)}
-                                                />
-                                            </td>
-                                            <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 font-mono ${isRTL ? 'text-right' : 'text-left'}`}>{product.productCode}</td>
-                                            <td className={`px-6 py-4 text-sm font-medium text-neutral-900 whitespace-pre-line ${isRTL ? 'text-right' : 'text-left'}`}>{product.name}</td>
-                                            <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>
-                                                {product.category ? (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
-                                                        {product.category}
-                                                    </span>
-                                                ) : '-'}
-                                            </td>
-                                            <td className={`whitespace-nowrap px-6 py-4 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
-                                                {product.productType === 'Service' ? (
-                                                    <span className="text-neutral-400 italic">{t('pService')}</span>
-                                                ) : (
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(product.stockQuantity || 0) <= (product.minStockAlert || 5) ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                                                        {(product.stockQuantity || 0) <= (product.minStockAlert || 5) && <AlertTriangle className="w-3 h-3 mr-1"/>}
-                                                        {formatDecimalForInput(product.stockQuantity || 0, language)} {product.unitOfMeasure !== 'Aucune' ? product.unitOfMeasure : ''}
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{formatCurrency(product.salePrice, companySettings)}</td>
-                                            <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{product.vat}%</td>
-                                            <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                                <div className={`flex items-center justify-end space-x-2 ${isRTL ? 'space-x-reverse' : ''}`}>
-                                                    <button 
-                                                        onClick={() => navigate(`/products/edit/${product.id}`)} 
-                                                        className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors"
-                                                        title={t('edit')}
-                                                    >
-                                                        <Pencil size={18} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleDeleteClick(product.id)} 
-                                                        className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors"
-                                                        title={t('delete')}
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                        <React.Fragment key={product.id}>
+                                            <tr className={`hover:bg-emerald-50/60 transition-colors duration-200 ${selectedProductIds.includes(product.id) ? 'bg-emerald-50' : ''}`}>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                                        checked={selectedProductIds.includes(product.id)}
+                                                        onChange={() => handleSelectProduct(product.id)}
+                                                    />
+                                                </td>
+                                                <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 font-mono ${isRTL ? 'text-right' : 'text-left'}`}>{product.productCode}</td>
+                                                <td className={`px-6 py-4 text-sm font-medium text-neutral-900 whitespace-pre-line ${isRTL ? 'text-right' : 'text-left'}`}>
+                                                    <div className="flex flex-col">
+                                                        <span>{product.name}</span>
+                                                        {product.hasVariants && (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-bold uppercase mt-1 bg-emerald-50 px-1.5 py-0.5 rounded w-fit">
+                                                                <Layers size={10} /> {product.variants?.length || 0} {language === 'fr' ? 'variantes' : 'variants'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                                    {product.category ? (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                                                            {product.category}
+                                                        </span>
+                                                    ) : '-'}
+                                                </td>
+                                                <td className={`whitespace-nowrap px-6 py-4 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
+                                                    {product.productType === 'Service' ? (
+                                                        <span className="text-neutral-400 italic">{t('pService')}</span>
+                                                    ) : (
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(product.stockQuantity || 0) <= (product.minStockAlert || 5) ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                                                            {(product.stockQuantity || 0) <= (product.minStockAlert || 5) && <AlertTriangle className="w-3 h-3 mr-1"/>}
+                                                            {formatDecimalForInput(product.stockQuantity || 0, language)} {product.unitOfMeasure !== 'Aucune' ? product.unitOfMeasure : ''}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{formatCurrency(product.salePrice, companySettings)}</td>
+                                                <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{product.vat}%</td>
+                                                <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                                                    <div className={`flex items-center justify-end space-x-2 ${isRTL ? 'space-x-reverse' : ''}`}>
+                                                        <button 
+                                                            onClick={() => navigate(`/products/edit/${product.id}`)} 
+                                                            className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors"
+                                                            title={t('edit')}
+                                                        >
+                                                            <Pencil size={18} />
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDeleteClick(product.id)} 
+                                                            className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors"
+                                                            title={t('delete')}
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {/* Expandable variants if any */}
+                                            {product.hasVariants && product.variants && product.variants.length > 0 && (
+                                                <tr className="bg-slate-50/30">
+                                                    <td colSpan={8} className="px-14 py-2">
+                                                        <div className="flex flex-wrap gap-2 py-1">
+                                                            {product.variants.map((variant) => (
+                                                                <div key={variant.id} className="flex items-center gap-2 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] shadow-sm">
+                                                                    <span className="font-bold text-slate-700">{variant.attributeValue}</span>
+                                                                    <span className="text-slate-400">|</span>
+                                                                    <span className={`font-mono ${variant.stockQuantity <= 0 ? 'text-red-500 font-bold' : 'text-slate-600'}`}>
+                                                                        {variant.stockQuantity}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
                                     ))
                                  ) : (
                                     <tr>
@@ -675,6 +808,15 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                                         </div>
                                         <div className="min-w-0">
                                             <h4 className="text-base font-bold text-neutral-900 whitespace-pre-line">{product.name}</h4>
+                                            {product.hasVariants && (
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                    {product.variants?.map(v => (
+                                                        <span key={v.id} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-100 font-medium">
+                                                            {v.attributeValue}: {v.stockQuantity}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                             <p className="text-xs text-neutral-500 font-mono mt-0.5">{product.productCode}</p>
                                             
                                             <div className="mt-2 flex flex-wrap gap-2">

@@ -234,10 +234,19 @@ const MainContent: React.FC = () => {
         }
     };
 
-    const updateProductStock = async (productId: string, quantityChange: number) => {
+    const updateProductStock = async (productId: string, quantityChange: number, variantId?: string) => {
         const product = products.find(p => p.id === productId);
         if(product) {
-            const updatedProduct = { ...product, stockQuantity: (product.stockQuantity || 0) + quantityChange };
+            let updatedProduct = { ...product };
+            if (variantId && product.hasVariants && product.variants) {
+                updatedProduct.variants = product.variants.map(v => 
+                    v.id === variantId ? { ...v, stockQuantity: (v.stockQuantity || 0) + quantityChange } : v
+                );
+                // Recompute total stock from variants
+                updatedProduct.stockQuantity = updatedProduct.variants.reduce((sum, v) => sum + (v.stockQuantity || 0), 0);
+            } else {
+                updatedProduct.stockQuantity = (product.stockQuantity || 0) + quantityChange;
+            }
             await dbService.products.update(updatedProduct);
             setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
         }
@@ -246,7 +255,7 @@ const MainContent: React.FC = () => {
         const newMovement = { id: generateUUID(), ...movement };
         await dbService.stockMovements.add(newMovement);
         setStockMovements(prev => [newMovement, ...prev]);
-        await updateProductStock(movement.productId, movement.quantity);
+        await updateProductStock(movement.productId, movement.quantity, movement.variantId);
     };
     const addProduct = async (product: Omit<Product, 'id'>) => {
         const newProduct: Product = { id: generateUUID(), productCode: product.productCode || getNextCode('P', products), ...product };
@@ -350,6 +359,7 @@ const MainContent: React.FC = () => {
                     if (item.productId) {
                         await addStockMovement({
                             productId: item.productId,
+                            variantId: item.variantId,
                             productName: item.name,
                             date: newInvoice.date,
                             quantity: -item.quantity,
@@ -392,6 +402,7 @@ const MainContent: React.FC = () => {
                         if (item.productId) {
                             await addStockMovement({
                                 productId: item.productId,
+                                variantId: item.variantId,
                                 productName: item.name,
                                 date: new Date().toISOString().split('T')[0],
                                 quantity: item.quantity,
@@ -408,6 +419,7 @@ const MainContent: React.FC = () => {
                         if (item.productId) {
                             await addStockMovement({
                                 productId: item.productId,
+                                variantId: item.variantId,
                                 productName: item.name,
                                 date: updatedInvoice.date,
                                 quantity: -item.quantity,
@@ -446,6 +458,7 @@ const MainContent: React.FC = () => {
                         if (item.productId) {
                             await addStockMovement({
                                 productId: item.productId,
+                                variantId: item.variantId,
                                 productName: item.name,
                                 date: new Date().toISOString().split('T')[0],
                                 quantity: item.quantity,
@@ -511,6 +524,7 @@ const MainContent: React.FC = () => {
                         if (item.productId) {
                             await addStockMovement({
                                 productId: item.productId,
+                                variantId: item.variantId,
                                 productName: item.name,
                                 date: new Date().toISOString().split('T')[0],
                                 quantity: -item.quantity,
@@ -526,6 +540,7 @@ const MainContent: React.FC = () => {
                     if (item.productId) {
                         await addStockMovement({
                             productId: item.productId,
+                            variantId: item.variantId,
                             productName: item.name,
                             date: new Date().toISOString().split('T')[0],
                             quantity: item.quantity,
@@ -553,6 +568,7 @@ const MainContent: React.FC = () => {
                     if (item.productId) {
                         await addStockMovement({
                             productId: item.productId,
+                            variantId: item.variantId,
                             productName: item.name,
                             date: newInvoiceData.date,
                             quantity: -item.quantity,
@@ -637,6 +653,7 @@ const MainContent: React.FC = () => {
                     if (item.productId) {
                         await addStockMovement({ 
                             productId: item.productId, 
+                            variantId: item.variantId,
                             productName: item.name, 
                             date: noteData.date, 
                             quantity: -item.quantity, 
@@ -675,6 +692,7 @@ const MainContent: React.FC = () => {
                         if (item.productId) {
                             await addStockMovement({ 
                                 productId: item.productId, 
+                                variantId: item.variantId,
                                 productName: item.name, 
                                 date: new Date().toISOString().split('T')[0], 
                                 quantity: item.quantity, 
@@ -758,7 +776,15 @@ const MainContent: React.FC = () => {
             if (newStatus === PurchaseOrderStatus.Received && order.status !== PurchaseOrderStatus.Received) {
                  for (const item of order.lineItems) {
                     if (item.productId) {
-                        await addStockMovement({ productId: item.productId, productName: item.name, date: new Date().toISOString().split('T')[0], quantity: item.quantity, type: 'Achat', reference: `Reception ${order.documentId || order.id}` });
+                        await addStockMovement({ 
+                            productId: item.productId, 
+                            variantId: item.variantId,
+                            productName: item.name, 
+                            date: new Date().toISOString().split('T')[0], 
+                            quantity: item.quantity, 
+                            type: 'Achat', 
+                            reference: `Reception ${order.documentId || order.id}` 
+                        });
                     }
                 }
             }

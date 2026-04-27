@@ -61,6 +61,23 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
     const currencyLocale = language === 'ar' ? 'ar-MA' : (language === 'es' ? 'es-ES' : 'fr-FR');
     const formatMoney = (amount: number) => amount.toLocaleString(currencyLocale, { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 });
 
+    const cleanHtml = (html: string) => {
+        if (!html) return '';
+        // Remove tags
+        let text = html.replace(/<[^>]*>/g, '');
+        // Decode common entities
+        const entities: { [key: string]: string } = {
+            '&nbsp;': ' ',
+            '&amp;': '&',
+            '&lt;': '<',
+            '&gt;': '>',
+            '&quot;': '"',
+            '&#39;': "'",
+            '&apos;': "'"
+        };
+        return text.replace(/&[a-z0-9#]+;/gi, (match) => entities[match] || match).trim();
+    };
+
     const { currentMetrics, previousMetrics, evolutionData, productPerformance, financeBreakdown, clientsList } = useMemo(() => {
         const { start, end } = getDatesFromRange(rangeType, startDate, endDate);
         const duration = end.getTime() - start.getTime();
@@ -508,7 +525,9 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                     <tbody className="bg-white divide-y divide-slate-50">
                                         {clientProfitability.products.map((p, idx) => (
                                             <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                                                <td className="px-6 py-4 text-sm font-bold text-slate-900">{p.name}</td>
+                                                <td className="px-6 py-4 text-sm font-bold text-slate-900">
+                                                    {cleanHtml(p.name)}
+                                                </td>
                                                 <td className="px-6 py-4 text-sm text-center text-slate-600 font-medium">{p.qty}</td>
                                                 <td className="px-6 py-4 text-sm text-right text-slate-900 font-bold">{formatMoney(p.revenue)}</td>
                                                 <td className="px-6 py-4 text-sm text-right text-slate-500">{formatMoney(p.cost)}</td>
@@ -644,12 +663,18 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                         tick={{fontSize: 10, fontWeight: 600, fill: '#64748b'}} 
                                         axisLine={false} 
                                         tickLine={false}
-                                        tickFormatter={(val) => val.length > 15 ? val.substring(0, 15) + '...' : val}
+                                        tickFormatter={(val) => {
+                                            const clean = cleanHtml(val);
+                                            return clean.length > 15 ? clean.substring(0, 15) + '...' : clean;
+                                        }}
                                     />
                                     <Tooltip 
                                         cursor={{fill: '#f8fafc'}}
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
-                                        formatter={(value: number) => [<span className="font-bold text-slate-900">{formatMoney(value)}</span>, <span className="text-xs text-slate-500">Revenu</span>]} 
+                                        formatter={(value: number, name: string, props: any) => {
+                                            const cleanName = cleanHtml(props.payload.name);
+                                            return [<span className="font-bold text-slate-900">{formatMoney(value)}</span>, <span className="text-xs text-slate-500">{cleanName}</span>];
+                                        }} 
                                     />
                                     <Bar 
                                         dataKey="revenue" 
@@ -685,7 +710,9 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                         productPerformance.map((p) => (
                             <div key={p.id} className="p-4 space-y-2 hover:bg-slate-50 transition-colors">
                                 <div className="flex justify-between items-start">
-                                    <div className="text-sm font-bold text-slate-900 truncate max-w-[200px]">{p.name}</div>
+                                    <div className="text-sm font-bold text-slate-900 truncate max-w-[200px]">
+                                        {cleanHtml(p.name)}
+                                    </div>
                                     <div className="text-xs font-medium text-slate-500">Qté: {p.qty}</div>
                                 </div>
                                 <div className="grid grid-cols-3 gap-2 text-[11px]">
@@ -725,7 +752,9 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                             {productPerformance.length > 0 ? (
                                 productPerformance.map((p) => (
                                     <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                                        <td className="px-5 md:px-8 py-3 md:py-4 text-xs md:text-sm font-medium text-slate-900 truncate max-w-[120px] md:max-w-none">{p.name}</td>
+                                        <td className="px-5 md:px-8 py-3 md:py-4 text-xs md:text-sm font-medium text-slate-900 truncate max-w-[120px] md:max-w-none">
+                                            {cleanHtml(p.name)}
+                                        </td>
                                         <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-center text-slate-600">{p.qty}</td>
                                         <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-right text-emerald-600 font-bold">{formatMoney(p.revenue)}</td>
                                         <td className="px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm text-right text-slate-500">{formatMoney(p.cost)}</td>

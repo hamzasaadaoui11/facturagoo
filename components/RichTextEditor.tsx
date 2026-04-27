@@ -26,6 +26,42 @@ const formats = [
 
 const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeholder, className }) => {
     const quillRef = useRef<ReactQuill>(null);
+    const [localValue, setLocalValue] = React.useState(value || '');
+    const isEditing = useRef(false);
+
+    // Sync local value with prop value ONLY when not actively editing
+    // or when the difference is significant (to catch external updates)
+    React.useEffect(() => {
+        if (!isEditing.current && value !== localValue) {
+            setLocalValue(value || '');
+        }
+    }, [value]);
+
+    const handleChange = (content: string, delta: any, source: string) => {
+        setLocalValue(content);
+        
+        // Mark as editing if change was made by user
+        if (source === 'user') {
+            isEditing.current = true;
+            onChange(content);
+            // Reset editing flag after a short delay or on blur
+            // but for now, we keep it true while they might be typing
+        } else {
+            onChange(content);
+        }
+    };
+
+    const handleBlur = () => {
+        isEditing.current = false;
+        // Final sync just in case
+        if (value !== localValue) {
+            onChange(localValue);
+        }
+    };
+
+    const handleFocus = () => {
+        isEditing.current = true;
+    };
 
     return (
         <div 
@@ -34,8 +70,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
             <ReactQuill 
                 ref={quillRef}
                 theme="snow"
-                value={value || ''}
-                onChange={onChange}
+                value={localValue}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                onFocus={handleFocus}
                 modules={modules}
                 formats={formats}
                 placeholder={placeholder}

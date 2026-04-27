@@ -306,6 +306,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                 onSave={handleSaveManual}
                 clients={clients}
                 products={products}
+                invoices={invoices}
                 noteToEdit={noteToEdit || undefined}
                 companySettings={companySettings}
             />

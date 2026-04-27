@@ -40,6 +40,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
     const [showPaymentMethodField, setShowPaymentMethodField] = useState(false);
     
     const [selectedProductId, setSelectedProductId] = useState('');
+    const [selectedVariantId, setSelectedVariantId] = useState('');
     const [tempName, setTempName] = useState('');
     const [tempDesc, setTempDesc] = useState('');
     const [tempPrice, setTempPrice] = useState<string>('0');
@@ -110,6 +111,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
 
     const resetItemForm = () => {
         setSelectedProductId('');
+        setSelectedVariantId('');
         setTempName('');
         setTempDesc('');
         setTempPrice('0');
@@ -136,9 +138,26 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                 setTempPrice(formatDecimalForInput(priceToDisplay, language));
                 setTempVat(product.vat);
                 setTempProductCode(product.productCode);
+                setSelectedVariantId('');
             }
         }
     }, [selectedProductId, products, language, isModeTTC]);
+
+    useEffect(() => {
+        if (selectedVariantId && selectedProductId) {
+            const product = products.find(p => p.id === selectedProductId);
+            const variant = product?.variants?.find(v => v.id === selectedVariantId);
+            if (variant && product) {
+                const baseName = product.description || product.name;
+                setTempName(`${baseName} (${variant.attributeValue})`);
+                
+                if (variant.salePrice !== undefined && variant.salePrice > 0) {
+                    const priceToDisplay = isModeTTC ? (variant.salePrice * (1 + product.vat / 100)) : variant.salePrice;
+                    setTempPrice(formatDecimalForInput(priceToDisplay, language));
+                }
+            }
+        }
+    }, [selectedVariantId, selectedProductId, products, language, isModeTTC]);
 
     const isM2 = calculationMode === 'm2';
     const isML = calculationMode === 'ml';
@@ -171,6 +190,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
             const newItem: LineItem = {
                 id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 productId: selectedProductId || null,
+                variantId: selectedVariantId || undefined,
                 productCode: tempProductCode || '',
                 name: tempName,
                 description: tempDesc || '',
@@ -475,6 +495,30 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                     onSelect={setSelectedProductId}
                                     placeholder={`-- ${t('select')} --`}
                                 />
+                                {selectedProductId && products.find(p => p.id === selectedProductId)?.hasVariants && (
+                                    <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                        <label className="block text-[9px] font-bold text-emerald-600 uppercase mb-1 ml-1 font-mono">Variante *</label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {products.find(p => p.id === selectedProductId)?.variants?.map(variant => (
+                                                <button
+                                                    key={variant.id}
+                                                    type="button"
+                                                    onClick={() => setSelectedVariantId(variant.id)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                                        selectedVariantId === variant.id
+                                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm scale-[1.02]'
+                                                        : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50'
+                                                    }`}
+                                                >
+                                                    {variant.attributeValue} 
+                                                    <span className={`ml-1.5 opacity-60 font-mono text-[10px] ${selectedVariantId === variant.id ? 'text-white' : 'text-slate-400'}`}>
+                                                        ({variant.stockQuantity || 0})
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                             <div className="col-span-1 md:col-span-24 lg:col-span-6">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
