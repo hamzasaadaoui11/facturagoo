@@ -243,15 +243,27 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                                     />
                                 </div>
                             </div>
-                            <div>
-                                <label htmlFor="vat" className="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">{t('vat')}</label>
-                                <select id="vat" value={vat} onChange={(e) => handleVatChange(parseInt(e.target.value))} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all font-medium">
-                                    <option value={20}>20%</option>
-                                    <option value={14}>14%</option>
-                                    <option value={10}>10%</option>
-                                    <option value={7}>7%</option>
-                                    <option value={0}>0%</option>
-                                </select>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="vat" className="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">{t('vat')}</label>
+                                    <select id="vat" value={vat} onChange={(e) => handleVatChange(parseInt(e.target.value))} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all font-medium">
+                                        <option value={20}>20%</option>
+                                        <option value={14}>14%</option>
+                                        <option value={10}>10%</option>
+                                        <option value={7}>7%</option>
+                                        <option value={0}>0%</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="minStockAlert" className="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">Alerte Stock Minimal</label>
+                                    <input 
+                                        type="number" 
+                                        id="minStockAlert"
+                                        value={minStockAlert} 
+                                        onChange={(e) => setMinStockAlert(parseFloat(e.target.value) || 0)} 
+                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all font-medium" 
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>

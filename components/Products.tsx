@@ -62,6 +62,8 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
     const [hasVariants, setHasVariants] = useState(false);
     const [variants, setVariants] = useState<ProductVariant[]>([]);
 
+    const [minStockAlertStr, setMinStockAlertStr] = useState('5');
+
     // Extract categories for datalist
     const categoriesList = useMemo(() => {
         const cats = products
@@ -101,8 +103,10 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
             setPurchasePriceHTStr(formatDecimalForInput(pPriceHT, language));
             setPurchasePriceTTCStr(formatDecimalForInput(round(pPriceHT * vatRate), language));
             setStockQuantityStr(formatDecimalForInput(existingProduct.stockQuantity || 0, language));
+            setMinStockAlertStr(formatDecimalForInput(existingProduct.minStockAlert === undefined ? 5 : existingProduct.minStockAlert, language));
         } else if (!isEditMode) {
              setVat(language === 'es' ? 21 : 20);
+             setMinStockAlertStr('5');
         }
     }, [isEditMode, existingProduct, language]);
 
@@ -172,7 +176,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
             salePrice: parseDecimalInput(salePriceHTStr),
             purchasePrice: parseDecimalInput(purchasePriceHTStr),
             stockQuantity: parseDecimalInput(stockQuantityStr),
-            minStockAlert: 5,
+            minStockAlert: parseDecimalInput(minStockAlertStr) || 0,
             hasVariants,
             variants: hasVariants ? variants : []
         };
@@ -249,17 +253,29 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                             </select>
                         </div>
                         {productType === 'Produit' && (
-                            <div>
-                                <label htmlFor="stockQuantity" className="block text-sm font-medium text-neutral-700">{t('stock')}</label>
-                                <input 
-                                    type="text" 
-                                    id="stockQuantity" 
-                                    value={stockQuantityStr} 
-                                    onChange={e => setStockQuantityStr(e.target.value)} 
-                                    disabled={hasVariants}
-                                    className={`mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm ${hasVariants ? 'bg-slate-50 text-slate-400 italic cursor-not-allowed' : ''}`} 
-                                />
-                                <p className="mt-1 text-xs text-neutral-500">{t('stockUpdateNote')}</p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="stockQuantity" className="block text-sm font-medium text-neutral-700">{t('stock')}</label>
+                                    <input 
+                                        type="text" 
+                                        id="stockQuantity" 
+                                        value={stockQuantityStr} 
+                                        onChange={e => setStockQuantityStr(e.target.value)} 
+                                        disabled={hasVariants}
+                                        className={`mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm ${hasVariants ? 'bg-slate-50 text-slate-400 italic cursor-not-allowed' : ''}`} 
+                                    />
+                                    <p className="mt-1 text-xs text-neutral-500">{t('stockUpdateNote')}</p>
+                                </div>
+                                <div>
+                                    <label htmlFor="minStockAlertStr" className="block text-sm font-medium text-neutral-700">Alerte Stock Minimal</label>
+                                    <input 
+                                        type="number" 
+                                        id="minStockAlertStr"
+                                        value={minStockAlertStr} 
+                                        onChange={e => setMinStockAlertStr(e.target.value)} 
+                                        className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" 
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>

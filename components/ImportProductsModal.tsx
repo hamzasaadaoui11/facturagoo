@@ -71,6 +71,7 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                             const productType = (row.Type || row.type || 'Produit') as 'Produit' | 'Service';
                             const unitOfMeasure = row.Unité || row.Unit || row.unite || 'Aucune';
                             const rowCategory = row.Catégorie || row.Category || row.categorie || row.category || category;
+                            const minStockAlert = parseFloat(row.Alerte_Stock || row.Stock_Min || row.MinStock || row.MinStockAlert || '5');
 
                             return {
                                 name,
@@ -83,7 +84,7 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                                 description,
                                 productType,
                                 unitOfMeasure,
-                                minStockAlert: 5,
+                                minStockAlert: isNaN(minStockAlert) ? 5 : minStockAlert,
                                 hasVariants: false,
                                 variants: []
                             };
@@ -106,6 +107,7 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                             const category_val = parentRow.Catégorie || parentRow.Category || category;
                             const vat = parseFloat(parentRow.TVA || parentRow.VAT || '20');
                             const unitOfMeasure = parentRow.Unité || parentRow.Unit || 'Unité';
+                            const minStockAlert = parseFloat(parentRow.Alerte_Stock || parentRow.Stock_Min || parentRow.MinStock || parentRow.MinStockAlert || '5');
 
                             const variants: ProductVariant[] = rows.map((vRow, idx) => {
                                 const variantName = vRow.Nom_Variante || vRow.Variant_Name || vRow.variant || vRow.Nom || '';
@@ -144,7 +146,7 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                                 description: parentRow.Description || parentRow.description || '',
                                 productType: 'Produit' as 'Produit' | 'Service',
                                 unitOfMeasure,
-                                minStockAlert: 5,
+                                minStockAlert: isNaN(minStockAlert) ? 5 : minStockAlert,
                                 hasVariants: true,
                                 variants
                             };
@@ -176,7 +178,7 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
     };
 
     const downloadTemplate = () => {
-        let templateData = [];
+        let templateData: any[] = [];
         if (importMode === 'standard') {
             templateData = [
                 {
@@ -185,6 +187,7 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                     "Prix d'achat": 100,
                     "Prix de vente": 150,
                     "Quantité": 10,
+                    "Alerte Stock Minimal": 5,
                     "TVA": 20,
                     "Catégorie": "Exemple",
                     "Description": "Description du produit",
@@ -200,6 +203,7 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                     "Nom_Variante": "T-shirt Coton - XL",
                     "Valeur_Attribut": "XL",
                     "Quantité": 5,
+                    "Alerte Stock Minimal": 5,
                     "Prix de vente": 150,
                     "Prix d'achat": 80,
                     "TVA": 20,
@@ -211,6 +215,7 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                     "Nom_Variante": "T-shirt Coton - M",
                     "Valeur_Attribut": "M",
                     "Quantité": 8,
+                    "Alerte Stock Minimal": 5,
                     "Prix de vente": 150,
                     "Prix d'achat": 80,
                     "TVA": 20,

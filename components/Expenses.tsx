@@ -3,23 +3,19 @@ import React, { useState, useMemo } from 'react';
 import { 
     Plus, 
     Search, 
-    Filter, 
-    Download, 
     Trash2, 
     Edit, 
     Wallet, 
     Calendar,
     ChevronLeft,
     ChevronRight,
-    TrendingUp,
-    TrendingDown,
-    MoreHorizontal,
     Receipt
 } from 'lucide-react';
 import { Expense } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import AddExpenseModal from './AddExpenseModal';
+import Header from './Header';
 
 interface ExpensesProps {
     expenses: Expense[];
@@ -113,24 +109,21 @@ const Expenses: React.FC<ExpensesProps> = ({
     const currentMonthLabel = `${t(monthNames[selectedMonth].toLowerCase() as any)} ${selectedYear}`;
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 bg-slate-50 min-h-screen">
-            <div className="max-w-7xl mx-auto space-y-6">
-                
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-900">{t('expenses')}</h1>
-                        <p className="text-slate-500 text-sm mt-1">{t('trackAndManageExpenses')}</p>
-                    </div>
-                    <button
-                        onClick={() => setIsAddModalOpen(true)}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all shadow-sm hover:shadow-md active:scale-95"
-                    >
-                        <Plus className="w-5 h-5" />
-                        <span>{t('addExpense')}</span>
-                    </button>
-                </div>
+        <div>
+            <Header title={t('expenses')}>
+                 <button
+                    type="button"
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                >
+                    <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
+                    <span className="hidden sm:inline">{t('addExpense')}</span>
+                    <span className="sm:hidden">{t('add')}</span>
+                </button>
+            </Header>
 
+            <div className="space-y-6">
+                
                 {/* Monthly Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <motion.div 
@@ -189,37 +182,35 @@ const Expenses: React.FC<ExpensesProps> = ({
                 </div>
 
                 {/* Main Table Section */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="relative w-full md:w-96">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                            <input 
-                                type="text"
-                                placeholder={t('search')}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm"
+                <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
+                    <div className="p-4 border-b border-neutral-200">
+                         <div className="relative">
+                            <div className="pointer-events-none absolute inset-y-0 flex items-center pl-3 rtl:right-0 rtl:pr-3">
+                               <Search className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                            </div>
+                            <input
+                               type="search"
+                               placeholder={t('search')}
+                               value={searchTerm}
+                               onChange={(e) => setSearchTerm(e.target.value)}
+                               className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
                             />
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                             {/* Optional: Add action buttons like export here */}
                         </div>
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead>
-                                <tr className="bg-slate-50/50">
-                                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">{t('date')}</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">{t('category')}</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">{t('description')}</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">{t('reference')}</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">{t('amount')}</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">{t('actions')}</th>
+                        <table className="min-w-full divide-y divide-neutral-200">
+                            <thead className="bg-neutral-50">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('date')}</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('category')}</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('description')}</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('reference')}</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 text-right">{t('amount')}</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 text-right">{t('actions')}</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-neutral-200 bg-white">
                                 <AnimatePresence mode="popLayout">
                                     {filteredExpenses.length > 0 ? (
                                         filteredExpenses.map((expense) => (
@@ -229,38 +220,40 @@ const Expenses: React.FC<ExpensesProps> = ({
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 exit={{ opacity: 0 }}
-                                                className="hover:bg-slate-50 transition-colors group"
+                                                className="hover:bg-neutral-50 transition-colors group"
                                             >
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-neutral-900">
                                                     {new Date(expense.date).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR', { day: '2-digit', month: 'short' })}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${getCategoryColor(expense.category)}`}>
+                                                <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">
+                                                    <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${getCategoryColor(expense.category)}`}>
                                                         {getCategoryLabel(expense.category)}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-slate-900 font-medium">
+                                                <td className="px-6 py-4 text-sm text-neutral-500">
                                                     {expense.description}
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-slate-500 font-mono">
+                                                <td className="px-6 py-4 text-sm text-neutral-500">
                                                     {expense.reference || '-'}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900 text-right">
+                                                <td className="whitespace-nowrap px-6 py-4 text-sm font-bold text-neutral-900 text-right">
                                                     {expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} DH
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                                                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                                                    <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <button 
                                                             onClick={() => setEditingExpense(expense)}
-                                                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                            className="text-emerald-600 hover:text-emerald-900 transition-colors"
+                                                            title={t('edit')}
                                                         >
-                                                            <Edit className="w-4 h-4" />
+                                                            <Edit className="h-4 w-4" />
                                                         </button>
                                                         <button 
                                                             onClick={() => onDeleteExpense(expense.id)}
-                                                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                            className="text-red-600 hover:text-red-900 transition-colors"
+                                                            title={t('delete')}
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            <Trash2 className="h-4 w-4" />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -268,13 +261,13 @@ const Expenses: React.FC<ExpensesProps> = ({
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={6} className="px-6 py-12 text-center">
+                                            <td colSpan={6} className="px-6 py-12 text-center text-sm font-medium text-neutral-500">
                                                 <div className="flex flex-col items-center justify-center">
-                                                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-4">
-                                                        <Receipt className="w-8 h-8" />
+                                                    <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mb-4">
+                                                        <Receipt className="w-8 h-8 text-neutral-400" />
                                                     </div>
-                                                    <p className="text-slate-900 font-semibold">{t('noExpensesFound')}</p>
-                                                    <p className="text-slate-500 text-sm mt-1">{t('firstExpensePrompt')}</p>
+                                                    <p className="text-neutral-900 font-semibold">{t('noExpensesFound')}</p>
+                                                    <p className="mt-1">{t('firstExpensePrompt')}</p>
                                                 </div>
                                             </td>
                                         </tr>
