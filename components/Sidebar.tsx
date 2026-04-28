@@ -73,6 +73,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         },
         { id: 'stock', name: t('stock'), href: '/stock', icon: Archive },
         { id: 'expenses', name: t('expenses'), href: '/expenses', icon: Wallet },
+        { id: 'personnel', name: 'Personnel', href: '/personnel', icon: Users },
         { type: 'divider' },
         { id: 'clients', name: t('clients'), href: '/clients', icon: Users },
         { id: 'suppliers', name: t('suppliers'), href: '/suppliers', icon: Building },

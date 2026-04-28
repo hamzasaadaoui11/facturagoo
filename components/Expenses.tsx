@@ -44,7 +44,6 @@ const Expenses: React.FC<ExpensesProps> = ({
         { id: 'Water', label: t('expWater'), color: 'bg-blue-100 text-blue-700' },
         { id: 'Electricity', label: t('expElectricity'), color: 'bg-yellow-100 text-yellow-700' },
         { id: 'Internet', label: t('expInternet'), color: 'bg-indigo-100 text-indigo-700' },
-        { id: 'Salary', label: t('expSalary'), color: 'bg-emerald-100 text-emerald-700' },
         { id: 'Rent', label: t('expRent'), color: 'bg-purple-100 text-purple-700' },
         { id: 'Other', label: t('expOther'), color: 'bg-gray-100 text-gray-700' }
     ];

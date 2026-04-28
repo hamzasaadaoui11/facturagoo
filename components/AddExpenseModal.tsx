@@ -55,7 +55,6 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         { id: 'Water', label: t('expWater') },
         { id: 'Electricity', label: t('expElectricity') },
         { id: 'Internet', label: t('expInternet') },
-        { id: 'Salary', label: t('expSalary') },
         { id: 'Rent', label: t('expRent') },
         { id: 'Other', label: t('expOther') }
     ];

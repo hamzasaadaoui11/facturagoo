@@ -1,5 +1,5 @@
 
-import { Client, Product, Supplier, Quote, Invoice, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, CreditNote, Expense } from './types';
+import { Client, Product, Supplier, Quote, Invoice, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, CreditNote, Expense, Employee, Attendance, SalaryPayment } from './types';
 import { supabase } from './supabaseClient';
 
 const TABLE_MAP: Record<string, string> = {
@@ -14,7 +14,10 @@ const TABLE_MAP: Record<string, string> = {
     'stock_movements': 'stock_movements',
     'delivery_notes': 'delivery_notes',
     'purchase_orders': 'purchase_orders',
-    'expenses': 'expenses'
+    'expenses': 'expenses',
+    'employees': 'employees',
+    'attendances': 'attendances',
+    'salary_payments': 'salary_payments'
 };
 
 const LOCAL_STORAGE_KEYS = {
@@ -76,9 +79,9 @@ supabase.auth.onAuthStateChange((_event, session) => {
     cachedCompanyId = null; // Reset company cache to force re-fetch
 });
 
-const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number = 30000): Promise<T> => {
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number = 120000): Promise<T> => {
     const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error("La requête a expiré. Cela peut être dû à une connexion lente ou à un volume important de données.")), timeoutMs)
+        setTimeout(() => reject(new Error("La requête a expiré. La base de données est peut-être en train de démarrer (peut prendre jusqu'à 2 minutes).")), timeoutMs)
     );
     return Promise.race([promise, timeoutPromise]);
 };
@@ -118,7 +121,7 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
 
         if (error) {
             // Check if it's a schema error (table or column missing)
-            if (error.code === 'PGRST116' || error.code === '42P01' || (error.message && error.message.includes('column') && error.message.includes('does not exist'))) {
+            if (error.code === 'PGRST116' || error.code === '42P01' || error.code === 'PGRST205' || (error.message && error.message.includes('column') && error.message.includes('does not exist'))) {
                 console.warn(`Table or column missing for ${storeName}, returning empty array:`, error.message);
                 return [];
             }
@@ -196,8 +199,9 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
         const { data, error } = result;
 
         if (error) {
-            if (error.code === 'PGRST204' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
-                console.error("Missing DB columns. Run SQL in /supabase_schema_update.sql");
+            if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
+                console.error("Missing DB columns/table. Run SQL in /supabase_schema_update.sql");
+                throw new Error("Erreur de base de données. Veuillez exécuter le script SQL dans supabase_schema_update.sql pour créer ou mettre à jour les tables.");
             }
             const recovered = await handleAuthError(error);
             if (recovered) {
@@ -263,8 +267,9 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
         const { data, error } = result;
 
         if (error) {
-            if (error.code === 'PGRST204' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
-                console.error("Missing DB columns. Run SQL in /supabase_schema_update.sql");
+            if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
+                console.error("Missing DB columns/table. Run SQL in /supabase_schema_update.sql");
+                throw new Error("Erreur de base de données. Veuillez exécuter le script SQL dans supabase_schema_update.sql pour créer ou mettre à jour les tables.");
             }
             const recovered = await handleAuthError(error);
             if (recovered) {
@@ -371,8 +376,9 @@ const bulkAdd = async (storeName: string, items: any[]): Promise<void> => {
             .insert(itemsWithUser);
 
         if (error) {
-            if (error.code === 'PGRST204' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
-                console.error("Missing DB columns in bulk operation. Run SQL in /supabase_schema_update.sql");
+            if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
+                console.error("Missing DB columns/table in bulk operation. Run SQL in /supabase_schema_update.sql");
+                throw new Error("Erreur de base de données. Veuillez exécuter le script SQL dans /supabase_schema_update.sql pour créer ou mettre à jour les tables.");
             }
             if (await handleAuthError(error)) {
                 await supabase.from(tableName).insert(itemsWithUser);
@@ -461,6 +467,24 @@ export const dbService = {
         add: (item: Expense) => add<Expense>('expenses', item),
         update: (item: Expense) => update<Expense>('expenses', item),
         delete: (id: string | string[]) => remove('expenses', id),
+    },
+    employees: {
+        getAll: () => getAll<Employee>('employees'),
+        add: (item: Employee) => add<Employee>('employees', item),
+        update: (item: Employee) => update<Employee>('employees', item),
+        delete: (id: string | string[]) => remove('employees', id),
+    },
+    attendances: {
+        getAll: () => getAll<Attendance>('attendances'),
+        add: (item: Attendance) => add<Attendance>('attendances', item),
+        update: (item: Attendance) => update<Attendance>('attendances', item),
+        delete: (id: string | string[]) => remove('attendances', id),
+    },
+    salaryPayments: {
+        getAll: () => getAll<SalaryPayment>('salary_payments'),
+        add: (item: SalaryPayment) => add<SalaryPayment>('salary_payments', item),
+        update: (item: SalaryPayment) => update<SalaryPayment>('salary_payments', item),
+        delete: (id: string | string[]) => remove('salary_payments', id),
     },
     settings: {
         get: async (): Promise<CompanySettings | null> => {

@@ -311,3 +311,36 @@ export interface CompanySettings {
     documentInfoPosition?: 'right' | 'left';
     showExpiryDate?: boolean;
 }
+
+export interface Employee {
+    id: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    phone: string;
+    email?: string;
+    dailyRate: number;
+    monthlySalary: number;
+    paymentType: 'Daily' | 'Monthly';
+    joinDate: string;
+    isActive: boolean;
+}
+
+export interface Attendance {
+    id: string;
+    employeeId: string;
+    date: string;
+    status: 'Present' | 'Absent' | 'Half-day' | 'Leave';
+    note?: string;
+}
+
+export interface SalaryPayment {
+    id: string;
+    employeeId: string;
+    amount: number;
+    paymentDate: string;
+    periodStart: string;
+    periodEnd: string;
+    status: 'Paid' | 'Pending';
+    reference?: string;
+}

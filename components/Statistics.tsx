@@ -9,7 +9,7 @@ import {
     CreditCard, ShoppingBag, ArrowUpRight, ArrowDownRight, Filter, PieChart as PieIcon, Activity,
     ArrowRightLeft, UserCheck, Truck, BarChart2, User, Target, Info, FileText
 } from 'lucide-react';
-import { Invoice, Payment, PurchaseOrder, Product, PurchaseOrderStatus, InvoiceStatus, CreditNote, CreditNoteStatus, Expense } from '../types';
+import { Invoice, Payment, PurchaseOrder, Product, PurchaseOrderStatus, InvoiceStatus, CreditNote, CreditNoteStatus, Expense, SalaryPayment } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface StatisticsProps {
@@ -19,11 +19,12 @@ interface StatisticsProps {
     products: Product[];
     expenses: Expense[];
     creditNotes?: CreditNote[];
+    salaryPayments?: SalaryPayment[];
 }
 
 type DateRangeType = 'today' | 'week' | 'month' | 'year' | 'custom';
 
-const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrders, products, expenses = [], creditNotes = [] }) => {
+const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrders, products, expenses = [], creditNotes = [], salaryPayments = [] }) => {
     const { t, isRTL, language } = useLanguage();
     
     const [rangeType, setRangeType] = useState<DateRangeType>('month');
@@ -139,7 +140,8 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             const totalCreditNotes = periodCreditNotes.reduce((sum, cn) => sum + (useTTC ? cn.amount : (cn.amount / 1.2)), 0); // Approx HT if not stored
             
             const periodExpenses = expenses.filter(exp => isInRange(exp.date, s, e));
-            const totalOperationalExpenses = periodExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+            const periodSalaryPayments = salaryPayments.filter(sp => sp.status === 'Paid' && isInRange(sp.paymentDate, s, e));
+            const totalOperationalExpenses = periodExpenses.reduce((sum, exp) => sum + exp.amount, 0) + periodSalaryPayments.reduce((sum, sp) => sum + Number(sp.amount), 0);
 
             const finalReceived = receivedRevenue; // Payments are always total received
             const finalBilled = billedRevenue - totalCreditNotes;
@@ -177,6 +179,16 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
         payments.filter(p => isInRange(p.date, start, end)).forEach(p => {
             if (!chartDataMap.has(p.date)) chartDataMap.set(p.date, { date: p.date, revenue: 0, expense: 0, profit: 0 });
             chartDataMap.get(p.date)!.revenue += p.amount;
+        });
+
+        expenses.filter(e => isInRange(e.date, start, end)).forEach(e => {
+            if (!chartDataMap.has(e.date)) chartDataMap.set(e.date, { date: e.date, revenue: 0, expense: 0, profit: 0 });
+            chartDataMap.get(e.date)!.expense += e.amount;
+        });
+
+        salaryPayments.filter(sp => sp.status === 'Paid' && isInRange(sp.paymentDate, start, end)).forEach(sp => {
+            if (!chartDataMap.has(sp.paymentDate)) chartDataMap.set(sp.paymentDate, { date: sp.paymentDate, revenue: 0, expense: 0, profit: 0 });
+            chartDataMap.get(sp.paymentDate)!.expense += Number(sp.amount);
         });
 
         // Global product performance weighted by payment ratio

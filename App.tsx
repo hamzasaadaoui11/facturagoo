@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Menu, X, Files } from 'lucide-react';
-import { Client, Product, Supplier, Quote, QuoteStatus, Invoice, InvoiceStatus, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, PurchaseOrderStatus, CreditNote, CreditNoteStatus, Expense } from './types';
+import { Client, Product, Supplier, Quote, QuoteStatus, Invoice, InvoiceStatus, CompanySettings, Payment, StockMovement, DeliveryNote, PurchaseOrder, PurchaseOrderStatus, CreditNote, CreditNoteStatus, Expense, SalaryPayment } from './types';
 import { dbService, initDB, getCurrentUserAndCompany, resetDBCache } from './db';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
@@ -25,6 +25,7 @@ import CreditNotesComponent from './components/CreditNotes';
 import PaymentTracking from './components/PaymentTracking';
 import Statistics from './components/Statistics';
 import Expenses from './components/Expenses';
+import PersonnelManagement from './components/PersonnelManagement';
 import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import UserProfile from './components/UserProfile';
@@ -64,6 +65,7 @@ const MainContent: React.FC = () => {
     const [payments, setPayments] = useState<Payment[]>([]);
     const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
     const [deliveryNotes, setDeliveryNotes] = useState<DeliveryNote[]>([]);
+    const [salaryPayments, setSalaryPayments] = useState<SalaryPayment[]>([]);
     const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -104,17 +106,19 @@ const MainContent: React.FC = () => {
 
                 // Group 3: Secondary data
                 try {
-                    const [creditNotesData, paymentsData, movementsData, expensesData] = await Promise.all([
+                    const [creditNotesData, paymentsData, movementsData, expensesData, salaryPaymentsData] = await Promise.all([
                         dbService.creditNotes.getAll().catch(e => { console.warn("CreditNotes load failed", e); return []; }), 
                         dbService.payments.getAll().catch(e => { console.warn("Payments load failed", e); return []; }),
                         dbService.stockMovements.getAll().catch(e => { console.warn("Mouvements Stock load failed", e); return []; }),
-                        dbService.expenses.getAll().catch(e => { console.warn("Dépenses load failed", e); return []; })
+                        dbService.expenses.getAll().catch(e => { console.warn("Dépenses load failed", e); return []; }),
+                        dbService.salaryPayments.getAll().catch(e => { console.warn("SalaryPayments load failed", e); return []; })
                     ]);
 
                     setCreditNotes(creditNotesData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
                     setPayments(paymentsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
                     setStockMovements(movementsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
                     setExpenses(expensesData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+                    setSalaryPayments(salaryPaymentsData.sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()));
                 } catch (secondaryErr) {
                     console.warn("Some secondary data failed to load, but continuing...", secondaryErr);
                 }
@@ -907,7 +911,7 @@ const MainContent: React.FC = () => {
                         <Routes>
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
                             <Route path="/dashboard" element={<Dashboard invoices={invoices} clients={clients} products={products} companySettings={companySettings} creditNotes={creditNotes} expenses={expenses} />} />
-                            <Route path="/statistics" element={<Statistics invoices={invoices} payments={payments} purchaseOrders={purchaseOrders} products={products} creditNotes={creditNotes} expenses={expenses} />} />
+                            <Route path="/statistics" element={<Statistics invoices={invoices} payments={payments} purchaseOrders={purchaseOrders} products={products} creditNotes={creditNotes} expenses={expenses} salaryPayments={salaryPayments} />} />
                             <Route path="/sales/quotes" element={<Quotes quotes={quotes} onUpdateQuoteStatus={updateQuoteStatus} onCreateInvoice={createInvoiceFromQuote} onAddQuote={addQuote} onUpdateQuote={updateQuote} onDeleteQuote={deleteQuote} clients={clients} products={products} companySettings={companySettings} />} />
                             <Route path="/sales/invoices" element={<InvoicesComponent invoices={invoices} onUpdateInvoiceStatus={updateInvoiceStatus} onAddPayment={addPayment} onCreateInvoice={addInvoice} onUpdateInvoice={updateInvoice} onDeleteInvoice={deleteInvoice} onCreateCreditNote={createCreditNoteFromInvoice} clients={clients} products={products} companySettings={companySettings} />} />
                             <Route path="/sales/credit-notes" element={<CreditNotesComponent creditNotes={creditNotes} onUpdateCreditNoteStatus={updateCreditNoteStatus} onCreateCreditNote={addCreditNote} onUpdateCreditNote={updateCreditNote} onDeleteCreditNote={deleteCreditNote} clients={clients} products={products} companySettings={companySettings} />} />
@@ -916,6 +920,7 @@ const MainContent: React.FC = () => {
                             <Route path="/purchases/orders" element={<PurchaseOrders orders={purchaseOrders} suppliers={suppliers} products={products} onAddOrder={addPurchaseOrder} onUpdateOrder={updatePurchaseOrder} onUpdateStatus={updatePurchaseOrderStatus} onDeleteOrder={deletePurchaseOrder} onConvertToInvoice={(order) => navigate('/sales/invoices', { state: { prefilledPO: order.documentId || order.id } })} companySettings={companySettings} />} />
                             <Route path="/stock" element={<StockManagement products={products} movements={stockMovements} onAddMovement={addStockMovement} />} />
                             <Route path="/expenses" element={<Expenses expenses={expenses} onAddExpense={addExpense} onUpdateExpense={updateExpense} onDeleteExpense={deleteExpense} />} />
+                            <Route path="/personnel" element={<PersonnelManagement companySettings={companySettings} onAddExpense={addExpense} />} />
                             <Route path="/clients" element={<ClientsComponent clients={clients} onAddClient={addClient} onUpdateClient={updateClient} onDeleteClient={deleteClient} onDeleteClients={deleteClient} />} />
                             <Route path="/suppliers" element={<SuppliersComponent suppliers={suppliers} onAddSupplier={addSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} onDeleteSuppliers={deleteSupplier} />} />
                             <Route path="/products" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onDeleteProducts={deleteProducts} />} />
