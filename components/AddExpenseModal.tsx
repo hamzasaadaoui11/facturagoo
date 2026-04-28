@@ -114,7 +114,15 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                                         <button
                                             key={cat.id}
                                             type="button"
-                                            onClick={() => setFormData({ ...formData, category: cat.id })}
+                                            onClick={() => {
+                                                const currentCatLabel = categories.find(c => c.id === formData.category)?.label;
+                                                const shouldUpdateDescription = !formData.description || formData.description === currentCatLabel;
+                                                setFormData({ 
+                                                    ...formData, 
+                                                    category: cat.id,
+                                                    description: shouldUpdateDescription ? cat.label : formData.description
+                                                });
+                                            }}
                                             className={`px-3 py-2 text-xs font-semibold rounded-xl border transition-all ${
                                                 formData.category === cat.id 
                                                     ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm ring-1 ring-emerald-500' 
