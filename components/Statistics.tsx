@@ -187,7 +187,10 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
 
             inv.lineItems.forEach(item => {
                 if (item.productId) {
-                    if (!productStats.has(item.productId)) productStats.set(item.productId, { id: item.productId, name: item.name, qty: 0, revenue: 0, cost: 0 });
+                    const productDef = products.find(p => p.id === item.productId);
+                    const prodName = productDef ? productDef.name : item.name;
+
+                    if (!productStats.has(item.productId)) productStats.set(item.productId, { id: item.productId, name: prodName, qty: 0, revenue: 0, cost: 0 });
                     const stat = productStats.get(item.productId)!;
                     stat.qty += item.quantity;
                     
@@ -196,7 +199,6 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                     const lineTotal = item.quantity * lineUnitPrice;
                     stat.revenue += (lineTotal * paymentRatio);
 
-                    const productDef = products.find(p => p.id === item.productId);
                     const purchasePrice = productDef?.purchasePrice || (item as any).purchasePrice || 0;
                     stat.cost += (item.quantity * purchasePrice);
                 }
@@ -234,7 +236,8 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                     totalCoutAchat += lineCost;
 
                     if (!productsBought.has(item.productId)) {
-                        productsBought.set(item.productId, { name: item.name, qty: 0, cost: 0, revenue: 0 });
+                        const prodName = productDef ? productDef.name : item.name;
+                        productsBought.set(item.productId, { name: prodName, qty: 0, cost: 0, revenue: 0 });
                     }
                     const pData = productsBought.get(item.productId)!;
                     pData.qty += item.quantity;

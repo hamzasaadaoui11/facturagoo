@@ -710,7 +710,42 @@ const MainContent: React.FC = () => {
         }
     };
     const createInvoiceFromDeliveryNote = async (deliveryNoteId: string) => {
-        // ... (existing code minimized for brevity)
+        const note = deliveryNotes.find(n => n.id === deliveryNoteId);
+        if (!note) return;
+        try {
+            const documentId = generateDocumentId('invoice', invoices);
+            const newInvoiceData: Invoice = { 
+                id: generateUUID(), 
+                documentId: documentId, 
+                clientId: note.clientId, 
+                clientName: note.clientName, 
+                date: new Date().toISOString().split('T')[0], 
+                dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
+                status: InvoiceStatus.Pending, 
+                subject: note.subject ? note.subject : `Facture depuis BL ${note.documentId || note.id}`, 
+                reference: note.reference, 
+                purchaseOrderNumber: note.purchaseOrderNumber, 
+                lineItems: note.lineItems, 
+                subTotal: note.subTotal || 0, 
+                vatAmount: note.vatAmount || 0, 
+                amount: note.totalAmount || 0, 
+                amountPaid: 0 
+            };
+            
+            // Note: We do NOT deduct stock here because creating a Delivery Note already deducted the stock.
+            
+            await dbService.invoices.add(newInvoiceData);
+            setInvoices(prev => [newInvoiceData, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+            
+            // Link BL to Invoice
+            const updatedNote = { ...note, invoiceId: newInvoiceData.documentId || newInvoiceData.id };
+            await dbService.deliveryNotes.update(updatedNote);
+            setDeliveryNotes(prev => prev.map(n => n.id === note.id ? updatedNote : n));
+            
+            navigate('/sales/invoices');
+        } catch (e: any) {
+            alert("Erreur conversion: " + e.message);
+        }
     };
 
     const addExpense = async (expenseData: Omit<Expense, 'id'>) => {

@@ -5,7 +5,6 @@ import { Supplier, Product, PurchaseOrder, LineItem, PurchaseOrderStatus, Compan
 import { useLanguage } from '../contexts/LanguageContext';
 import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
 import SearchableProductSelect from './SearchableProductSelect';
-import RichTextEditor from './RichTextEditor';
 
 interface CreatePurchaseOrderModalProps {
     isOpen: boolean;
@@ -460,7 +459,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                     className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all"
                                 />
                             </div>
-                            <div className="col-span-1 md:col-span-12 lg:col-span-4">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-5">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Package size={10} /> {t('productAutoLabel')}
                                 </label>
@@ -495,15 +494,20 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                     </div>
                                 )}
                             </div>
-                            <div className="col-span-1 md:col-span-24 lg:col-span-6">
+                            <div className="col-span-1 md:col-span-24 lg:col-span-5">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Tag size={10} /> {t('designationLabel')} *
                                 </label>
-                                <RichTextEditor 
+                                <textarea
                                     value={tempName} 
-                                    onChange={(val) => setTempName(val)} 
+                                    onChange={(e) => setTempName(e.target.value)} 
                                     placeholder={t('description')} 
-                                    className="block w-full"
+                                    rows={1}
+                                    className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs py-3 px-3 transition-all min-h-[48px] resize-y overflow-hidden"
+                                    onInput={(e) => {
+                                        e.currentTarget.style.height = 'auto';
+                                        e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                                    }}
                                 />
                             </div>
                             <div className="col-span-1 md:col-span-12 lg:col-span-3">
@@ -574,9 +578,9 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                             <div className="col-span-1 md:col-span-24 lg:col-span-3">
                                 <button 
                                     onClick={handleAddItem} 
-                                    className="w-full inline-flex items-center justify-center h-12 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-200 transition-all active:scale-[0.98] text-sm font-bold gap-2"
+                                    className="w-full inline-flex items-center justify-center h-12 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-200 transition-all active:scale-[0.98] text-[13px] font-bold gap-2"
                                 >
-                                    <Plus size={18} /> {t('add')}
+                                    <Plus size={16} /> {t('add')}
                                 </button>
                             </div>
                         </div>
@@ -622,11 +626,16 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <RichTextEditor 
+                                                    <textarea 
                                                         value={item.name || ''} 
-                                                        onChange={(val) => updateLineItem(item.id, { name: val })}
+                                                        onChange={(e) => updateLineItem(item.id, { name: e.target.value })}
                                                         placeholder={t('designationLabel')}
-                                                        className="w-full text-left"
+                                                        rows={1}
+                                                        className="w-full p-1 text-left border-none focus:ring-0 text-[11px] font-bold bg-transparent resize-y overflow-hidden leading-tight"
+                                                        onInput={(e) => {
+                                                            e.currentTarget.style.height = 'auto';
+                                                            e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                                                        }}
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
@@ -724,11 +733,16 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                                     </div>
                                                     <div className="flex flex-col gap-1">
                                                         <label className="text-[10px] font-bold text-slate-400 uppercase">{t('designationLabel')}</label>
-                                                        <RichTextEditor 
+                                                        <textarea
                                                             value={item.name || ''} 
-                                                            onChange={(val) => updateLineItem(item.id, { name: val })}
+                                                            onChange={(e) => updateLineItem(item.id, { name: e.target.value })}
                                                             placeholder={t('designationLabel')}
-                                                            className="w-full"
+                                                            rows={1}
+                                                            className="w-full mt-0.5 p-2 rounded-lg border-slate-200 bg-slate-50/50 text-xs shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white transition-all resize-y overflow-hidden"
+                                                            onInput={(e) => {
+                                                                e.currentTarget.style.height = 'auto';
+                                                                e.currentTarget.style.height = e.currentTarget.scrollHeight + 'px';
+                                                            }}
                                                         />
                                                     </div>
                                                 </div>

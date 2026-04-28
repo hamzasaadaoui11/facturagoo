@@ -25,7 +25,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
     const formats = useMemo(() => [
         'bold', 'italic', 'underline', 'strike',
         'color', 'background',
-        'list', 'bullet',
+        'list',
         'size'
     ], []);
 

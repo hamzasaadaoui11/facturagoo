@@ -708,8 +708,8 @@ const generateDocumentHTML = (
                 break;
               case "name":
                 content = `
-                            <div style="font-weight: 500; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
-                            ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 2px; line-height: 1.1;">${item.description}</div>` : ""}
+                            <div style="font-weight: 500; color: #111827; font-size: 12.3px; line-height: 1.2; overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap;">${item.name}</div>
+                            ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 2px; line-height: 1.1; overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap;">${item.description}</div>` : ""}
                         `;
                 break;
               case "quantity":
@@ -1053,8 +1053,8 @@ const generateDocumentHTML = (
               break;
             case "name":
               content = `
-                        <div style="font-weight: 500; color: #111827; font-size: 12.3px; line-height: 1.2;">${item.name}</div>
-                        ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 2px; line-height: 1.1;">${item.description}</div>` : ""}
+                        <div style="font-weight: 500; color: #111827; font-size: 12.3px; line-height: 1.2; overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap;">${item.name}</div>
+                        ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 2px; line-height: 1.1; overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap;">${item.description}</div>` : ""}
                     `;
               break;
             case "quantity":
