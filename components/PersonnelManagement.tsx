@@ -92,15 +92,24 @@ const translate = (key: string, language: string) => {
 interface PersonnelManagementProps {
     companySettings?: CompanySettings | null;
     onAddExpense?: (expense: Omit<any, 'id'>) => Promise<void>;
+    initialEmployees?: Employee[];
+    initialAttendances?: Attendance[];
+    initialPayments?: SalaryPayment[];
 }
 
-const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettings, onAddExpense }) => {
+const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettings, onAddExpense, initialEmployees = [], initialAttendances = [], initialPayments = [] }) => {
     const { language, isRTL } = useLanguage();
     const [activeTab, setActiveTab] = useState<'employees' | 'attendance' | 'payments'>('employees');
     
-    const [employees, setEmployees] = useState<Employee[]>([]);
-    const [attendances, setAttendances] = useState<Attendance[]>([]);
-    const [payments, setPayments] = useState<SalaryPayment[]>([]);
+    const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+    const [attendances, setAttendances] = useState<Attendance[]>(initialAttendances);
+    const [payments, setPayments] = useState<SalaryPayment[]>(initialPayments);
+
+    useEffect(() => {
+        setEmployees(initialEmployees);
+        setAttendances(initialAttendances);
+        setPayments(initialPayments);
+    }, [initialEmployees, initialAttendances, initialPayments]);
 
     const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
     const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
@@ -113,7 +122,6 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
     const [attendanceToDelete, setAttendanceToDelete] = useState<string | null>(null);
     const [paymentToEdit, setPaymentToEdit] = useState<SalaryPayment | null>(null);
     const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
 
     // Attendance Filters
     const [attendanceFilterEmployeeId, setAttendanceFilterEmployeeId] = useState<string>('all');
@@ -149,7 +157,6 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
 
     const loadData = async () => {
         try {
-            setIsLoading(true);
             const emps = await dbService.employees.getAll();
             const atts = await dbService.attendances.getAll();
             const pays = await dbService.salaryPayments.getAll();
@@ -158,8 +165,6 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
             setPayments(pays);
         } catch (err) {
             console.error("Failed to load personnel data", err);
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -195,6 +200,7 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
                 await dbService.attendances.delete(attendanceToDelete);
             } else if (paymentToDelete) {
                 await dbService.salaryPayments.delete(paymentToDelete);
+                window.dispatchEvent(new CustomEvent('refreshAppData'));
             }
             await loadData();
             setIsConfirmOpen(false);
@@ -208,12 +214,14 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
     };
 
     // Attendance Handlers
-    const handleSaveAttendance = async (att: Attendance) => {
+    const handleSaveAttendance = async (attData: Attendance | Attendance[]) => {
         try {
-            if (attendanceToEdit) {
-                await dbService.attendances.update(att);
+            if (attendanceToEdit && !Array.isArray(attData)) {
+                await dbService.attendances.update(attData);
+            } else if (Array.isArray(attData)) {
+                await dbService.bulkAdd('attendances', attData);
             } else {
-                await dbService.attendances.add(att);
+                await dbService.attendances.add(attData);
             }
             await loadData();
             setIsAddAttendanceModalOpen(false);
@@ -236,21 +244,9 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
                 await dbService.salaryPayments.update(pay);
             } else {
                 await dbService.salaryPayments.add(pay);
-                if (onAddExpense) {
-                    const emp = employees.find(e => e.id === pay.employeeId);
-                    const empName = emp ? `${emp.firstName} ${emp.lastName}` : '';
-                    if (window.confirm("Voulez-vous enregistrer ce paiement dans vos Dépenses (Charges diverses) automatiquement ?")) {
-                        await onAddExpense({
-                            category: "Salaires & Rémunérations",
-                            description: `Paiement ${pay.type} - ${empName}`,
-                            amount: pay.amount,
-                            date: pay.paymentDate,
-                            receiptUrl: ''
-                        });
-                    }
-                }
             }
             await loadData();
+            window.dispatchEvent(new CustomEvent('refreshAppData'));
             setIsAddPaymentModalOpen(false);
             setPaymentToEdit(null);
         } catch (err: any) {
@@ -357,21 +353,40 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
         );
     };
 
-    const AttendanceForm = ({ attendance, onSave, onCancel, employeesList }: { attendance?: Attendance | null, onSave: (a: Attendance) => void, onCancel: () => void, employeesList: Employee[] }) => {
+    const AttendanceForm = ({ attendance, onSave, onCancel, onDelete, employeesList }: { attendance?: Attendance | null, onSave: (a: Attendance | Attendance[]) => void, onCancel: () => void, onDelete?: (id: string) => void, employeesList: Employee[] }) => {
         const [formData, setFormData] = useState<Partial<Attendance>>(attendance || {
             employeeId: employeesList.length > 0 ? employeesList[0].id : '',
             date: new Date().toISOString().split('T')[0],
             status: 'Present',
             note: ''
         });
+        const [endDate, setEndDate] = useState(formData.date || new Date().toISOString().split('T')[0]);
 
         const handleSubmit = (e: React.FormEvent) => {
             e.preventDefault();
-            onSave({
-                ...formData,
-                id: attendance?.id || crypto.randomUUID(),
-            } as Attendance);
+            if (!attendance && (formData.status === 'Absent' || formData.status === 'Leave') && formData.date && endDate && new Date(formData.date) <= new Date(endDate)) {
+                // Generate range
+                const records: Attendance[] = [];
+                let current = new Date(formData.date);
+                const end = new Date(endDate);
+                while (current <= end) {
+                    records.push({
+                        ...formData,
+                        id: crypto.randomUUID(),
+                        date: current.toISOString().split('T')[0]
+                    } as Attendance);
+                    current.setDate(current.getDate() + 1);
+                }
+                onSave(records);
+            } else {
+                onSave({
+                    ...formData,
+                    id: attendance?.id || crypto.randomUUID(),
+                } as Attendance);
+            }
         };
+
+        const isRange = !attendance && (formData.status === 'Absent' || formData.status === 'Leave');
 
         return (
             <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -389,18 +404,14 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
                         <form id="attendanceForm" onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700">{t('employee')} *</label>
-                                <select required value={formData.employeeId} onChange={e => setFormData({...formData, employeeId: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
+                                <select required value={formData.employeeId} onChange={e => setFormData({...formData, employeeId: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" disabled={!!attendance}>
                                     <option value="" disabled>{t('selectEmployee')}</option>
                                     {employeesList.map(emp => (
                                         <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>
                                     ))}
                                 </select>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">{t('date')} *</label>
-                                    <input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                </div>
+                            <div className={`grid ${isRange ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'} gap-4`}>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700">{t('status')} *</label>
                                     <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
@@ -410,6 +421,23 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
                                         <option value="Leave">{t('leave')}</option>
                                     </select>
                                 </div>
+                                {isRange ? (
+                                    <>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700">De *</label>
+                                            <input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700">Jusqu'à *</label>
+                                            <input required type="date" value={endDate} min={formData.date} onChange={e => setEndDate(e.target.value)} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">{t('date')} *</label>
+                                        <input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700">{t('note')}</label>
@@ -417,13 +445,23 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
                             </div>
                         </form>
                     </div>
-                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
-                        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-                            {t('cancel')}
-                        </button>
-                        <button form="attendanceForm" type="submit" className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
-                            {t('save')}
-                        </button>
+                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center gap-3 rounded-b-2xl">
+                        {attendance && onDelete ? (
+                            <button type="button" onClick={() => onDelete(attendance.id)} className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors rounded-lg flex items-center gap-2">
+                                <Trash2 className="w-4 h-4" />
+                                {t('delete')}
+                            </button>
+                        ) : (
+                            <div></div>
+                        )}
+                        <div className="flex justify-end gap-3">
+                            <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                                {t('cancel')}
+                            </button>
+                            <button form="attendanceForm" type="submit" className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                                {t('save')}
+                            </button>
+                        </div>
                     </div>
                 </motion.div>
             </div>
@@ -543,17 +581,78 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
         );
     };
 
-    if (isLoading) {
+    const renderCalendar = () => {
+        if (!attendanceFilterMonth || attendanceFilterEmployeeId === 'all') return (
+            <div className="text-center py-12">
+                <Calendar className="mx-auto h-12 w-12 text-slate-300" />
+                <h3 className="mt-2 text-sm font-semibold text-slate-900">Sélectionnez un employé pour voir son calendrier</h3>
+            </div>
+        );
+
+        const [yearStr, monthStr] = attendanceFilterMonth.split('-');
+        const year = parseInt(yearStr);
+        const month = parseInt(monthStr) - 1;
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDayOfMonth = new Date(year, month, 1).getDay(); // Sunday = 0
+        const startOffset = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1; // Make Monday = 0
+        
+        const days = Array.from({length: daysInMonth}, (_, i) => i + 1);
+        
+        const getStatusColor = (status: string) => {
+            switch(status) {
+                case 'Present': return 'bg-emerald-50 text-emerald-700';
+                case 'Absent': return 'bg-red-50 text-red-700';
+                case 'Half-day': return 'bg-amber-50 text-amber-700';
+                case 'Leave': return 'bg-blue-50 text-blue-700';
+                default: return 'bg-slate-50 text-slate-700';
+            }
+        };
+        const getStatusText = (status: string) => {
+            switch(status) {
+                case 'Present': return t('present');
+                case 'Absent': return t('absent');
+                case 'Half-day': return t('halfDay');
+                case 'Leave': return t('leave');
+                default: return status;
+            }
+        };
+
         return (
-            <div>
-                <Header title={t('personnel')} />
-                <div className="flex flex-col items-center justify-center py-20">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mb-4"></div>
-                    <p className="text-slate-500 font-medium">Chargement des données...</p>
+            <div className="p-4 sm:p-6 bg-slate-50/50">
+                <div className="grid grid-cols-7 gap-px rounded-xl bg-slate-200 overflow-hidden border border-slate-200 shadow-sm">
+                    {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map(d => (
+                        <div key={d} className="bg-white py-3 text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">{d}</div>
+                    ))}
+                    {Array.from({length: startOffset}).map((_, i) => (
+                        <div key={`empty-${i}`} className="bg-slate-50/50 min-h-[100px]" />
+                    ))}
+                    {days.map(day => {
+                        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        const dayAttendances = filteredAttendances.filter(a => a.date === dateStr);
+                        const isToday = new Date().toISOString().split('T')[0] === dateStr;
+                        return (
+                            <div key={day} className={`bg-white min-h-[100px] p-2 hover:bg-slate-50 transition-colors flex flex-col group relative ${isToday ? 'ring-2 ring-inset ring-emerald-500' : ''}`}>
+                                <span className={`text-sm font-semibold mb-1 ${isToday ? 'text-emerald-600' : 'text-slate-400'}`}>{day}</span>
+                                <div className="flex-1 flex flex-col gap-1">
+                                    {dayAttendances.map(att => (
+                                        <div key={att.id} onClick={(e) => { e.stopPropagation(); setAttendanceToEdit(att); setIsAddAttendanceModalOpen(true); }} className={`cursor-pointer px-2 py-1 rounded text-[11px] font-bold leading-tight truncate ${getStatusColor(att.status)}`} title={att.note}>
+                                            {getStatusText(att.status)}
+                                        </div>
+                                    ))}
+                                </div>
+                                <button onClick={() => {
+                                    setAttendanceToEdit(null);
+                                    setIsAddAttendanceModalOpen(true);
+                                }} className="absolute top-1 right-1 p-1 bg-white shadow-sm border border-slate-100 rounded text-slate-400 hover:text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                    <Plus className="w-3 h-3" />
+                                </button>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         );
-    }
+    };
 
     return (
         <div>
@@ -700,12 +799,12 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
                     {activeTab === 'attendance' && (
                         <div className="flex flex-col h-full">
                             <div className="p-4 sm:p-6 border-b border-slate-100 bg-white">
-                                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                                    <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+                                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 xl:gap-6 w-full">
+                                    <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 sm:gap-4 w-full xl:w-auto">
                                         <select
                                             value={attendanceFilterEmployeeId}
                                             onChange={(e) => setAttendanceFilterEmployeeId(e.target.value)}
-                                            className="block w-full sm:w-64 rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-slate-50"
+                                            className="block w-full sm:w-64 h-[42px] px-3 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all cursor-pointer"
                                         >
                                             <option value="all">Tous les employés</option>
                                             {employees.map(emp => (
@@ -716,139 +815,50 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
                                             type="month"
                                             value={attendanceFilterMonth}
                                             onChange={(e) => setAttendanceFilterMonth(e.target.value)}
-                                            className="block w-full sm:w-48 rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-slate-50"
+                                            className="block w-full sm:w-48 h-[42px] px-3 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all cursor-pointer"
                                         />
                                         {(attendanceFilterEmployeeId !== 'all' || attendanceFilterMonth !== '') && (
                                             <button 
                                                 onClick={() => { setAttendanceFilterEmployeeId('all'); setAttendanceFilterMonth(''); }} 
-                                                className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors whitespace-nowrap"
+                                                className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors whitespace-nowrap self-start sm:self-center"
                                             >
                                                 Effacer les filtres
                                             </button>
                                         )}
                                     </div>
-                                    <div className="flex flex-wrap gap-3 text-sm font-medium w-full lg:w-auto justify-start lg:justify-end">
-                                        <div className="flex flex-col items-center justify-center py-2 px-4 bg-emerald-50 text-emerald-800 rounded-xl min-w-[90px] border border-emerald-100/50">
+                                    <div className="grid grid-cols-2 lg:flex lg:flex-nowrap gap-2 sm:gap-3 text-sm font-medium w-full xl:w-auto mt-2 xl:mt-0">
+                                        <div className="flex flex-col items-center justify-center py-2 px-2 sm:px-4 bg-emerald-50 text-emerald-800 rounded-xl lg:min-w-[90px] border border-emerald-100/50 text-center">
                                             <span className="text-xl font-bold">{totalPresent}</span>
-                                            <span className="text-xs mt-0.5 opacity-80">Présences</span>
+                                            <span className="text-[10px] sm:text-xs mt-0.5 opacity-80 uppercase tracking-wider font-semibold truncate max-w-full">Présences</span>
                                         </div>
-                                        <div className="flex flex-col items-center justify-center py-2 px-4 bg-amber-50 text-amber-800 rounded-xl min-w-[90px] border border-amber-100/50">
+                                        <div className="flex flex-col items-center justify-center py-2 px-2 sm:px-4 bg-amber-50 text-amber-800 rounded-xl lg:min-w-[90px] border border-amber-100/50 text-center">
                                             <span className="text-xl font-bold">{totalHalfDay}</span>
-                                            <span className="text-xs mt-0.5 opacity-80">Demi-journées</span>
+                                            <span className="text-[10px] sm:text-xs mt-0.5 opacity-80 uppercase tracking-wider font-semibold truncate max-w-full">Demi-journées</span>
                                         </div>
-                                        <div className="flex flex-col items-center justify-center py-2 px-4 bg-red-50 text-red-800 rounded-xl min-w-[90px] border border-red-100/50">
+                                        <div className="flex flex-col items-center justify-center py-2 px-2 sm:px-4 bg-red-50 text-red-800 rounded-xl lg:min-w-[90px] border border-red-100/50 text-center">
                                             <span className="text-xl font-bold">{totalAbsent}</span>
-                                            <span className="text-xs mt-0.5 opacity-80">Absences</span>
+                                            <span className="text-[10px] sm:text-xs mt-0.5 opacity-80 uppercase tracking-wider font-semibold truncate max-w-full">Absences</span>
                                         </div>
-                                        <div className="flex flex-col items-center justify-center py-2 px-4 bg-blue-50 text-blue-800 rounded-xl min-w-[90px] border border-blue-100/50">
+                                        <div className="flex flex-col items-center justify-center py-2 px-2 sm:px-4 bg-blue-50 text-blue-800 rounded-xl lg:min-w-[90px] border border-blue-100/50 text-center">
                                             <span className="text-xl font-bold">{totalLeave}</span>
-                                            <span className="text-xs mt-0.5 opacity-80">Congés</span>
+                                            <span className="text-[10px] sm:text-xs mt-0.5 opacity-80 uppercase tracking-wider font-semibold truncate max-w-full">Congés</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            {filteredAttendances.length === 0 ? (
-                                <div className="text-center py-12">
-                                    <Calendar className="mx-auto h-12 w-12 text-slate-300" />
-                                    <h3 className="mt-2 text-sm font-semibold text-slate-900">{t('noData')}</h3>
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-neutral-200">
-                                        <thead className="bg-neutral-50">
-                                            <tr>
-                                                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('date')}</th>
-                                                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('employee')}</th>
-                                                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('status')}</th>
-                                                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('note')}</th>
-                                                <th scope="col" className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-neutral-500">{t('actions')}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-neutral-200 bg-white">
-                                            {filteredAttendances.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(att => {
-                                                const emp = employees.find(e => e.id === att.employeeId);
-                                                const getStatusColor = (status: string) => {
-                                                    switch(status) {
-                                                        case 'Present': return 'bg-emerald-50 text-emerald-700 ring-emerald-600/20';
-                                                        case 'Absent': return 'bg-red-50 text-red-700 ring-red-600/20';
-                                                        case 'Half-day': return 'bg-amber-50 text-amber-700 ring-amber-600/20';
-                                                        case 'Leave': return 'bg-blue-50 text-blue-700 ring-blue-600/20';
-                                                        default: return 'bg-slate-50 text-slate-700 ring-slate-600/20';
-                                                    }
-                                                };
-                                                const getStatusText = (status: string) => {
-                                                    switch(status) {
-                                                        case 'Present': return t('present');
-                                                        case 'Absent': return t('absent');
-                                                        case 'Half-day': return t('halfDay');
-                                                        case 'Leave': return t('leave');
-                                                        default: return status;
-                                                    }
-                                                };
-                                                return (
-                                                    <tr key={att.id} className="hover:bg-neutral-50 transition-colors group">
-                                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-medium">
-                                                            {new Date(att.date).toLocaleDateString()}
-                                                        </td>
-                                                        <td className="whitespace-nowrap px-6 py-4">
-                                                            <div className="flex items-center">
-                                                                {emp ? (
-                                                                    <>
-                                                                        <div className="h-8 w-8 flex-shrink-0 rounded-full bg-emerald-100 flex items-center justify-center">
-                                                                            <span className="text-emerald-700 font-semibold text-xs">{emp.firstName.charAt(0)}{emp.lastName.charAt(0)}</span>
-                                                                        </div>
-                                                                        <div className="ml-3 rtl:ml-0 rtl:mr-3">
-                                                                            <div className="text-sm font-medium text-neutral-900">{emp.firstName} {emp.lastName}</div>
-                                                                        </div>
-                                                                    </>
-                                                                ) : (
-                                                                    <span className="text-sm text-neutral-500">Employé inconnu</span>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                        <td className="whitespace-nowrap px-6 py-4">
-                                                            <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${getStatusColor(att.status)}`}>
-                                                                {getStatusText(att.status)}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-sm text-neutral-500 max-w-xs truncate">
-                                                            {att.note || '-'}
-                                                        </td>
-                                                        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                                            <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <button 
-                                                                    onClick={() => { setAttendanceToEdit(att); setIsAddAttendanceModalOpen(true); }} 
-                                                                    className="text-emerald-600 hover:text-emerald-900"
-                                                                >
-                                                                    <Edit className="h-4 w-4" />
-                                                                </button>
-                                                                <button 
-                                                                    onClick={() => handleDeleteAttendance(att.id)} 
-                                                                    className="text-red-600 hover:text-red-900"
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
+                            {renderCalendar()}
                         </div>
                     )}
 
                     {activeTab === 'payments' && (
                         <div className="flex flex-col h-full">
                             <div className="p-4 sm:p-6 border-b border-slate-100 bg-white">
-                                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                                    <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+                                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 xl:gap-6 w-full">
+                                    <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 sm:gap-4 w-full xl:w-auto">
                                         <select
                                             value={paymentFilterEmployeeId}
                                             onChange={(e) => setPaymentFilterEmployeeId(e.target.value)}
-                                            className="block w-full sm:w-64 rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-slate-50"
+                                            className="block w-full sm:w-64 h-[42px] px-3 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all cursor-pointer"
                                         >
                                             <option value="all">Tous les employés</option>
                                             {employees.map(emp => (
@@ -859,26 +869,26 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
                                             type="month"
                                             value={paymentFilterMonth}
                                             onChange={(e) => setPaymentFilterMonth(e.target.value)}
-                                            className="block w-full sm:w-48 rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm bg-slate-50"
+                                            className="block w-full sm:w-48 h-[42px] px-3 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all cursor-pointer"
                                         />
                                         {(paymentFilterEmployeeId !== 'all' || paymentFilterMonth !== '') && (
                                             <button 
                                                 onClick={() => { setPaymentFilterEmployeeId('all'); setPaymentFilterMonth(''); }} 
-                                                className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors whitespace-nowrap"
+                                                className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors whitespace-nowrap self-start sm:self-center"
                                             >
                                                 Effacer les filtres
                                             </button>
                                         )}
                                     </div>
-                                    <div className="flex gap-4 text-sm font-medium w-full lg:w-auto justify-start lg:justify-end border-t lg:border-t-0 pt-4 lg:pt-0">
+                                    <div className="flex flex-wrap gap-4 lg:gap-6 text-sm font-medium w-full xl:w-auto justify-between sm:justify-start xl:justify-end border-t xl:border-t-0 pt-4 xl:pt-0 mt-2 xl:mt-0">
                                         <div className="flex flex-col rtl:text-right">
-                                            <span className="text-slate-500 text-xs">Total Payé ({paymentFilterMonth === 'all' || paymentFilterMonth === '' ? 'Tout' : paymentFilterMonth})</span>
-                                            <span className="text-xl font-bold text-emerald-600">{formatCurrency(totalPaidAmount, companySettings?.currency || 'EUR')}</span>
+                                            <span className="text-slate-500 text-xs text-center sm:text-left">Total Payé ({paymentFilterMonth === 'all' || paymentFilterMonth === '' ? 'Tout' : paymentFilterMonth})</span>
+                                            <span className="text-lg sm:text-xl font-bold text-emerald-600 text-center sm:text-left">{formatCurrency(totalPaidAmount, companySettings?.currency || 'EUR')}</span>
                                         </div>
                                         <div className="w-px bg-slate-200 hidden sm:block"></div>
                                         <div className="flex flex-col rtl:text-right">
-                                            <span className="text-slate-500 text-xs">Total En attente</span>
-                                            <span className="text-xl font-bold text-amber-600">{formatCurrency(totalPendingAmount, companySettings?.currency || 'EUR')}</span>
+                                            <span className="text-slate-500 text-xs text-center sm:text-left">Total En attente</span>
+                                            <span className="text-lg sm:text-xl font-bold text-amber-600 text-center sm:text-left">{formatCurrency(totalPendingAmount, companySettings?.currency || 'EUR')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -971,7 +981,16 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
             )}
 
             {isAddAttendanceModalOpen && (
-                <AttendanceForm attendance={attendanceToEdit} onSave={handleSaveAttendance} onCancel={() => { setIsAddAttendanceModalOpen(false); setAttendanceToEdit(null); }} employeesList={employees} />
+                <AttendanceForm 
+                    attendance={attendanceToEdit} 
+                    onSave={handleSaveAttendance} 
+                    onCancel={() => { setIsAddAttendanceModalOpen(false); setAttendanceToEdit(null); }} 
+                    onDelete={(id) => {
+                        setIsAddAttendanceModalOpen(false);
+                        handleDeleteAttendance(id);
+                    }}
+                    employeesList={employees} 
+                />
             )}
 
             {isAddPaymentModalOpen && (

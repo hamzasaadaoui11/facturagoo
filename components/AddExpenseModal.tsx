@@ -170,16 +170,6 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                                 />
                             </div>
 
-                            <div className="sm:col-span-2">
-                                <label className="block text-sm font-bold text-slate-700 mb-1.5">{t('reference')} (Optionnel)</label>
-                                <input 
-                                    type="text"
-                                    value={formData.reference}
-                                    onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm outline-none"
-                                    placeholder="Ex: Facture #123"
-                                />
-                            </div>
                         </div>
 
                         {/* Footer / Actions */}

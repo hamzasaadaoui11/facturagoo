@@ -16,6 +16,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import AddExpenseModal from './AddExpenseModal';
 import Header from './Header';
+import ConfirmationModal from './ConfirmationModal';
 
 interface ExpensesProps {
     expenses: Expense[];
@@ -34,6 +35,8 @@ const Expenses: React.FC<ExpensesProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+    const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     
     // Date filtering state
     const today = new Date();
@@ -63,7 +66,7 @@ const Expenses: React.FC<ExpensesProps> = ({
             const expenseDate = new Date(expense.date);
             const matchesDate = expenseDate.getMonth() === selectedMonth && expenseDate.getFullYear() === selectedYear;
             
-            const searchStr = `${expense.description} ${expense.category} ${expense.reference || ''}`.toLowerCase();
+            const searchStr = `${expense.description} ${expense.category}`.toLowerCase();
             const matchesSearch = searchStr.includes(searchTerm.toLowerCase());
             
             return matchesDate && matchesSearch;
@@ -141,7 +144,7 @@ const Expenses: React.FC<ExpensesProps> = ({
                         </div>
                     </motion.div>
 
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between col-span-1 md:col-span-2">
+                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center col-span-1 md:col-span-2">
                         <div className="flex items-center gap-3">
                             <Calendar className="w-5 h-5 text-slate-400" />
                             <div className="flex items-center gap-2">
@@ -155,13 +158,6 @@ const Expenses: React.FC<ExpensesProps> = ({
                                     <ChevronRight className="w-5 h-5" />
                                 </button>
                             </div>
-                        </div>
-                        
-                        <div className="hidden sm:flex gap-4">
-                             <div className="text-right border-l pl-4 border-slate-100">
-                                <p className="text-xs text-slate-400 uppercase font-bold tracking-wider">{t('count')}</p>
-                                <p className="text-lg font-bold text-slate-700">{filteredExpenses.length}</p>
-                             </div>
                         </div>
                     </div>
                 </div>
@@ -204,7 +200,6 @@ const Expenses: React.FC<ExpensesProps> = ({
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('date')}</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('category')}</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('description')}</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('reference')}</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 text-right">{t('amount')}</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 text-right">{t('actions')}</th>
                                 </tr>
@@ -232,9 +227,6 @@ const Expenses: React.FC<ExpensesProps> = ({
                                                 <td className="px-6 py-4 text-sm text-neutral-500">
                                                     {expense.description}
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-neutral-500">
-                                                    {expense.reference || '-'}
-                                                </td>
                                                 <td className="whitespace-nowrap px-6 py-4 text-sm font-bold text-neutral-900 text-right">
                                                     {expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} DH
                                                 </td>
@@ -248,7 +240,10 @@ const Expenses: React.FC<ExpensesProps> = ({
                                                             <Edit className="h-4 w-4" />
                                                         </button>
                                                         <button 
-                                                            onClick={() => onDeleteExpense(expense.id)}
+                                                            onClick={() => {
+                                                                setExpenseToDelete(expense.id);
+                                                                setIsConfirmOpen(true);
+                                                            }}
                                                             className="text-red-600 hover:text-red-900 transition-colors"
                                                             title={t('delete')}
                                                         >
@@ -295,6 +290,23 @@ const Expenses: React.FC<ExpensesProps> = ({
                     setEditingExpense(null);
                 }}
                 editingExpense={editingExpense}
+            />
+
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                title={t('confirmDelete')}
+                message="Êtes-vous sûr de vouloir supprimer cette dépense ? Cette action est irréversible."
+                onConfirm={() => {
+                    if (expenseToDelete) {
+                        onDeleteExpense(expenseToDelete);
+                    }
+                    setIsConfirmOpen(false);
+                    setExpenseToDelete(null);
+                }}
+                onClose={() => {
+                    setIsConfirmOpen(false);
+                    setExpenseToDelete(null);
+                }}
             />
         </div>
     );
