@@ -343,4 +343,6 @@ export interface SalaryPayment {
     periodEnd: string;
     status: 'Paid' | 'Pending';
     reference?: string;
+    type?: string; 
+    note?: string;
 }

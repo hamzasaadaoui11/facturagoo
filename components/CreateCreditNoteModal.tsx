@@ -52,6 +52,13 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
     const [discountValue, setDiscountValue] = useState<string>('');
 
+    const stripHtml = (html?: string) => {
+        if (!html) return '';
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = html;
+        return (tempDiv.textContent || tempDiv.innerText || "").replace(/\u00a0/g, " ").trim();
+    };
+
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => setIsVisible(true), 10);
@@ -71,7 +78,14 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 setNotes(creditNoteToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(creditNoteToEdit.lineItems[0]?.calculationMode || 'piece');
-                setLineItems(JSON.parse(JSON.stringify(creditNoteToEdit.lineItems)));
+                
+                const loadedItems = JSON.parse(JSON.stringify(creditNoteToEdit.lineItems));
+                setLineItems(loadedItems.map((li: any) => ({
+                    ...li,
+                    name: stripHtml(li.name),
+                    description: stripHtml(li.description)
+                })));
+                
                 setIsDiscountEnabled(!!creditNoteToEdit.discountValue && creditNoteToEdit.discountValue > 0);
                 setDiscountType(creditNoteToEdit.discountType || 'percentage');
                 setDiscountValue(creditNoteToEdit.discountValue ? formatDecimalForInput(creditNoteToEdit.discountValue, language) : '');
@@ -117,7 +131,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
         if (selectedProductId) {
             const product = products.find(p => p.id === selectedProductId);
             if (product) {
-                setTempName(product.description || product.name);
+                setTempName(stripHtml(product.name));
                 setTempDesc('');
                 const priceToDisplay = isModeTTC ? (product.salePrice * (1 + product.vat / 100)) : product.salePrice;
                 setTempPrice(priceToDisplay);
@@ -745,7 +759,6 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                             
                             <div className="flex items-center justify-between text-sm">
                                 <div className="flex items-center gap-2">
-                                    <label htmlFor="discount-toggle" className="text-slate-500 font-medium">{t('globalDiscount')}</label>
                                     <input 
                                         type="checkbox" 
                                         id="discount-toggle"
@@ -753,6 +766,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                         onChange={(e) => setIsDiscountEnabled(e.target.checked)}
                                         className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                                     />
+                                    <label htmlFor="discount-toggle" className="text-slate-500 font-medium">{t('globalDiscount')}</label>
                                 </div>
                                 {isDiscountEnabled && totals.discountAmount > 0 && (
                                     <span className="font-bold text-red-500">

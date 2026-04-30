@@ -7,7 +7,7 @@ import {
 import { 
     Calendar, TrendingUp, TrendingDown, DollarSign, 
     CreditCard, ShoppingBag, ArrowUpRight, ArrowDownRight, Filter, PieChart as PieIcon, Activity,
-    ArrowRightLeft, UserCheck, Truck, BarChart2, User, Target, Info, FileText
+    ArrowRightLeft, UserCheck, Truck, BarChart2, User, Target, Info, FileText, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Invoice, Payment, PurchaseOrder, Product, PurchaseOrderStatus, InvoiceStatus, CreditNote, CreditNoteStatus, Expense, SalaryPayment } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -34,6 +34,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
     
     const [selectedClientId, setSelectedClientId] = useState<string>('');
     const [selectedCategory, setSelectedCategory] = useState<string>('');
+    const [productPerformancePage, setProductPerformancePage] = useState<number>(1);
 
     const getDatesFromRange = (type: DateRangeType, customStart?: string, customEnd?: string) => {
         const end = new Date();
@@ -329,6 +330,11 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
         if (previous === 0) return current > 0 ? 100 : 0;
         return ((current - previous) / previous) * 100;
     };
+
+    const itemsPerPage = 7;
+    const totalPages = Math.ceil(productPerformance.length / itemsPerPage);
+    const currentPage = Math.min(productPerformancePage, totalPages || 1);
+    const paginatedProductPerformance = productPerformance.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     return (
         <div className="space-y-4 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -721,8 +727,8 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                 
                 {/* Mobile Card View for Global Product Performance */}
                 <div className="md:hidden divide-y divide-slate-100">
-                    {productPerformance.length > 0 ? (
-                        productPerformance.map((p) => (
+                    {paginatedProductPerformance.length > 0 ? (
+                        paginatedProductPerformance.map((p) => (
                             <div key={p.id} className="p-4 space-y-2 hover:bg-slate-50 transition-colors">
                                 <div className="flex justify-between items-start">
                                     <div className="text-sm font-bold text-slate-900 truncate max-w-[200px]">
@@ -764,8 +770,8 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
-                            {productPerformance.length > 0 ? (
-                                productPerformance.map((p) => (
+                            {paginatedProductPerformance.length > 0 ? (
+                                paginatedProductPerformance.map((p) => (
                                     <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                                         <td className="px-5 md:px-8 py-3 md:py-4 text-xs md:text-sm font-medium text-slate-900 truncate max-w-[120px] md:max-w-none">
                                             {cleanHtml(p.name)}
@@ -780,6 +786,34 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-5 md:px-8 py-4 border-t border-slate-100 bg-white">
+                        <p className="text-xs text-slate-500">
+                            Affichage <span className="font-bold">{(currentPage - 1) * itemsPerPage + 1}</span> à <span className="font-bold">{Math.min(currentPage * itemsPerPage, productPerformance.length)}</span> sur <span className="font-bold">{productPerformance.length}</span> produits
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setProductPerformancePage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="p-1 rounded bg-slate-50 text-slate-400 hover:text-slate-600 disabled:opacity-50 transition-colors"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <span className="text-xs font-bold text-slate-700 bg-slate-50 px-3 py-1 rounded">
+                                {currentPage} / {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setProductPerformancePage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="p-1 rounded bg-slate-50 text-slate-400 hover:text-slate-600 disabled:opacity-50 transition-colors"
+                            >
+                                <ChevronRight className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown, Package, AlertTriangle, XCircle } from 'lucide-react';
 import { Product } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -91,16 +91,37 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
                                     onClick={() => handleSelect(product)}
                                 >
                                     <div className="flex justify-between items-start">
-                                        <span className="font-bold text-slate-900">{product.name}</span>
-                                        {product.category && (
-                                            <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 rounded-full font-bold uppercase tracking-wider">
-                                                {product.category}
-                                            </span>
-                                        )}
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-slate-900">{product.name}</span>
+                                            {product.productType === 'Produit' && (
+                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                    {(product.stockQuantity || 0) <= 0 ? (
+                                                        <span className="flex items-center gap-1 text-[9px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
+                                                            <XCircle size={10} /> {language === 'fr' ? 'Rupture' : 'Out'}
+                                                        </span>
+                                                    ) : (product.stockQuantity || 0) <= (product.minStockAlert || 5) ? (
+                                                        <span className="flex items-center gap-1 text-[9px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
+                                                            <AlertTriangle size={10} /> {(product.stockQuantity || 0)} {language === 'fr' ? 'restants' : 'left'}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="flex items-center gap-1 text-[9px] font-bold text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded">
+                                                            <Package size={10} /> {(product.stockQuantity || 0)} {language === 'fr' ? 'en stock' : 'in stock'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1">
+                                            {product.category && (
+                                                <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 rounded-full font-bold uppercase tracking-wider">
+                                                    {product.category}
+                                                </span>
+                                            )}
+                                            {product.productCode && (
+                                                <span className="text-[9px] text-slate-400 font-mono">{product.productCode}</span>
+                                            )}
+                                        </div>
                                     </div>
-                                    {product.productCode && (
-                                        <span className="text-[10px] text-slate-500 font-mono">{product.productCode}</span>
-                                    )}
                                 </button>
                             ))}
                         </div>

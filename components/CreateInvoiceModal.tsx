@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Trash2, ScanLine, Calculator, FileText, CreditCard, Loader2, Package, Square, Ruler, Weight, Hash, Tag, Coins, Layers } from 'lucide-react';
+import { X, Plus, Trash2, ScanLine, Calculator, FileText, CreditCard, Loader2, Package, Square, Ruler, Weight, Hash, Tag, Coins, Layers, AlertTriangle } from 'lucide-react';
 import { Client, Product, Invoice, LineItem, InvoiceStatus, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
@@ -58,6 +58,14 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     const [isDiscountEnabled, setIsDiscountEnabled] = useState(false);
     const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
     const [discountValue, setDiscountValue] = useState<string>('');
+    const [stockError, setStockError] = useState<string | null>(null);
+
+    const stripHtml = (html?: string) => {
+        if (!html) return '';
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = html;
+        return (tempDiv.textContent || tempDiv.innerText || "").replace(/\u00a0/g, " ").trim();
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -77,7 +85,14 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setNotes(invoiceToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(invoiceToEdit.lineItems[0]?.calculationMode || 'piece');
-                setLineItems(JSON.parse(JSON.stringify(invoiceToEdit.lineItems)));
+                
+                const loadedItems = JSON.parse(JSON.stringify(invoiceToEdit.lineItems));
+                setLineItems(loadedItems.map((li: any) => ({
+                    ...li,
+                    name: stripHtml(li.name),
+                    description: stripHtml(li.description)
+                })));
+                
                 setExistingAmountPaid(invoiceToEdit.amountPaid || 0);
                 setNewPaymentAmount(0);
                 setIsDiscountEnabled(!!invoiceToEdit.discountValue && invoiceToEdit.discountValue > 0);
@@ -138,7 +153,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
         if (productId) {
             const product = products.find(p => p.id === productId);
             if (product) {
-                setTempName(product.description || product.name);
+                setTempName(stripHtml(product.name));
                 setTempDesc('');
                 const priceToDisplay = isModeTTC ? (product.salePrice * (1 + product.vat / 100)) : product.salePrice;
                 setTempPrice(formatDecimalForInput(priceToDisplay, language));
@@ -155,7 +170,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             const product = products.find(p => p.id === selectedProductId);
             const variant = product?.variants?.find(v => v.id === variantId);
             if (variant && product) {
-                const baseName = product.description || product.name;
+                const baseName = stripHtml(product.description || product.name);
                 setTempName(`${baseName} (${variant.attributeValue})`);
                 
                 if (variant.salePrice !== undefined && variant.salePrice > 0) {
@@ -184,6 +199,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
 
     const handleAddItem = () => {
         try {
+            setStockError(null);
             if (!tempName) return;
             const qty = parseDecimalInput(itemQuantity);
 
@@ -205,7 +221,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                             const availableStock = (variant.stockQuantity || 0) + savedQty;
                             
                             if (totalRequestedQty > availableStock) {
-                                alert(`Stock insuffisant pour la variante ${variant.attributeValue} de ${product.name}. Stock disponible: ${availableStock}`);
+                                setStockError(`Stock insuffisant pour la variante ${variant.attributeValue} de ${product.name}. Disponible: ${availableStock}`);
                                 return;
                             }
                         }
@@ -221,7 +237,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                         const availableStock = (product.stockQuantity || 0) + savedQty;
                         
                         if (totalRequestedQty > availableStock) {
-                            alert(`Stock insuffisant pour ${product.name}. Stock disponible: ${availableStock}`);
+                            setStockError(`Stock insuffisant pour ${product.name}. Disponible: ${availableStock}`);
                             return;
                         }
                     }
@@ -264,6 +280,31 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     };
 
     const updateLineItem = (id: string, updatedField: Partial<LineItem>) => {
+        if (updatedField.quantity !== undefined) {
+            const item = lineItems.find(li => li.id === id);
+            if (item && item.productId) {
+                const product = products.find(p => p.id === item.productId);
+                if (product && product.productType === 'Produit') {
+                    const savedItem = invoiceToEdit?.lineItems?.find(li => li.productId === item.productId && li.variantId === item.variantId);
+                    const savedQty = (savedItem && invoiceToEdit?.status !== InvoiceStatus.Draft) ? savedItem.quantity : 0;
+                    
+                    let availableStock = 0;
+                    if (item.variantId && product.variants) {
+                        const variant = product.variants.find(v => v.id === item.variantId);
+                        availableStock = (variant?.stockQuantity || 0) + savedQty;
+                    } else {
+                        availableStock = (product.stockQuantity || 0) + savedQty;
+                    }
+
+                    if (updatedField.quantity > availableStock) {
+                        setStockError(`Stock insuffisant. Disponible: ${availableStock}`);
+                        return;
+                    } else {
+                        setStockError(null);
+                    }
+                }
+            }
+        }
         setLineItems(prev => prev.map(item => item.id === id ? { ...item, ...updatedField } : item));
     };
 
@@ -724,6 +765,15 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                     <Plus size={16} /> {t('add')}
                                 </button>
                             </div>
+
+                            {stockError && (
+                                <div className="col-span-1 md:col-span-12 lg:col-span-12 mt-2 animate-in fade-in slide-in-from-top-1">
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg border border-red-100 text-[11px] font-bold uppercase tracking-wider">
+                                        <AlertTriangle size={14} />
+                                        {stockError}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -1004,7 +1054,6 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                             
                             <div className="flex items-center justify-between text-sm">
                                 <div className="flex items-center gap-2">
-                                    <label htmlFor="discount-toggle" className="text-slate-500 font-medium">{t('globalDiscount')}</label>
                                     <input 
                                         type="checkbox" 
                                         id="discount-toggle"
@@ -1012,6 +1061,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                         onChange={(e) => setIsDiscountEnabled(e.target.checked)}
                                         className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                                     />
+                                    <label htmlFor="discount-toggle" className="text-slate-500 font-medium">{t('globalDiscount')}</label>
                                 </div>
                                 {isDiscountEnabled && totals.discountAmount > 0 && (
                                     <span className="font-bold text-red-500">

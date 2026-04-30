@@ -46,7 +46,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                 setVat(productToEdit.vat);
                 setCategory(productToEdit.category || '');
                 setDescription(productToEdit.description || '');
-                setProductType(productToEdit.productType || 'Produit');
+                setProductType(productToEdit.productType === 'Service' ? 'Service' : 'Produit');
                 setUnitOfMeasure(productToEdit.unitOfMeasure || 'Unité');
                 setMinStockAlert(productToEdit.minStockAlert || 5);
                 setHasVariants(!!productToEdit.hasVariants);
@@ -183,16 +183,25 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                                     className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all font-medium"
                                 />
                             </div>
-                            <div>
-                                <label htmlFor="modalProductCode" className="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">{t('reference')}</label>
-                                <input 
-                                    type="text" 
-                                    id="modalProductCode" 
-                                    value={productCode} 
-                                    onChange={(e) => setProductCode(e.target.value)} 
-                                    placeholder="Ex: REF-001"
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all font-medium"
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="productType" className="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">Type</label>
+                                    <select id="productType" value={productType} onChange={(e) => setProductType(e.target.value as 'Produit' | 'Service')} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all font-medium">
+                                        <option value="Produit">Produit</option>
+                                        <option value="Service">Service</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="modalProductCode" className="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">{t('reference')}</label>
+                                    <input 
+                                        type="text" 
+                                        id="modalProductCode" 
+                                        value={productCode} 
+                                        onChange={(e) => setProductCode(e.target.value)} 
+                                        placeholder="Ex: REF-001"
+                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all font-medium"
+                                    />
+                                </div>
                             </div>
                             <div>
                                 <label htmlFor="modalCategory" className="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">{t('category')}</label>
@@ -232,16 +241,18 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                                     <label htmlFor="purchasePrice" className="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">{t('purchasePrice')} (HT)</label>
                                     <input type="number" step="0.01" id="purchasePrice" value={purchasePrice} onChange={(e) => handlePurchasePriceHTChange(parseFloat(e.target.value) || 0)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all font-medium" />
                                 </div>
-                                 <div>
-                                    <label id="stock-label" className="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">Stock Initial</label>
-                                    <input 
-                                        type="number" 
-                                        value={stockQuantity} 
-                                        onChange={(e) => !hasVariants && setStockQuantity(parseFloat(e.target.value) || 0)} 
-                                        disabled={hasVariants}
-                                        className={`w-full px-4 py-2.5 rounded-xl border border-slate-200 transition-all font-medium ${hasVariants ? 'bg-slate-50 text-slate-400 italic' : 'focus:border-emerald-500 focus:ring-emerald-500'}`} 
-                                    />
-                                </div>
+                                {productType !== 'Service' && (
+                                     <div>
+                                        <label id="stock-label" className="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">Stock Initial</label>
+                                        <input 
+                                            type="number" 
+                                            value={stockQuantity} 
+                                            onChange={(e) => !hasVariants && setStockQuantity(parseFloat(e.target.value) || 0)} 
+                                            disabled={hasVariants}
+                                            className={`w-full px-4 py-2.5 rounded-xl border border-slate-200 transition-all font-medium ${hasVariants ? 'bg-slate-50 text-slate-400 italic' : 'focus:border-emerald-500 focus:ring-emerald-500'}`} 
+                                        />
+                                    </div>
+                                )}
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -254,16 +265,18 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                                         <option value={0}>0%</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <label htmlFor="minStockAlert" className="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">Alerte Stock Minimal</label>
-                                    <input 
-                                        type="number" 
-                                        id="minStockAlert"
-                                        value={minStockAlert} 
-                                        onChange={(e) => setMinStockAlert(parseFloat(e.target.value) || 0)} 
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all font-medium" 
-                                    />
-                                </div>
+                                {productType !== 'Service' && (
+                                    <div>
+                                        <label htmlFor="minStockAlert" className="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1">Alerte Stock Minimal</label>
+                                        <input 
+                                            type="number" 
+                                            id="minStockAlert"
+                                            value={minStockAlert} 
+                                            onChange={(e) => setMinStockAlert(parseFloat(e.target.value) || 0)} 
+                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all font-medium" 
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

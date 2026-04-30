@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Plus, Trash2, ScanLine, Calculator, CreditCard, Loader2, Package, Square, Ruler, Weight, Hash, Tag, Coins, Layers } from 'lucide-react';
+import { X, Plus, Trash2, ScanLine, Calculator, CreditCard, Loader2, Package, Square, Ruler, Weight, Hash, Tag, Coins, Layers, AlertTriangle } from 'lucide-react';
 import { Client, Product, DeliveryNote, LineItem, CompanySettings, Invoice, InvoiceStatus } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
@@ -52,6 +52,14 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState('Espèces');
+    const [stockError, setStockError] = useState<string | null>(null);
+
+    const stripHtml = (html?: string) => {
+        if (!html) return '';
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = html;
+        return (tempDiv.textContent || tempDiv.innerText || "").replace(/\u00a0/g, " ").trim();
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -70,7 +78,14 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setNotes(noteToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(noteToEdit.lineItems[0]?.calculationMode || 'piece');
-                setLineItems(JSON.parse(JSON.stringify(noteToEdit.lineItems)));
+                
+                const loadedItems = JSON.parse(JSON.stringify(noteToEdit.lineItems));
+                setLineItems(loadedItems.map((li: any) => ({
+                    ...li,
+                    name: stripHtml(li.name),
+                    description: stripHtml(li.description)
+                })));
+                
                 setPaymentAmount(noteToEdit.paymentAmount || 0);
                 
                 const initialPaymentMethod = noteToEdit.paymentMethod || noteToEdit.lineItems[0]?.paymentMethod || 'Espèces';
@@ -116,6 +131,33 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     };
 
     const updateLineItem = (id: string, updatedField: Partial<LineItem>) => {
+        if (updatedField.quantity !== undefined) {
+            const item = lineItems.find(li => li.id === id);
+            if (item && item.productId) {
+                const product = products.find(p => p.id === item.productId);
+                if (product && product.productType === 'Produit') {
+                    const savedItem = noteToEdit?.lineItems?.find(li => li.productId === item.productId && li.variantId === item.variantId);
+                    const sourceInvoice = noteToEdit?.invoiceId ? invoices.find(inv => inv.documentId === noteToEdit.invoiceId || inv.id === noteToEdit.invoiceId) : null;
+                    const stockAlreadyDeductedByInv = sourceInvoice && sourceInvoice.status !== InvoiceStatus.Draft;
+                    const savedQty = (!stockAlreadyDeductedByInv) ? (savedItem?.quantity || 0) : 0;
+                    
+                    let availableStock = 0;
+                    if (item.variantId && product.variants) {
+                        const variant = product.variants.find(v => v.id === item.variantId);
+                        availableStock = (variant?.stockQuantity || 0) + savedQty;
+                    } else {
+                        availableStock = (product.stockQuantity || 0) + savedQty;
+                    }
+
+                    if (updatedField.quantity > availableStock) {
+                        setStockError(`Stock insuffisant. Disponible: ${availableStock}`);
+                        return;
+                    } else {
+                        setStockError(null);
+                    }
+                }
+            }
+        }
         setLineItems(prev => prev.map(item => item.id === id ? { ...item, ...updatedField } : item));
     };
 
@@ -126,7 +168,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         if (productId) {
             const product = products.find(p => p.id === productId);
             if (product) {
-                setTempName(product.description || product.name);
+                setTempName(stripHtml(product.name));
                 setTempDesc('');
                 const priceToDisplay = isModeTTC ? (product.salePrice * (1 + product.vat / 100)) : product.salePrice;
                 setTempPrice(formatDecimalForInput(priceToDisplay, language));
@@ -143,7 +185,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
             const product = products.find(p => p.id === selectedProductId);
             const variant = product?.variants?.find(v => v.id === variantId);
             if (variant && product) {
-                const baseName = product.description || product.name;
+                const baseName = stripHtml(product.description || product.name);
                 setTempName(`${baseName} (${variant.attributeValue})`);
                 
                 if (variant.salePrice !== undefined && variant.salePrice > 0) {
@@ -172,6 +214,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
 
     const handleAddItem = () => {
         try {
+            setStockError(null);
             if (!tempName) return;
             const qty = parseDecimalInput(itemQuantity);
 
@@ -195,7 +238,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                             const availableStock = (variant.stockQuantity || 0) + savedQty;
                             
                             if (totalRequestedQty > availableStock) {
-                                alert(`Stock insuffisant pour la variante ${variant.attributeValue} de ${product.name}. Stock disponible: ${availableStock}`);
+                                setStockError(`Stock insuffisant pour la variante ${variant.attributeValue} de ${product.name}. Disponible: ${availableStock}`);
                                 return;
                             }
                         }
@@ -213,7 +256,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                         const availableStock = (product.stockQuantity || 0) + savedQty;
                         
                         if (totalRequestedQty > availableStock) {
-                            alert(`Stock insuffisant pour ${product.name}. Stock disponible: ${availableStock}`);
+                            setStockError(`Stock insuffisant pour ${product.name}. Disponible: ${availableStock}`);
                             return;
                         }
                     }
@@ -598,6 +641,15 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                     <Plus size={16} /> {t('add')}
                                 </button>
                             </div>
+
+                            {stockError && (
+                                <div className="col-span-1 md:col-span-12 lg:col-span-12 mt-2 animate-in fade-in slide-in-from-top-1">
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-lg border border-red-100 text-[11px] font-bold uppercase tracking-wider">
+                                        <AlertTriangle size={14} />
+                                        {stockError}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

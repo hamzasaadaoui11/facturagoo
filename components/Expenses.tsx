@@ -37,6 +37,7 @@ const Expenses: React.FC<ExpensesProps> = ({
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
     const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
     
     // Date filtering state
     const today = new Date();
@@ -84,6 +85,16 @@ const Expenses: React.FC<ExpensesProps> = ({
         });
         return summary;
     }, [filteredExpenses]);
+
+    const itemsPerPage = 8;
+    const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
+    const validCurrentPage = Math.min(currentPage, Math.max(1, totalPages));
+    const paginatedExpenses = filteredExpenses.slice((validCurrentPage - 1) * itemsPerPage, validCurrentPage * itemsPerPage);
+
+    // Reset pagination when date or search changes
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedMonth, selectedYear, searchTerm]);
 
     const handlePrevMonth = () => {
         if (selectedMonth === 0) {
@@ -206,8 +217,8 @@ const Expenses: React.FC<ExpensesProps> = ({
                             </thead>
                             <tbody className="divide-y divide-neutral-200 bg-white">
                                 <AnimatePresence mode="popLayout">
-                                    {filteredExpenses.length > 0 ? (
-                                        filteredExpenses.map((expense) => (
+                                    {paginatedExpenses.length > 0 ? (
+                                        paginatedExpenses.map((expense) => (
                                             <motion.tr 
                                                 key={expense.id}
                                                 layout
@@ -270,6 +281,34 @@ const Expenses: React.FC<ExpensesProps> = ({
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between px-5 md:px-6 py-4 border-t border-slate-100 bg-white">
+                            <p className="text-xs text-slate-500">
+                                Affichage <span className="font-bold">{(validCurrentPage - 1) * itemsPerPage + 1}</span> à <span className="font-bold">{Math.min(validCurrentPage * itemsPerPage, filteredExpenses.length)}</span> sur <span className="font-bold">{filteredExpenses.length}</span>
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={validCurrentPage === 1}
+                                    className="p-1 rounded bg-slate-50 text-slate-400 hover:text-slate-600 disabled:opacity-50 transition-colors"
+                                >
+                                    <ChevronLeft className="w-5 h-5" />
+                                </button>
+                                <span className="text-xs font-bold text-slate-700 bg-slate-50 px-3 py-1 rounded">
+                                    {validCurrentPage} / {totalPages}
+                                </span>
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={validCurrentPage === totalPages}
+                                    className="p-1 rounded bg-slate-50 text-slate-400 hover:text-slate-600 disabled:opacity-50 transition-colors"
+                                >
+                                    <ChevronRight className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

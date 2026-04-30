@@ -88,7 +88,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
             setProductCode(existingProduct.productCode);
             setDescription(existingProduct.description || '');
             setCategory(existingProduct.category || '');
-            setProductType(existingProduct.productType || 'Produit');
+            setProductType(existingProduct.productType === 'Service' ? 'Service' : 'Produit');
             setUnitOfMeasure(existingProduct.unitOfMeasure || 'Aucune');
             setHasVariants(!!existingProduct.hasVariants);
             setVariants(existingProduct.variants || []);
@@ -252,7 +252,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                                 <option value="m3">{t('uM3')}</option>
                             </select>
                         </div>
-                        {productType === 'Produit' && (
+                        {productType !== 'Service' && (
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label htmlFor="stockQuantity" className="block text-sm font-medium text-neutral-700">{t('stock')}</label>
@@ -446,7 +446,8 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
     const [productIdToDelete, setProductIdToDelete] = useState<string | null>(null);
     const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const [stockFilter, setStockFilter] = useState<'all' | 'out' | 'low' | 'ok'>('all');
 
     // Categories logic
     const categories = useMemo(() => {
@@ -468,15 +469,39 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
             (product.category && product.category.toLowerCase().includes(term))
         );
         
-        const matchesCategory = selectedCategory === null || product.category === selectedCategory;
+        const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
         
-        return matchesSearch && matchesCategory;
+        // Stock logic
+        let matchesStock = true;
+        const stock = Number(product.stockQuantity || 0);
+        const threshold = Number(product.minStockAlert !== undefined && product.minStockAlert !== null ? product.minStockAlert : 5);
+        
+        if (product.productType !== 'Service') {
+            const isOut = stock <= 0;
+            const isLow = !isOut && stock <= threshold;
+            const isOk = stock > threshold;
+            
+            if (stockFilter === 'out') {
+                matchesStock = isOut;
+            } else if (stockFilter === 'low') {
+                matchesStock = isLow;
+            } else if (stockFilter === 'ok') {
+                matchesStock = isOk;
+            }
+        } else {
+            // Services
+            if (stockFilter !== 'all') {
+                matchesStock = false;
+            }
+        }
+        
+        return matchesSearch && matchesCategory && matchesStock;
     });
 
     // Reset to first page when search changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm]);
+    }, [searchTerm, selectedCategory, stockFilter]);
 
     // Pagination Logic
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
@@ -603,9 +628,9 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                 {categories.length > 0 && (
                     <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
                         <button
-                            onClick={() => setSelectedCategory(null)}
+                            onClick={() => setSelectedCategory('all')}
                             className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${
-                                selectedCategory === null 
+                                selectedCategory === 'all' 
                                 ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-100' 
                                 : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
                             }`}
@@ -615,7 +640,7 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                         {categories.map(cat => (
                             <button
                                 key={cat}
-                                onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
+                                onClick={() => setSelectedCategory(cat === selectedCategory ? 'all' : cat)}
                                 className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${
                                     selectedCategory === cat 
                                     ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-100' 
@@ -627,6 +652,71 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                         ))}
                     </div>
                 )}
+
+                {/* Stock Status Filters */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                    <button
+                        onClick={() => setStockFilter('all')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all border ${
+                            stockFilter === 'all'
+                            ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                        }`}
+                    >
+                        <Layers size={14} />
+                        {language === 'fr' ? 'Tous les Stocks' : 'All Stocks'}
+                    </button>
+                    <button
+                        onClick={() => setStockFilter('out')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all border ${
+                            stockFilter === 'out'
+                            ? 'bg-red-600 text-white border-red-600 shadow-sm'
+                            : 'bg-white text-red-600 border-red-100 hover:bg-red-50'
+                        }`}
+                    >
+                        <X size={14} />
+                        {language === 'fr' ? 'Rupture de Stock' : 'Out of Stock'}
+                        <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${stockFilter === 'out' ? 'bg-white/20' : 'bg-red-100'}`}>
+                            {products.filter(p => p.productType !== 'Service' && Number(p.stockQuantity || 0) <= 0).length}
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => setStockFilter('low')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all border ${
+                            stockFilter === 'low'
+                            ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
+                            : 'bg-white text-orange-500 border-orange-100 hover:bg-orange-50'
+                        }`}
+                    >
+                        <AlertTriangle size={14} />
+                        {language === 'fr' ? 'Stock Critique' : 'Low Stock'}
+                        <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${stockFilter === 'low' ? 'bg-white/20' : 'bg-orange-100'}`}>
+                            {products.filter(p => {
+                                const stock = Number(p.stockQuantity || 0);
+                                const threshold = Number(p.minStockAlert !== undefined && p.minStockAlert !== null ? p.minStockAlert : 5);
+                                return p.productType !== 'Service' && stock > 0 && stock <= threshold;
+                            }).length}
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => setStockFilter('ok')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all border ${
+                            stockFilter === 'ok'
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                            : 'bg-white text-emerald-600 border-emerald-100 hover:bg-emerald-50'
+                        }`}
+                    >
+                        <Package size={14} />
+                        {language === 'fr' ? 'Stock OK' : 'Stock OK'}
+                        <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${stockFilter === 'ok' ? 'bg-white/20' : 'bg-emerald-100'}`}>
+                            {products.filter(p => {
+                                const stock = Number(p.stockQuantity || 0);
+                                const threshold = Number(p.minStockAlert !== undefined && p.minStockAlert !== null ? p.minStockAlert : 5);
+                                return p.productType !== 'Service' && stock > threshold;
+                            }).length}
+                        </span>
+                    </button>
+                </div>
 
                 {/* Search and Bulk Actions */}
                 <div className="bg-white p-4 rounded-xl shadow-sm ring-1 ring-neutral-200 flex flex-col md:flex-row gap-4 items-center justify-between">

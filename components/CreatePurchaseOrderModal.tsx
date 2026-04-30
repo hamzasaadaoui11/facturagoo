@@ -54,6 +54,13 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
     const [discountValue, setDiscountValue] = useState<string>('');
 
+    const stripHtml = (html?: string) => {
+        if (!html) return '';
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = html;
+        return (tempDiv.textContent || tempDiv.innerText || "").replace(/\u00a0/g, " ").trim();
+    };
+
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => setIsVisible(true), 10);
@@ -76,7 +83,14 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setNotes(orderToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(orderToEdit.lineItems[0]?.calculationMode || 'piece');
-                setLineItems(JSON.parse(JSON.stringify(orderToEdit.lineItems)));
+                
+                const loadedItems = JSON.parse(JSON.stringify(orderToEdit.lineItems));
+                setLineItems(loadedItems.map((li: any) => ({
+                    ...li,
+                    name: stripHtml(li.name),
+                    description: stripHtml(li.description)
+                })));
+                
                 setIsDiscountEnabled(!!orderToEdit.discountValue && orderToEdit.discountValue > 0);
                 setDiscountType(orderToEdit.discountType || 'percentage');
                 setDiscountValue(orderToEdit.discountValue ? formatDecimalForInput(orderToEdit.discountValue, language) : '');
@@ -132,7 +146,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
         if (productId) {
             const product = products.find(p => p.id === productId);
             if (product) {
-                setTempName(product.description || product.name);
+                setTempName(stripHtml(product.name));
                 setTempDesc('');
                 const priceToDisplay = isModeTTC ? (product.purchasePrice * (1 + product.vat / 100)) : product.purchasePrice;
                 setTempPrice(formatDecimalForInput(priceToDisplay, language));
@@ -149,7 +163,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
             const product = products.find(p => p.id === selectedProductId);
             const variant = product?.variants?.find(v => v.id === variantId);
             if (variant && product) {
-                const baseName = product.description || product.name;
+                const baseName = stripHtml(product.description || product.name);
                 setTempName(`${baseName} (${variant.attributeValue})`);
                 
                 if (variant.purchasePrice !== undefined && variant.purchasePrice > 0) {
@@ -844,7 +858,6 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                             
                             <div className="flex items-center justify-between text-sm">
                                 <div className="flex items-center gap-2">
-                                    <label htmlFor="discount-toggle" className="text-slate-500 font-medium">{t('globalDiscount')}</label>
                                     <input 
                                         type="checkbox" 
                                         id="discount-toggle"
@@ -852,6 +865,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                         onChange={(e) => setIsDiscountEnabled(e.target.checked)}
                                         className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                                     />
+                                    <label htmlFor="discount-toggle" className="text-slate-500 font-medium">{t('globalDiscount')}</label>
                                 </div>
                                 {isDiscountEnabled && totals.discountAmount > 0 && (
                                     <span className="font-bold text-red-500">

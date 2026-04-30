@@ -151,10 +151,6 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
     const totalPaidAmount = filteredPayments.filter(p => p.status === 'Paid').reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     const totalPendingAmount = filteredPayments.filter(p => p.status === 'Pending').reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-    useEffect(() => {
-        loadData();
-    }, []);
-
     const loadData = async () => {
         try {
             const emps = await dbService.employees.getAll();
@@ -883,12 +879,12 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
                                     <div className="flex flex-wrap gap-4 lg:gap-6 text-sm font-medium w-full xl:w-auto justify-between sm:justify-start xl:justify-end border-t xl:border-t-0 pt-4 xl:pt-0 mt-2 xl:mt-0">
                                         <div className="flex flex-col rtl:text-right">
                                             <span className="text-slate-500 text-xs text-center sm:text-left">Total Payé ({paymentFilterMonth === 'all' || paymentFilterMonth === '' ? 'Tout' : paymentFilterMonth})</span>
-                                            <span className="text-lg sm:text-xl font-bold text-emerald-600 text-center sm:text-left">{formatCurrency(totalPaidAmount, companySettings?.currency || 'EUR')}</span>
+                                            <span className="text-lg sm:text-xl font-bold text-emerald-600 text-center sm:text-left">{formatCurrency(totalPaidAmount, companySettings)}</span>
                                         </div>
                                         <div className="w-px bg-slate-200 hidden sm:block"></div>
                                         <div className="flex flex-col rtl:text-right">
                                             <span className="text-slate-500 text-xs text-center sm:text-left">Total En attente</span>
-                                            <span className="text-lg sm:text-xl font-bold text-amber-600 text-center sm:text-left">{formatCurrency(totalPendingAmount, companySettings?.currency || 'EUR')}</span>
+                                            <span className="text-lg sm:text-xl font-bold text-amber-600 text-center sm:text-left">{formatCurrency(totalPendingAmount, companySettings)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -941,7 +937,7 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
                                                             </span>
                                                         </td>
                                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-emerald-600">
-                                                            {formatCurrency(pay.amount, companySettings?.currency || 'EUR')}
+                                                            {formatCurrency(pay.amount, companySettings)}
                                                         </td>
                                                         <td className="whitespace-nowrap px-6 py-4">
                                                             <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${pay.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-amber-50 text-amber-700 ring-amber-600/20'}`}>
