@@ -17,7 +17,7 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
     placeholder,
     selectedProductId 
 }) => {
-    const { t, isRTL } = useLanguage();
+    const { t, isRTL, language } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const wrapperRef = useRef<HTMLDivElement>(null);
