@@ -14,10 +14,11 @@ interface CreateInvoiceModalProps {
     products: Product[];
     invoiceToEdit?: Invoice | null;
     prefilledPO?: string;
+    prefilledOrder?: any;
     companySettings?: CompanySettings | null;
 }
 
-const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose, onSave, clients, products, invoiceToEdit, prefilledPO, companySettings }) => {
+const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose, onSave, clients, products, invoiceToEdit, prefilledPO, prefilledOrder, companySettings }) => {
     const { t, isRTL, language } = useLanguage();
     const [isVisible, setIsVisible] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,6 +36,8 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     const [showSubjectField, setShowSubjectField] = useState(false);
     const [showPaymentMethodField, setShowPaymentMethodField] = useState(false);
     const [invoicePaymentMethod, setInvoicePaymentMethod] = useState('');
+    const [checkNumber, setCheckNumber] = useState('');
+    const [bankName, setBankName] = useState('');
     const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg' | 'days'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -82,6 +85,8 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 const pm = invoiceToEdit.paymentMethod || invoiceToEdit.lineItems[0]?.paymentMethod || '';
                 setInvoicePaymentMethod(pm);
                 setShowPaymentMethodField(!!pm);
+                setCheckNumber(invoiceToEdit.checkNumber || '');
+                setBankName(invoiceToEdit.bankName || '');
                 setNotes(invoiceToEdit.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(invoiceToEdit.lineItems[0]?.calculationMode || 'piece');
@@ -108,6 +113,8 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setShowPOField(!!prefilledPO);
                 setInvoicePaymentMethod('');
                 setShowPaymentMethodField(false);
+                setCheckNumber('');
+                setBankName('');
                 setShowDueDateField(false);
                 setNotes('');
                 setLineItems([]);
@@ -117,8 +124,22 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setIsDiscountEnabled(false);
                 setDiscountType('percentage');
                 setDiscountValue('0');
-                if (prefilledPO) {
+                
+                if (prefilledOrder) {
+                    setPurchaseOrderNumber(prefilledOrder.documentId || prefilledOrder.id);
+                    setShowPOField(true);
+                    setSubject(prefilledOrder.subject || '');
+                    setShowSubjectField(!!prefilledOrder.subject);
+                    setNotes(prefilledOrder.notes || '');
+                    setLineItems(JSON.parse(JSON.stringify(prefilledOrder.lineItems)));
+                    
+                    // If the PO was paid, we can pre-set the amount paid for the invoice too
+                    if (prefilledOrder.amountPaid && prefilledOrder.amountPaid > 0) {
+                        setNewPaymentAmount(prefilledOrder.amountPaid);
+                    }
+                } else if (prefilledPO) {
                     setPurchaseOrderNumber(prefilledPO);
+                    setShowPOField(true);
                 }
             }
             resetItemForm();
@@ -400,7 +421,9 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 purchaseOrderNumber: showPOField ? purchaseOrderNumber : undefined,
                 dueDate: showDueDateField ? dueDate : undefined,
                 notes,
-                paymentMethod: showPaymentMethodField ? invoicePaymentMethod : undefined
+                paymentMethod: showPaymentMethodField ? invoicePaymentMethod : undefined,
+                checkNumber: (showPaymentMethodField && invoicePaymentMethod === 'Chèque') ? checkNumber : undefined,
+                bankName: (showPaymentMethodField && invoicePaymentMethod === 'Chèque') ? bankName : undefined
             };
         }
 
@@ -410,6 +433,8 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             subject: showSubjectField ? subject : undefined, 
             purchaseOrderNumber: showPOField ? purchaseOrderNumber : undefined,
             paymentMethod: showPaymentMethodField ? invoicePaymentMethod : undefined,
+            checkNumber: (showPaymentMethodField && invoicePaymentMethod === 'Chèque') ? checkNumber : undefined,
+            bankName: (showPaymentMethodField && invoicePaymentMethod === 'Chèque') ? bankName : undefined,
             notes,
             lineItems: updatedLineItems, status,
             subTotal: totals.subTotal, 
@@ -418,7 +443,13 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             amountPaid: totalPaid,
             discountType: isDiscountEnabled ? discountType : undefined,
             discountValue: isDiscountEnabled ? parseDecimalInput(discountValue) : undefined,
-            initialPayment: newPaymentAmount > 0 ? { amount: newPaymentAmount, method: invoicePaymentMethod, date: new Date().toISOString().split('T')[0] } : undefined
+            initialPayment: newPaymentAmount > 0 ? { 
+                amount: newPaymentAmount, 
+                method: invoicePaymentMethod, 
+                date: new Date().toISOString().split('T')[0],
+                checkNumber: (invoicePaymentMethod === 'Chèque') ? checkNumber : undefined,
+                bankName: (invoicePaymentMethod === 'Chèque') ? bankName : undefined
+            } : undefined
         };
         setIsSubmitting(true);
         try { 
@@ -559,7 +590,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                     </select>
                                     <button 
                                         type="button"
-                                        onClick={() => { setInvoicePaymentMethod(''); setShowPaymentMethodField(false); }}
+                                        onClick={() => { setInvoicePaymentMethod(''); setCheckNumber(''); setBankName(''); setShowPaymentMethodField(false); }}
                                         className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
                                     >
                                         <X size={16} />
@@ -575,6 +606,31 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                                 >
                                     <Plus size={14} /> {t('addPaymentMethod')}
                                 </button>
+                            </div>
+                        )}
+
+                        {showPaymentMethodField && invoicePaymentMethod === 'Chèque' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="space-y-1">
+                                    <label className="block text-sm font-bold text-emerald-700 ml-1">Numéro de chèque</label>
+                                    <input 
+                                        type="text" 
+                                        value={checkNumber} 
+                                        onChange={(e) => setCheckNumber(e.target.value)} 
+                                        placeholder="Ex: 1234567" 
+                                        className="block w-full rounded-xl border-emerald-200 bg-white shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="block text-sm font-bold text-emerald-700 ml-1">La banque</label>
+                                    <input 
+                                        type="text" 
+                                        value={bankName} 
+                                        onChange={(e) => setBankName(e.target.value)} 
+                                        placeholder="Ex: Attijariwafa bank" 
+                                        className="block w-full rounded-xl border-emerald-200 bg-white shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"
+                                    />
+                                </div>
                             </div>
                         )}
 

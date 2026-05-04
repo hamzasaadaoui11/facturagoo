@@ -27,6 +27,8 @@ interface DocumentData {
   notes?: string;
   subject?: string;
   paymentMethod?: string;
+  checkNumber?: string;
+  bankName?: string;
   reference?: string;
   purchaseOrderNumber?: string;
   dueDate?: string;
@@ -797,14 +799,14 @@ const generateDocumentHTML = (
     .join("");
 
   let paymentInfoHtml = "";
-  if ((docType === "Facture" || docType === "Bon de Livraison") && showPrices) {
+  if ((docType === "Facture" || docType === "Bon de Livraison" || docType === "Bon de Commande") && showPrices) {
     const paid = doc.amountPaid || doc.paymentAmount || 0;
     const remaining = totalAmount - paid;
     if (paid > 0) {
       paymentInfoHtml = `
                 <div style="margin-top: 10px; font-size: 12px; color: #059669;">
                     ${lang === "es" ? "Ya pagado" : lang === "en" ? "Already paid" : "Déjà réglé"} : <b>${paid.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</b>
-                    ${remaining > 0 ? `<br/><span style="color: #d97706;">${lang === "es" ? "Importe pendiente" : lang === "en" ? "Balance due" : "Reste à payer"} : <b>${remaining.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</b></span>` : `<br/><span style="color: #059669; font-weight: bold;">${lang === "es" ? "Liquidado" : lang === "en" ? "Settled" : "Soldé"}</span>`}
+                    ${remaining > 0.1 ? `<br/><span style="color: #d97706;">${lang === "es" ? "Importe pendiente" : lang === "en" ? "Balance due" : "Reste à payer"} : <b>${remaining.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</b></span>` : `<br/><span style="color: #059669; font-weight: bold;">${lang === "es" ? "Liquidado" : lang === "en" ? "Settled" : "Soldé"}</span>`}
                 </div>
             `;
     }
@@ -1154,9 +1156,9 @@ const generateDocumentHTML = (
             <div id="measure-header" style="position: relative; z-index: 2;">
                 ${topHeaderHtml}
                 ${clientInfoHtml}
-                <div style="display: flex; gap: 40px; margin-bottom: 15px;">
+                <div style="display: flex; gap: 40px; margin-bottom: 15px; flex-wrap: wrap;">
                     ${doc.subject ? `<div><span style="font-weight: 600;">Objet :</span> ${doc.subject}</div>` : ""}
-                    ${doc.paymentMethod ? `<div><span style="font-weight: 600;">Mode de paiement :</span> ${doc.paymentMethod}</div>` : ""}
+                    ${doc.paymentMethod ? `<div><span style="font-weight: 600;">Mode de paiement :</span> ${doc.paymentMethod} ${doc.paymentMethod === 'Chèque' && doc.checkNumber ? `(N° ${doc.checkNumber}${doc.bankName ? ` - ${doc.bankName}` : ''})` : ''}</div>` : ""}
                 </div>
             </div>
             <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px;">
@@ -1285,9 +1287,9 @@ const generateDocumentHTML = (
                 <div style="position: relative; z-index: 2;">
                     ${topHeaderHtml}
                     ${clientInfoHtml}
-                    <div style="display: flex; gap: 40px; margin-bottom: 15px;">
+                    <div style="display: flex; gap: 40px; margin-bottom: 15px; flex-wrap: wrap;">
                         ${doc.subject ? `<div style="font-weight: 600;">${dict.pdfSubject || "Objet"} : <span style="font-weight: normal;">${doc.subject}</span></div>` : ""}
-                        ${doc.paymentMethod ? `<div style="font-weight: 600;">${dict.paymentMethod || "Mode de paiement"} : <span style="font-weight: normal;">${doc.paymentMethod}</span></div>` : ""}
+                        ${doc.paymentMethod ? `<div style="font-weight: 600;">${dict.paymentMethod || "Mode de paiement"} : <span style="font-weight: normal;">${doc.paymentMethod} ${doc.paymentMethod === 'Chèque' && doc.checkNumber ? `(N° ${doc.checkNumber}${doc.bankName ? ` - ${doc.bankName}` : ''})` : ''}</span></div>` : ""}
                     </div>
                 </div>
 

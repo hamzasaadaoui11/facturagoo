@@ -78,6 +78,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
     const [purchasePriceHTStr, setPurchasePriceHTStr] = useState('0');
     const [purchasePriceTTCStr, setPurchasePriceTTCStr] = useState('0');
     const [stockQuantityStr, setStockQuantityStr] = useState('0');
+    const [imageUrl, setImageUrl] = useState('');
 
     const [salePriceIsTTC, setSalePriceIsTTC] = useState(false);
     const [purchasePriceIsTTC, setPurchasePriceIsTTC] = useState(false);
@@ -104,6 +105,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
             setPurchasePriceTTCStr(formatDecimalForInput(round(pPriceHT * vatRate), language));
             setStockQuantityStr(formatDecimalForInput(existingProduct.stockQuantity || 0, language));
             setMinStockAlertStr(formatDecimalForInput(existingProduct.minStockAlert === undefined ? 5 : existingProduct.minStockAlert, language));
+            setImageUrl(existingProduct.imageUrl || '');
         } else if (!isEditMode) {
              setVat(language === 'es' ? 21 : 20);
              setMinStockAlertStr('5');
@@ -169,6 +171,17 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
         setVariants(variants.map(v => v.id === id ? { ...v, ...updates } : v));
     };
     
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImageUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const productData = {
@@ -178,7 +191,8 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
             stockQuantity: parseDecimalInput(stockQuantityStr),
             minStockAlert: parseDecimalInput(minStockAlertStr) || 0,
             hasVariants,
-            variants: hasVariants ? variants : []
+            variants: hasVariants ? variants : [],
+            imageUrl
         };
         if (isEditMode && existingProduct) {
             onUpdateProduct({ ...existingProduct, ...productData });
@@ -196,6 +210,36 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                  <div className="bg-white p-4 md:p-6 shadow-sm ring-1 ring-neutral-200 rounded-xl md:rounded-lg">
                     <h3 className="text-lg font-semibold text-neutral-900 border-b border-neutral-200 pb-4 mb-6">{t('generalInfo')}</h3>
                     <div className="grid grid-cols-1 gap-5 md:gap-6 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Photo du produit (Optionnelle)</label>
+                            <div className="flex flex-col sm:flex-row items-center gap-4">
+                                <div className="relative w-32 h-32 flex-shrink-0 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center overflow-hidden group">
+                                    {imageUrl ? (
+                                        <>
+                                            <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                                            <button 
+                                                type="button" 
+                                                onClick={() => setImageUrl('')}
+                                                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <X className="text-white" size={24} />
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <div className="text-center p-2">
+                                            <Upload className="mx-auto h-6 w-6 text-slate-400" />
+                                            <span className="mt-1 block text-[10px] font-medium text-slate-500">Ajouter photo</span>
+                                        </div>
+                                    )}
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        onChange={handleImageUpload} 
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                         <div>
                             <label htmlFor="productName" className="block text-sm font-medium text-neutral-700">{t('name')} *</label>
                             <textarea 
@@ -448,6 +492,8 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [stockFilter, setStockFilter] = useState<'all' | 'out' | 'low' | 'ok'>('all');
+    const [hoveredImage, setHoveredImage] = useState<string | null>(null);
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     // Categories logic
     const categories = useMemo(() => {
@@ -780,6 +826,7 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                                     <th scope="col" className="px-6 py-3 text-left w-10">
                                         {/* Checkbox handled in search bar for better UX */}
                                     </th>
+                                    <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>Aperçu</th>
                                     <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('reference')}</th>
                                     <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('name')}</th>
                                     <th scope="col" className={`px-6 py-3 text-xs font-semibold uppercase tracking-wider text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>Catégorie</th>
@@ -801,6 +848,31 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                                                         checked={selectedProductIds.includes(product.id)}
                                                         onChange={() => handleSelectProduct(product.id)}
                                                     />
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div 
+                                                        className="h-10 w-10 flex-shrink-0 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 cursor-zoom-in"
+                                                        onMouseEnter={(e) => {
+                                                            if (product.imageUrl) {
+                                                                setHoveredImage(product.imageUrl);
+                                                                setMousePos({ x: e.clientX, y: e.clientY });
+                                                            }
+                                                        }}
+                                                        onMouseMove={(e) => {
+                                                            if (product.imageUrl) {
+                                                                setMousePos({ x: e.clientX, y: e.clientY });
+                                                            }
+                                                        }}
+                                                        onMouseLeave={() => setHoveredImage(null)}
+                                                    >
+                                                        {product.imageUrl ? (
+                                                            <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                                                        ) : (
+                                                            <div className="h-full w-full flex items-center justify-center">
+                                                                <Package className="h-5 w-5 text-slate-300" />
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 font-mono ${isRTL ? 'text-right' : 'text-left'}`}>{product.productCode}</td>
                                                 <td className={`px-6 py-4 text-sm font-medium text-neutral-900 whitespace-pre-line ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -911,6 +983,29 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                                                 checked={selectedProductIds.includes(product.id)}
                                                 onChange={() => handleSelectProduct(product.id)}
                                             />
+                                        </div>
+                                        <div 
+                                            className="h-12 w-12 flex-shrink-0 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 cursor-zoom-in"
+                                            onMouseEnter={(e) => {
+                                                if (product.imageUrl) {
+                                                    setHoveredImage(product.imageUrl);
+                                                    setMousePos({ x: e.clientX, y: e.clientY });
+                                                }
+                                            }}
+                                            onMouseMove={(e) => {
+                                                if (product.imageUrl) {
+                                                    setMousePos({ x: e.clientX, y: e.clientY });
+                                                }
+                                            }}
+                                            onMouseLeave={() => setHoveredImage(null)}
+                                        >
+                                            {product.imageUrl ? (
+                                                <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                                            ) : (
+                                                <div className="h-full w-full flex items-center justify-center">
+                                                    <Package className="h-6 w-6 text-slate-300" />
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="min-w-0">
                                             <h4 className="text-base font-bold text-neutral-900 whitespace-pre-line">{product.name}</h4>
@@ -1028,6 +1123,24 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                     </div>
                 )}
             </div>
+
+            {hoveredImage && (
+                <div 
+                    className="fixed z-[9999] pointer-events-none shadow-2xl p-1 bg-white rounded-2xl border border-slate-200 animate-in fade-in zoom-in duration-200 hidden md:block"
+                    style={{ 
+                        left: `${mousePos.x + 20}px`, 
+                        top: `${Math.min(mousePos.y - 150, window.innerHeight - 320)}px`,
+                        width: '300px',
+                        height: '300px'
+                    }}
+                >
+                    <img 
+                        src={hoveredImage} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover rounded-xl"
+                    />
+                </div>
+            )}
         </div>
     );
 };

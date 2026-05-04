@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import AddClientModal from './AddClientModal';
+import ImportClientsModal from './ImportClientsModal';
 import ConfirmationModal from './ConfirmationModal';
-import { Plus, Pencil, Trash2, Users, Search, Building2, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Search, Building2, User, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Client } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -18,6 +19,7 @@ interface ClientsProps {
 const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, onUpdateClient, onDeleteClient, onDeleteClients }) => {
     const { t, isRTL, language } = useLanguage();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isImportOpen, setIsImportOpen] = useState(false);
     const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [clientIdToDelete, setClientIdToDelete] = useState<string | null>(null);
@@ -146,16 +148,34 @@ const Clients: React.FC<ClientsProps> = ({ clients, onAddClient, onUpdateClient,
     return (
         <div>
             <Header title={t('clients')}>
-                <button
-                    type="button"
-                    onClick={handleAddClick}
-                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
-                >
-                    <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
-                    <span className="hidden sm:inline">{t('addClient')}</span>
-                    <span className="sm:hidden">{t('add')}</span>
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setIsImportOpen(true)}
+                        className="inline-flex items-center gap-x-2 rounded-lg bg-white px-3.5 py-2.5 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                    >
+                        <Upload className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
+                        <span className="hidden sm:inline">{t('import')}</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleAddClick}
+                        className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                    >
+                        <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
+                        <span className="hidden sm:inline">{t('addClient')}</span>
+                        <span className="sm:hidden">{t('add')}</span>
+                    </button>
+                </div>
             </Header>
+
+            <ImportClientsModal
+                isOpen={isImportOpen}
+                onClose={() => setIsImportOpen(false)}
+                onImport={(importedClients) => {
+                    importedClients.forEach(client => onAddClient(client));
+                }}
+            />
 
             <AddClientModal
                 isOpen={isModalOpen}

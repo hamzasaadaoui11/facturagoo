@@ -16,6 +16,15 @@ const statusColors: { [key in PurchaseOrderStatus]: string } = {
     [PurchaseOrderStatus.Cancelled]: 'bg-red-100 text-red-700',
 };
 
+const getPaymentStatus = (order: PurchaseOrder, language: string) => {
+    const total = order.totalAmount || 0;
+    const paid = order.amountPaid || 0;
+    
+    if (paid >= total && total > 0) return { label: language === 'fr' ? 'Payé' : 'Paid', color: 'bg-emerald-100 text-emerald-700' };
+    if (paid > 0) return { label: language === 'fr' ? 'Partiel' : 'Partial', color: 'bg-amber-100 text-amber-700' };
+    return { label: language === 'fr' ? 'En attente' : 'Unpaid', color: 'bg-slate-100 text-slate-600' };
+};
+
 interface PurchaseOrdersProps {
     orders: PurchaseOrder[];
     suppliers: Supplier[];
@@ -39,7 +48,7 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
     onConvertToInvoice,
     companySettings
 }) => {
-    const { t, isRTL } = useLanguage();
+    const { t, isRTL, language } = useLanguage();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [orderToEdit, setOrderToEdit] = useState<PurchaseOrder | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -298,9 +307,14 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{order.expectedDate ? new Date(order.expectedDate).toLocaleDateString() : '-'}</td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{order.totalAmount.toLocaleString(undefined, { style: 'currency', currency: 'MAD' })}</td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
-                                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[order.status]}`}>
-                                                {order.status}
-                                            </span>
+                                            <div className="flex flex-col gap-1">
+                                                <span className={`inline-flex items-center w-fit rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusColors[order.status]}`}>
+                                                    {order.status}
+                                                </span>
+                                                <span className={`inline-flex items-center w-fit rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${getPaymentStatus(order, language).color}`}>
+                                                    {getPaymentStatus(order, language).label}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium relative">
                                             <button 
@@ -354,9 +368,14 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                                 </div>
                                 
                                 <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
-                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[order.status]}`}>
-                                        {order.status}
-                                    </span>
+                                    <div className="flex gap-2">
+                                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusColors[order.status]}`}>
+                                            {order.status}
+                                        </span>
+                                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${getPaymentStatus(order, language).color}`}>
+                                            {getPaymentStatus(order, language).label}
+                                        </span>
+                                    </div>
                                     <p className="text-sm font-bold text-neutral-900">
                                         {order.totalAmount.toLocaleString(undefined, { style: 'currency', currency: 'MAD' })}
                                     </p>
@@ -476,6 +495,28 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                                 className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
                             >
                                 <Truck size={16} className={`text-green-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('markReceived')}
+                            </button>
+                        )}
+
+                        {(activeOrder.totalAmount - (activeOrder.amountPaid || 0)) > 0 && (
+                            <button 
+                                onClick={() => {
+                                    const balance = activeOrder.totalAmount - (activeOrder.amountPaid || 0);
+                                    const amountStr = window.prompt(language === 'fr' ? `Régler cet achat (Reste: ${balance.toFixed(2)} DH) :` : `Pay this purchase (Balance: ${balance.toFixed(2)} DH):`, balance.toString());
+                                    if (amountStr) {
+                                        const amount = parseFloat(amountStr);
+                                        if (!isNaN(amount)) {
+                                            onUpdateOrder({
+                                                ...activeOrder,
+                                                amountPaid: (activeOrder.amountPaid || 0) + amount
+                                            });
+                                        }
+                                    }
+                                    setActiveMenuId(null);
+                                }} 
+                                className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
+                            >
+                                <RefreshCw size={16} className={`text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {language === 'fr' ? 'Régler le paiement' : 'Record Payment'}
                             </button>
                         )}
 

@@ -27,8 +27,12 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const [supplierId, setSupplierId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [expectedDate, setExpectedDate] = useState('');
+    const [dueDate, setDueDate] = useState('');
+    const [amountPaid, setAmountPaid] = useState<string>('0');
     const [subject, setSubject] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
+    const [checkNumber, setCheckNumber] = useState('');
+    const [bankName, setBankName] = useState('');
     const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg' | 'days'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -68,6 +72,9 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setSupplierId(orderToEdit.supplierId);
                 setDate(orderToEdit.date);
                 
+                setDueDate(orderToEdit.dueDate || '');
+                setAmountPaid(orderToEdit.amountPaid ? formatDecimalForInput(orderToEdit.amountPaid, language) : '0');
+
                 const initialExpectedDate = orderToEdit.expectedDate || '';
                 setExpectedDate(initialExpectedDate);
                 setShowExpectedDateField(!!initialExpectedDate);
@@ -79,6 +86,8 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 const initialPaymentMethod = orderToEdit.paymentMethod || orderToEdit.lineItems[0]?.paymentMethod || '';
                 setPaymentMethod(initialPaymentMethod);
                 setShowPaymentMethodField(!!initialPaymentMethod);
+                setCheckNumber(orderToEdit.checkNumber || '');
+                setBankName(orderToEdit.bankName || '');
 
                 setNotes(orderToEdit.notes || '');
                 // Read calculationMode from first line item
@@ -98,11 +107,15 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setSupplierId('');
                 setDate(new Date().toISOString().split('T')[0]);
                 setExpectedDate('');
+                setDueDate('');
+                setAmountPaid('0');
                 setShowExpectedDateField(false);
                 setSubject('');
                 setShowSubjectField(false);
                 setPaymentMethod('');
                 setShowPaymentMethodField(false);
+                setCheckNumber('');
+                setBankName('');
                 setNotes('');
                 setLineItems([]);
                 setTempVat(language === 'es' ? 21 : 20);
@@ -274,15 +287,21 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 subject: showSubjectField ? subject : undefined,
                 expectedDate: showExpectedDateField ? expectedDate : undefined,
                 notes,
-                paymentMethod: showPaymentMethodField ? paymentMethod : undefined
+                paymentMethod: showPaymentMethodField ? paymentMethod : undefined,
+                checkNumber: (showPaymentMethodField && paymentMethod === 'Chèque') ? checkNumber : undefined,
+                bankName: (showPaymentMethodField && paymentMethod === 'Chèque') ? bankName : undefined
             };
         }
 
         const orderData = {
             supplierId, supplierName: supplierNameDisplay, date, 
+            dueDate: dueDate || undefined,
+            amountPaid: parseDecimalInput(amountPaid) || 0,
             expectedDate: showExpectedDateField ? expectedDate : undefined, 
             subject: showSubjectField ? subject : undefined, 
             paymentMethod: showPaymentMethodField ? paymentMethod : undefined,
+            checkNumber: (showPaymentMethodField && paymentMethod === 'Chèque') ? checkNumber : undefined,
+            bankName: (showPaymentMethodField && paymentMethod === 'Chèque') ? bankName : undefined,
             notes, 
             lineItems: updatedLineItems,
             status: orderToEdit ? orderToEdit.status : PurchaseOrderStatus.Draft,
@@ -329,6 +348,16 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('date')} *</label>
                             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{language === 'fr' ? 'Échéance' : 'Due Date'}</label>
+                            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"/>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{language === 'fr' ? 'Montant déjà payé' : 'Amount Paid'}</label>
+                            <input type="text" value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 font-mono"/>
                         </div>
                         
                         {showExpectedDateField ? (
@@ -403,7 +432,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                     </select>
                                     <button 
                                         type="button"
-                                        onClick={() => { setPaymentMethod(''); setShowPaymentMethodField(false); }}
+                                        onClick={() => { setPaymentMethod(''); setCheckNumber(''); setBankName(''); setShowPaymentMethodField(false); }}
                                         className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
                                     >
                                         <X size={16} />
@@ -419,6 +448,31 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                 >
                                     <Plus size={14} /> {t('addPaymentMethod')}
                                 </button>
+                            </div>
+                        )}
+
+                        {showPaymentMethodField && paymentMethod === 'Chèque' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="space-y-1">
+                                    <label className="block text-sm font-bold text-emerald-700 ml-1">Numéro de chèque</label>
+                                    <input 
+                                        type="text" 
+                                        value={checkNumber} 
+                                        onChange={(e) => setCheckNumber(e.target.value)} 
+                                        placeholder="Ex: 1234567" 
+                                        className="block w-full rounded-xl border-emerald-200 bg-white shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="block text-sm font-bold text-emerald-700 ml-1">La banque</label>
+                                    <input 
+                                        type="text" 
+                                        value={bankName} 
+                                        onChange={(e) => setBankName(e.target.value)} 
+                                        placeholder="Ex: Attijariwafa bank" 
+                                        className="block w-full rounded-xl border-emerald-200 bg-white shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"
+                                    />
+                                </div>
                             </div>
                         )}
                         <div className="sm:col-span-3 space-y-2">

@@ -20,6 +20,9 @@ ADD COLUMN IF NOT EXISTS "unitOfMeasure" TEXT DEFAULT 'Unité';
 ALTER TABLE products 
 ADD COLUMN IF NOT EXISTS "minStockAlert" NUMERIC DEFAULT 5;
 
+ALTER TABLE products 
+ADD COLUMN IF NOT EXISTS "imageUrl" TEXT;
+
 -- 2. Updates for 'stock_movements' table
 -- This is required to track stock changes for specific variants
 ALTER TABLE stock_movements 
@@ -77,3 +80,28 @@ CREATE TABLE IF NOT EXISTS public.salary_payments (
 -- Note: if you already created the salary_payments table without "type" or "note", run these lines:
 ALTER TABLE salary_payments ADD COLUMN IF NOT EXISTS "type" TEXT DEFAULT 'Salary';
 ALTER TABLE salary_payments ADD COLUMN IF NOT EXISTS "note" TEXT;
+
+-- 5. Support for Check details in documents
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "checkNumber" TEXT;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS "bankName" TEXT;
+
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS "checkNumber" TEXT;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS "bankName" TEXT;
+
+ALTER TABLE delivery_notes ADD COLUMN IF NOT EXISTS "checkNumber" TEXT;
+ALTER TABLE delivery_notes ADD COLUMN IF NOT EXISTS "bankName" TEXT;
+
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS "checkNumber" TEXT;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS "bankName" TEXT;
+
+ALTER TABLE credit_notes ADD COLUMN IF NOT EXISTS "checkNumber" TEXT;
+ALTER TABLE credit_notes ADD COLUMN IF NOT EXISTS "bankName" TEXT;
+
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS "bankName" TEXT;
+
+-- 6. Credit Supplier support for Purchase Orders
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS "amountPaid" NUMERIC DEFAULT 0;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS "totalAmount" NUMERIC DEFAULT 0;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS "subTotal" NUMERIC DEFAULT 0;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS "vatAmount" NUMERIC DEFAULT 0;
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS "dueDate" DATE;

@@ -63,6 +63,7 @@ export interface Product {
     category?: string;
     hasVariants?: boolean;
     variants?: ProductVariant[];
+    imageUrl?: string;
 }
 
 export enum QuoteStatus {
@@ -97,13 +98,15 @@ export interface LineItem {
   showDimensions?: boolean; // Persisted here to avoid schema changes
   calculationMode?: 'piece' | 'm2' | 'ml' | 'kg' | 'days';
   days?: number;
-  subject?: string; // Metadata for document
-  paymentMethod?: string; // Metadata for document
-  purchaseOrderNumber?: string; // Metadata for document
+  subject?: string;
+  paymentMethod?: string;
+  checkNumber?: string;
+  bankName?: string;
+  notes?: string;
+  purchaseOrderNumber?: string;
   dueDate?: string;
   expiryDate?: string;
   expectedDate?: string;
-  notes?: string;
   reference?: string;
 }
 
@@ -118,6 +121,8 @@ export interface Quote {
     status: QuoteStatus;
     subject?: string;
     paymentMethod?: string;
+    checkNumber?: string;
+    bankName?: string;
     reference?: string;
     purchaseOrderNumber?: string;
     showDimensions?: boolean;
@@ -139,11 +144,15 @@ export interface PurchaseOrder {
     status: PurchaseOrderStatus;
     subject?: string;
     paymentMethod?: string;
+    checkNumber?: string;
+    bankName?: string;
     reference?: string;
     lineItems: LineItem[];
     subTotal: number;
     vatAmount: number;
     totalAmount: number;
+    amountPaid: number; // Suivi des paiements fournisseurs
+    dueDate?: string; // Date d'échéance du paiement
     discountType?: 'percentage' | 'fixed';
     discountValue?: number;
     showDimensions?: boolean;
@@ -164,6 +173,8 @@ export interface Invoice {
     status: InvoiceStatus;
     subject?: string;
     paymentMethod?: string;
+    checkNumber?: string;
+    bankName?: string;
     reference?: string;
     purchaseOrderNumber?: string;
     showDimensions?: boolean;
@@ -186,6 +197,8 @@ export interface CreditNote {
     status: CreditNoteStatus;
     subject?: string; // Reason
     paymentMethod?: string;
+    checkNumber?: string;
+    bankName?: string;
     reference?: string;
     showDimensions?: boolean;
     lineItems: LineItem[];
@@ -206,6 +219,7 @@ export interface Payment {
     amount: number;
     method: 'Virement' | 'Chèque' | 'Espèces' | 'Carte Bancaire';
     reference?: string; // Check number, transaction ID
+    bankName?: string;
     notes?: string;
 }
 
@@ -239,6 +253,8 @@ export interface DeliveryNote {
     date: string;
     subject?: string; // Champ ajouté
     paymentMethod?: string;
+    checkNumber?: string;
+    bankName?: string;
     reference?: string;
     purchaseOrderNumber?: string;
     showDimensions?: boolean;

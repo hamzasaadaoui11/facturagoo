@@ -29,6 +29,8 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [reason, setReason] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
+    const [checkNumber, setCheckNumber] = useState('');
+    const [bankName, setBankName] = useState('');
     const [notes, setNotes] = useState('');
     const [calculationMode, setCalculationMode] = useState<'piece' | 'm2' | 'ml' | 'kg' | 'days'>('piece');
     const [lineItems, setLineItems] = useState<LineItem[]>([]);
@@ -74,6 +76,8 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 const initialPaymentMethod = creditNoteToEdit.paymentMethod || creditNoteToEdit.lineItems[0]?.paymentMethod || '';
                 setPaymentMethod(initialPaymentMethod);
                 setShowPaymentMethodField(!!initialPaymentMethod);
+                setCheckNumber(creditNoteToEdit.checkNumber || '');
+                setBankName(creditNoteToEdit.bankName || '');
 
                 setNotes(creditNoteToEdit.notes || '');
                 // Read calculationMode from first line item
@@ -96,6 +100,8 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 setShowSubjectField(false);
                 setPaymentMethod('');
                 setShowPaymentMethodField(false);
+                setCheckNumber('');
+                setBankName('');
                 setNotes('');
                 setLineItems([]);
                 setTempVat(language === 'es' ? 21 : 20);
@@ -240,7 +246,9 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 calculationMode,
                 subject: showSubjectField ? reason : undefined,
                 notes,
-                paymentMethod: showPaymentMethodField ? paymentMethod : undefined
+                paymentMethod: showPaymentMethodField ? paymentMethod : undefined,
+                checkNumber: (showPaymentMethodField && paymentMethod === 'Chèque') ? checkNumber : undefined,
+                bankName: (showPaymentMethodField && paymentMethod === 'Chèque') ? bankName : undefined
             };
         }
 
@@ -248,6 +256,8 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
             clientId, clientName: clientNameDisplay, date, 
             subject: showSubjectField ? reason : undefined, 
             paymentMethod: showPaymentMethodField ? paymentMethod : undefined, 
+            checkNumber: (showPaymentMethodField && paymentMethod === 'Chèque') ? checkNumber : undefined,
+            bankName: (showPaymentMethodField && paymentMethod === 'Chèque') ? bankName : undefined,
             notes, 
             lineItems: updatedLineItems,
             status: creditNoteToEdit ? creditNoteToEdit.status : CreditNoteStatus.Draft,
@@ -337,7 +347,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     </select>
                                     <button 
                                         type="button"
-                                        onClick={() => { setPaymentMethod(''); setShowPaymentMethodField(false); }}
+                                        onClick={() => { setPaymentMethod(''); setCheckNumber(''); setBankName(''); setShowPaymentMethodField(false); }}
                                         className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
                                     >
                                         <X size={16} />
@@ -353,6 +363,31 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                 >
                                     <Plus size={14} /> {t('addPaymentMethod')}
                                 </button>
+                            </div>
+                        )}
+
+                        {showPaymentMethodField && paymentMethod === 'Chèque' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="space-y-1">
+                                    <label className="block text-sm font-bold text-emerald-700 ml-1">Numéro de chèque</label>
+                                    <input 
+                                        type="text" 
+                                        value={checkNumber} 
+                                        onChange={(e) => setCheckNumber(e.target.value)} 
+                                        placeholder="Ex: 1234567" 
+                                        className="block w-full rounded-xl border-emerald-200 bg-white shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="block text-sm font-bold text-emerald-700 ml-1">La banque</label>
+                                    <input 
+                                        type="text" 
+                                        value={bankName} 
+                                        onChange={(e) => setBankName(e.target.value)} 
+                                        placeholder="Ex: Attijariwafa bank" 
+                                        className="block w-full rounded-xl border-emerald-200 bg-white shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"
+                                    />
+                                </div>
                             </div>
                         )}
 

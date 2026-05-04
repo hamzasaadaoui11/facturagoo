@@ -32,6 +32,8 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
     // Payment Modal State
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState<'Virement' | 'Chèque' | 'Espèces' | 'Carte Bancaire'>('Virement');
+    const [checkNumber, setCheckNumber] = useState('');
+    const [bankName, setBankName] = useState('');
 
     // Action Menu State
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -191,10 +193,14 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
             clientName: selectedInvoice.clientName,
             date: new Date().toISOString().split('T')[0],
             amount: paymentAmount,
-            method: paymentMethod
+            method: paymentMethod,
+            reference: paymentMethod === 'Chèque' ? checkNumber : undefined,
+            bankName: paymentMethod === 'Chèque' ? bankName : undefined
         });
 
         setSelectedInvoice(null);
+        setCheckNumber('');
+        setBankName('');
     };
 
     const currencyCode = 'MAD';
@@ -629,6 +635,36 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
                                     <option value="Carte Bancaire">{language === 'es' ? 'Tarjeta' : (language === 'ar' ? 'بطاقة' : 'Carte Bancaire')}</option>
                                 </select>
                             </div>
+
+                            {paymentMethod === 'Chèque' && (
+                                <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-black text-slate-700 ml-1">
+                                            {language === 'es' ? 'Nº de cheque' : (language === 'ar' ? 'رقم الشيك' : 'N° de chèque')}
+                                        </label>
+                                        <input 
+                                            type="text"
+                                            value={checkNumber}
+                                            onChange={(e) => setCheckNumber(e.target.value)}
+                                            className="block w-full rounded-2xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 h-12 px-4 text-sm font-bold"
+                                            placeholder="Ex: CH-12345"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="block text-sm font-black text-slate-700 ml-1">
+                                            {language === 'es' ? 'Banco' : (language === 'ar' ? 'البنك' : 'Banque')}
+                                        </label>
+                                        <input 
+                                            type="text"
+                                            value={bankName}
+                                            onChange={(e) => setBankName(e.target.value)}
+                                            className="block w-full rounded-2xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 h-12 px-4 text-sm font-bold"
+                                            placeholder="Ex: BMCE, Attijari..."
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex flex-col sm:flex-row gap-4 mt-10">
                                 <button type="button" onClick={() => setSelectedInvoice(null)} className="flex-1 py-4 text-sm font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-slate-100 transition-all uppercase tracking-widest">{t('cancel')}</button>
                                 <button type="submit" className="flex-[2] py-4 text-sm font-black text-white bg-emerald-600 rounded-2xl hover:bg-emerald-700 shadow-xl shadow-emerald-500/30 transition-all transform active:scale-95 uppercase tracking-widest">{t('confirm')}</button>

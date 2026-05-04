@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import Header from './Header';
 import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical, Trash2, ArrowLeftRight, ChevronLeft, ChevronRight, Search } from 'lucide-react';
-import { Invoice, InvoiceStatus, Payment, Client, Product, CompanySettings } from '../types';
+import { Invoice, InvoiceStatus, Payment, Client, Product, CompanySettings, PurchaseOrder } from '../types';
 import CreateInvoiceModal from './CreateInvoiceModal';
 import ConfirmationModal from './ConfirmationModal';
 import { generatePDF, printDocument } from '../services/pdfService';
@@ -38,17 +38,22 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
     const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState<'Virement' | 'Chèque' | 'Espèces' | 'Carte Bancaire'>('Virement');
+    const [checkNumber, setCheckNumber] = useState('');
+    const [bankName, setBankName] = useState('');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [prefilledPO, setPrefilledPO] = useState<string | undefined>(undefined);
+    const [prefilledOrder, setPrefilledOrder] = useState<PurchaseOrder | undefined>(undefined);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        if (location.state && (location.state as any).prefilledPO) {
+        if (location.state && (location.state as any).prefilledOrder) {
+            setPrefilledOrder((location.state as any).prefilledOrder);
+            setIsCreateModalOpen(true);
+            window.history.replaceState({}, document.title);
+        } else if (location.state && (location.state as any).prefilledPO) {
             setPrefilledPO((location.state as any).prefilledPO);
             setIsCreateModalOpen(true);
-            // Clear state to avoid reopening on refresh if possible, 
-            // though HashRouter state persistence varies.
             window.history.replaceState({}, document.title);
         }
     }, [location]);
@@ -205,10 +210,15 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
             clientName: selectedInvoiceForPayment.clientName,
             date: new Date().toISOString().split('T')[0],
             amount: paymentAmount,
-            method: paymentMethod
+            method: paymentMethod,
+            reference: paymentMethod === 'Chèque' ? checkNumber : undefined,
+            bankName: paymentMethod === 'Chèque' ? bankName : undefined,
+            notes: undefined
         });
         
         setSelectedInvoiceForPayment(null);
+        setCheckNumber('');
+        setBankName('');
     };
 
     const handleSaveInvoice = (invoiceData: any, id?: string) => {
@@ -267,12 +277,13 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
             
             <CreateInvoiceModal 
                 isOpen={isCreateModalOpen}
-                onClose={() => { setIsCreateModalOpen(false); setPrefilledPO(undefined); }}
+                onClose={() => { setIsCreateModalOpen(false); setPrefilledOrder(undefined); setPrefilledPO(undefined); }}
                 onSave={handleSaveInvoice}
                 clients={clients}
                 products={products}
                 invoiceToEdit={invoiceToEdit}
                 prefilledPO={prefilledPO}
+                prefilledOrder={prefilledOrder}
                 companySettings={companySettings}
             />
 
@@ -313,6 +324,34 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                     <option>Carte Bancaire</option>
                                 </select>
                             </div>
+                            {paymentMethod === 'Chèque' && (
+                                <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-bold text-gray-700 uppercase ml-1">
+                                            {language === 'es' ? 'Nº de cheque' : (language === 'ar' ? 'رقم الشيك' : 'N° de chèque')}
+                                        </label>
+                                        <input 
+                                            type="text"
+                                            value={checkNumber}
+                                            onChange={(e) => setCheckNumber(e.target.value)}
+                                            className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-11"
+                                            placeholder="Ex: CH-12345"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-bold text-gray-700 uppercase ml-1">
+                                            {language === 'es' ? 'Banco' : (language === 'ar' ? 'البنك' : 'Banque')}
+                                        </label>
+                                        <input 
+                                            type="text"
+                                            value={bankName}
+                                            onChange={(e) => setBankName(e.target.value)}
+                                            className="block w-full rounded-xl border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-11"
+                                            placeholder="Ex: BMCE, Attijari..."
+                                        />
+                                    </div>
+                                </div>
+                            )}
                             <div className="flex justify-end gap-2 mt-4">
                                 <button type="button" onClick={() => setSelectedInvoiceForPayment(null)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">{t('cancel')}</button>
                                 <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700">{t('confirm')}</button>

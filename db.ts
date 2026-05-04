@@ -150,6 +150,8 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
                     ...item,
                     subject: firstItem.subject || item.subject,
                     paymentMethod: firstItem.paymentMethod || item.paymentMethod,
+                    checkNumber: firstItem.checkNumber || item.checkNumber,
+                    bankName: firstItem.bankName || item.bankName,
                     notes: firstItem.notes || item.notes,
                     purchaseOrderNumber: firstItem.purchaseOrderNumber || item.purchaseOrderNumber,
                     dueDate: firstItem.dueDate || item.dueDate,
@@ -182,6 +184,11 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
 
         const { paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, userId: _, ...itemToSave } = item as any;
         
+        // Re-add fields if they are in the database schema for specific tables
+        if (tableName === 'purchase_orders') {
+            if (dueDate) itemToSave.dueDate = dueDate;
+        }
+
         // Strip fields that might be missing in Supabase schema to avoid errors
         // These are stored in lineItems[0] by the UI components
         if (['quotes', 'invoices'].includes(tableName)) {
@@ -220,6 +227,8 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
                 ...savedItem,
                 subject: firstItem.subject || savedItem.subject,
                 paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod,
+                checkNumber: firstItem.checkNumber || savedItem.checkNumber,
+                bankName: firstItem.bankName || savedItem.bankName,
                 notes: firstItem.notes || savedItem.notes,
                 purchaseOrderNumber: firstItem.purchaseOrderNumber || savedItem.purchaseOrderNumber,
                 dueDate: firstItem.dueDate || savedItem.dueDate,
@@ -251,6 +260,11 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
         // and to remove 'id' from the update payload itself
         const { id, paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, userId: _, created_at, ...itemToSave } = item as any;
         
+        // Re-add fields if they are in the database schema for specific tables
+        if (tableName === 'purchase_orders') {
+            if (dueDate) itemToSave.dueDate = dueDate;
+        }
+
         if (['quotes', 'invoices'].includes(tableName)) {
             delete itemToSave.totalAmount;
         }
@@ -288,6 +302,8 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
                 ...savedItem,
                 subject: firstItem.subject || savedItem.subject,
                 paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod,
+                checkNumber: firstItem.checkNumber || savedItem.checkNumber,
+                bankName: firstItem.bankName || savedItem.bankName,
                 notes: firstItem.notes || savedItem.notes,
                 purchaseOrderNumber: firstItem.purchaseOrderNumber || savedItem.purchaseOrderNumber,
                 dueDate: firstItem.dueDate || savedItem.dueDate,

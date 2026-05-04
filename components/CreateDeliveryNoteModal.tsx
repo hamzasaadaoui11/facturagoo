@@ -52,6 +52,8 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     
     const [paymentAmount, setPaymentAmount] = useState<number>(0);
     const [paymentMethod, setPaymentMethod] = useState('Espèces');
+    const [checkNumber, setCheckNumber] = useState('');
+    const [bankName, setBankName] = useState('');
     const [stockError, setStockError] = useState<string | null>(null);
 
     const stripHtml = (html?: string) => {
@@ -91,6 +93,8 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 const initialPaymentMethod = noteToEdit.paymentMethod || noteToEdit.lineItems[0]?.paymentMethod || 'Espèces';
                 setPaymentMethod(initialPaymentMethod);
                 setShowPaymentMethodField(!!initialPaymentMethod);
+                setCheckNumber(noteToEdit.checkNumber || '');
+                setBankName(noteToEdit.bankName || '');
             } else {
                 setClientId('');
                 setDate(new Date().toISOString().split('T')[0]);
@@ -104,6 +108,8 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setTempVat(language === 'es' ? 21 : 20);
                 setPaymentMethod(language === 'es' ? 'Efectivo' : 'Espèces');
                 setShowPaymentMethodField(false);
+                setCheckNumber('');
+                setBankName('');
             }
             resetItemForm();
         } else {
@@ -316,6 +322,8 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 calculationMode,
                 subject: showSubjectField ? subject : undefined,
                 paymentMethod: showPaymentMethodField ? paymentMethod : undefined,
+                checkNumber: (showPaymentMethodField && paymentMethod === 'Chèque') ? checkNumber : undefined,
+                bankName: (showPaymentMethodField && paymentMethod === 'Chèque') ? bankName : undefined,
                 notes,
                 purchaseOrderNumber: showPurchaseOrderField ? purchaseOrderNumber : undefined
             };
@@ -332,6 +340,8 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 subTotal: totals.subTotal, vatAmount: totals.vatAmount, totalAmount: totals.totalTTC,
                 paymentAmount, 
                 paymentMethod: showPaymentMethodField ? paymentMethod : undefined, 
+                checkNumber: (showPaymentMethodField && paymentMethod === 'Chèque') ? checkNumber : undefined,
+                bankName: (showPaymentMethodField && paymentMethod === 'Chèque') ? bankName : undefined,
                 invoiceId: noteToEdit?.invoiceId
             }, noteToEdit?.id);
             handleClose();
@@ -433,7 +443,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                     </select>
                                     <button 
                                         type="button"
-                                        onClick={() => { setPaymentMethod(language === 'es' ? 'Efectivo' : 'Espèces'); setShowPaymentMethodField(false); }}
+                                        onClick={() => { setPaymentMethod(language === 'es' ? 'Efectivo' : 'Espèces'); setCheckNumber(''); setBankName(''); setShowPaymentMethodField(false); }}
                                         className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors"
                                     >
                                         <X size={16} />
@@ -449,6 +459,31 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                 >
                                     <Plus size={14} /> {t('addPaymentMethod')}
                                 </button>
+                            </div>
+                        )}
+
+                        {showPaymentMethodField && paymentMethod === 'Chèque' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2 p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="space-y-1">
+                                    <label className="block text-sm font-bold text-emerald-700 ml-1">Numéro de chèque</label>
+                                    <input 
+                                        type="text" 
+                                        value={checkNumber} 
+                                        onChange={(e) => setCheckNumber(e.target.value)} 
+                                        placeholder="Ex: 1234567" 
+                                        className="block w-full rounded-xl border-emerald-200 bg-white shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="block text-sm font-bold text-emerald-700 ml-1">La banque</label>
+                                    <input 
+                                        type="text" 
+                                        value={bankName} 
+                                        onChange={(e) => setBankName(e.target.value)} 
+                                        placeholder="Ex: Attijariwafa bank" 
+                                        className="block w-full rounded-xl border-emerald-200 bg-white shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12"
+                                    />
+                                </div>
                             </div>
                         )}
 
