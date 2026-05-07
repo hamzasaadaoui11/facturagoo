@@ -9,7 +9,7 @@ import {
     CreditCard, ShoppingBag, ArrowUpRight, ArrowDownRight, Filter, PieChart as PieIcon, Activity,
     ArrowRightLeft, UserCheck, Truck, BarChart2, User, Target, Info, FileText, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { Invoice, Payment, PurchaseOrder, Product, PurchaseOrderStatus, InvoiceStatus, CreditNote, CreditNoteStatus, Expense, SalaryPayment } from '../types';
+import { Invoice, Payment, PurchaseOrder, Product, PurchaseOrderStatus, InvoiceStatus, CreditNote, CreditNoteStatus, Expense, SalaryPayment, StockMovement } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface StatisticsProps {
@@ -18,13 +18,15 @@ interface StatisticsProps {
     purchaseOrders: PurchaseOrder[];
     products: Product[];
     expenses: Expense[];
+    stockMovements: StockMovement[];
+    companySettings?: any;
     creditNotes?: CreditNote[];
     salaryPayments?: SalaryPayment[];
 }
 
 type DateRangeType = 'today' | 'week' | 'month' | 'year' | 'custom';
 
-const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrders, products, expenses = [], creditNotes = [], salaryPayments = [] }) => {
+const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrders, products, expenses = [], stockMovements = [], companySettings, creditNotes = [], salaryPayments = [] }) => {
     const { t, isRTL, language } = useLanguage();
     
     const [rangeType, setRangeType] = useState<DateRangeType>('month');
@@ -118,10 +120,20 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             };
 
             const billedRevenue = periodInvoices.reduce((sum, inv) => sum + getInvAmount(inv), 0);
+            
+            // Only count Paid invoices for profit calculation as requested
+            const paidInvoices = periodInvoices.filter(inv => inv.status === InvoiceStatus.Paid);
+            const paidRevenue = paidInvoices.reduce((sum, inv) => sum + getInvAmount(inv), 0);
 
-            // Cost of goods sold (COGS): Theoretical purchase cost of items billed
+            // Calculate Total Purchase Orders Volume for the period
+            const periodPOs = purchaseOrders.filter(po => 
+                (po.status === PurchaseOrderStatus.Received || po.status === PurchaseOrderStatus.Sent) && 
+                isInRange(po.date, s, e)
+            );
+            const totalPOs = periodPOs.reduce((sum, po) => sum + (useTTC ? (po.totalAmount || 0) : (po.subTotal || 0)), 0);
+
+            // Cost of goods sold (COGS): Theoretical purchase cost of items billed (used for Profit calculation)
             let cogsAll = 0;
-            let cogsPaid = 0;
             
             periodInvoices.forEach(inv => {
                 let invoiceCogs = 0;
@@ -131,7 +143,6 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                     invoiceCogs += item.quantity * purchasePrice;
                 });
                 cogsAll += invoiceCogs;
-                cogsPaid += invoiceCogs; // Since we filtered periodInvoices to only Paid ones
             });
 
             // Total Inventory Value (Global, not range dependent usually, but here we can show current)
@@ -142,18 +153,34 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             
             const periodExpenses = expenses.filter(exp => isInRange(exp.date, s, e));
             const periodSalaryPayments = salaryPayments.filter(sp => sp.status === 'Paid' && isInRange(sp.paymentDate, s, e));
-            const totalOperationalExpenses = periodExpenses.reduce((sum, exp) => sum + exp.amount, 0) + periodSalaryPayments.reduce((sum, sp) => sum + Number(sp.amount), 0);
+            
+            // Separate Purchase settlements from operational expenses
+            const purchaseSettlements = periodExpenses.filter(exp => exp.category === 'Purchases' || exp.category === 'Achats');
+            const otherExpenses = periodExpenses.filter(exp => exp.category !== 'Purchases' && exp.category !== 'Achats');
+            
+            const totalPurchaseSettlements = purchaseSettlements.reduce((sum, exp) => sum + exp.amount, 0);
+            
+            // NEW: Add initial stock cost from movements of type 'Initial' in this period
+            const initialStockCost = stockMovements
+                .filter(m => m.type === 'Initial' && isInRange(m.date, s, e))
+                .reduce((sum, m) => {
+                    const productDef = products.find(p => p.id === m.productId);
+                    const purchasePrice = productDef?.purchasePrice || 0;
+                    return sum + (m.quantity * purchasePrice);
+                }, 0);
+
+            const totalOperationalExpenses = otherExpenses.reduce((sum, exp) => sum + exp.amount, 0) + periodSalaryPayments.reduce((sum, sp) => sum + Number(sp.amount), 0);
 
             const finalReceived = receivedRevenue; // Payments are always total received
             const finalBilled = billedRevenue - totalCreditNotes;
             
             return { 
-                revenue: finalReceived,        // Used for "Recettes Encaissées" (Optional now)
+                revenue: finalReceived,        // Used for "Recettes Encaissées"
                 billedRevenue: finalBilled,    // Used for "CA Facturé"
-                expenses: cogsPaid,            // Used for "Coûts d'Achats (Paid Docs)"
+                expenses: totalPurchaseSettlements + initialStockCost, // Used for "Coût d'Achats" - Now includes initial stocks
                 operationalExpenses: totalOperationalExpenses,
                 inventoryValue,                // Used for "Valeur Stock"
-                profit: finalBilled - cogsAll - totalOperationalExpenses   // Theoretical net profit
+                profit: (paidRevenue - totalCreditNotes) - (totalPurchaseSettlements + initialStockCost) - totalOperationalExpenses   // Profit = Paid Revenue - Purchase Payments - Operating Expenses
             };
         };
 
@@ -382,24 +409,55 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                                     {type === 'today' ? t('today').split(' ')[0] : type === 'week' ? t('periodWeek') : type === 'month' ? t('periodMonth') : t('periodYear')}
                                 </button>
                             ))}
-                            <button onClick={() => setRangeType('custom')} className={`px-3 md:px-4 py-1.5 md:py-2 text-[10px] md:text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap flex-1 sm:flex-none ${rangeType === 'custom' || startDate ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
+                            <button onClick={() => setRangeType('custom')} className={`px-3 md:px-4 py-1.5 md:py-2 text-[10px] md:text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap flex-1 sm:flex-none ${rangeType === 'custom' ? 'bg-indigo-500 text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-white/5'}`}>
                                 {t('customRange')}
                             </button>
                         </div>
                     </div>
                 </div>
+
+                {/* Custom Date Range Picker - Appears when custom is selected */}
+                {rangeType === 'custom' && (
+                    <div className="mt-6 flex flex-wrap items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-300 bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-sm">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Date Début</label>
+                            <input 
+                                type="date" 
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="bg-slate-800/80 border-slate-700 text-white text-xs rounded-lg focus:ring-emerald-500 focus:border-emerald-500 p-2 h-10 min-w-[140px]"
+                            />
+                        </div>
+                        <div className="flex items-center pt-5">
+                            <ChevronRight className="text-slate-600" size={16} />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Date Fin</label>
+                            <input 
+                                type="date" 
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="bg-slate-800/80 border-slate-700 text-white text-xs rounded-lg focus:ring-emerald-500 focus:border-emerald-500 p-2 h-10 min-w-[140px]"
+                            />
+                        </div>
+                        <div className="flex items-end pt-5 ml-auto sm:ml-0">
+                            <button 
+                                onClick={() => {
+                                    // Today's date as default if empty
+                                    if (!startDate) setStartDate(new Date().toISOString().split('T')[0]);
+                                    if (!endDate) setEndDate(new Date().toISOString().split('T')[0]);
+                                }}
+                                className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-6 rounded-lg text-xs transition-colors shadow-lg shadow-emerald-500/20"
+                            >
+                                Appliquer
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-5">
-                <div className="bg-white rounded-2xl md:rounded-3xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all">
-                    <div className="flex justify-between items-start mb-3">
-                        <div className="p-2.5 bg-slate-50 text-slate-600 rounded-xl"><ShoppingBag size={20} /></div>
-                    </div>
-                    <p className="text-slate-500 text-[11px] md:text-xs font-semibold uppercase tracking-wider">Valeur Totale Stock</p>
-                    <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-1">{formatMoney(currentMetrics.inventoryValue)}</h3>
-                </div>
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
                 <div className="bg-white rounded-2xl md:rounded-3xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all">
                     <div className="flex justify-between items-start mb-3">
                         <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><FileText size={20} /></div>

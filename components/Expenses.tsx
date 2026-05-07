@@ -45,6 +45,7 @@ const Expenses: React.FC<ExpensesProps> = ({
     const [selectedYear, setSelectedYear] = useState(today.getFullYear());
 
     const categories = [
+        { id: 'Achats', label: language === 'fr' ? 'Achats' : 'Purchases', color: 'bg-emerald-100 text-emerald-700' },
         { id: 'Water', label: t('expWater'), color: 'bg-blue-100 text-blue-700' },
         { id: 'Electricity', label: t('expElectricity'), color: 'bg-yellow-100 text-yellow-700' },
         { id: 'Internet', label: t('expInternet'), color: 'bg-indigo-100 text-indigo-700' },

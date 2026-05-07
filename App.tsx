@@ -272,7 +272,12 @@ const MainContent: React.FC = () => {
         await updateProductStock(movement.productId, movement.quantity, movement.variantId);
     };
     const addProduct = async (product: Omit<Product, 'id'>) => {
-        const newProduct: Product = { id: generateUUID(), productCode: product.productCode || getNextCode('P', products), ...product };
+        const newProduct: Product = { 
+            id: generateUUID(), 
+            productCode: product.productCode || getNextCode('P', products), 
+            createdAt: new Date().toISOString().split('T')[0],
+            ...product 
+        };
         await dbService.products.add(newProduct);
         setProducts(prev => [newProduct, ...prev].sort((a,b) => (b.productCode || '').localeCompare(a.productCode || '')));
         if(product.stockQuantity && product.stockQuantity > 0) {
@@ -801,6 +806,24 @@ const MainContent: React.FC = () => {
             const newOrder: PurchaseOrder = { id: generateUUID(), documentId: documentId, ...orderData };
             await dbService.purchaseOrders.add(newOrder);
             setPurchaseOrders(prev => [newOrder, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
+
+            // If created as Paid, add expense
+            if (newOrder.status === PurchaseOrderStatus.Paid) {
+                const supplier = suppliers.find(s => s.id === newOrder.supplierId);
+                const supplierName = supplier ? (supplier.company || supplier.name) : 'Fournisseur';
+                const useTTC = companySettings?.priceDisplayMode === 'TTC';
+                const amount = useTTC ? (newOrder.totalAmount || 0) : (newOrder.subTotal || 0);
+
+                if (amount > 0) {
+                    await addExpense({
+                        date: new Date().toISOString().split('T')[0],
+                        description: `Paiement BC #${newOrder.documentId || newOrder.id} - ${supplierName}`,
+                        amount: amount,
+                        category: 'Achats',
+                        purchaseOrderId: newOrder.id
+                    });
+                }
+            }
         } catch (e: any) {
             console.error("Error creating purchase order", e);
             alert("Erreur création BC: " + e.message);
@@ -811,6 +834,34 @@ const MainContent: React.FC = () => {
         try {
             const savedOrder = await dbService.purchaseOrders.update(updatedOrder);
             setPurchaseOrders(prev => prev.map(o => o.id === updatedOrder.id ? savedOrder : o));
+
+            // Sync expenses if status is Paid
+            if (updatedOrder.status === PurchaseOrderStatus.Paid) {
+                const existingExpense = expenses.find(e => e.purchaseOrderId === updatedOrder.id);
+                const supplier = suppliers.find(s => s.id === updatedOrder.supplierId);
+                const supplierName = supplier ? (supplier.company || supplier.name) : 'Fournisseur';
+                const useTTC = companySettings?.priceDisplayMode === 'TTC';
+                const totalAmount = useTTC ? (updatedOrder.totalAmount || 0) : (updatedOrder.subTotal || 0);
+                // The expense should represent the total cost if status is Paid
+                
+                if (existingExpense) {
+                    if (existingExpense.amount !== totalAmount) {
+                        await updateExpense({
+                            ...existingExpense,
+                            amount: totalAmount,
+                            description: `Paiement BC #${updatedOrder.documentId || updatedOrder.id} - ${supplierName}`
+                        });
+                    }
+                } else {
+                    await addExpense({
+                        date: new Date().toISOString().split('T')[0],
+                        description: `Paiement BC #${updatedOrder.documentId || updatedOrder.id} - ${supplierName}`,
+                        amount: totalAmount,
+                        category: 'Achats',
+                        purchaseOrderId: updatedOrder.id
+                    });
+                }
+            }
         } catch (e: any) {
             console.error("Error updating purchase order", e);
             alert("Erreur mise à jour commande: " + e.message);
@@ -822,6 +873,34 @@ const MainContent: React.FC = () => {
             const updatedOrder = { ...order, status: newStatus };
             await dbService.purchaseOrders.update(updatedOrder);
             setPurchaseOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
+            
+            // Handle Statistics/Expenses sync when status changes to Paid
+            if (newStatus === PurchaseOrderStatus.Paid) {
+                const existingExpense = expenses.find(e => e.purchaseOrderId === orderId);
+                if (!existingExpense) {
+                    const supplier = suppliers.find(s => s.id === order.supplierId);
+                    const supplierName = supplier ? (supplier.company || supplier.name) : 'Fournisseur';
+                    const useTTC = companySettings?.priceDisplayMode === 'TTC';
+                    const amount = (useTTC ? (order.totalAmount || 0) : (order.subTotal || 0)) - (order.amountPaid || 0);
+                    
+                    if (amount > 0) {
+                        await addExpense({
+                            date: new Date().toISOString().split('T')[0],
+                            description: `Paiement BC #${order.documentId || order.id} - ${supplierName}`,
+                            amount: amount,
+                            category: 'Achats',
+                            purchaseOrderId: orderId
+                        });
+                    }
+                }
+            } else if ((order.status as any) === PurchaseOrderStatus.Paid && (newStatus as any) !== PurchaseOrderStatus.Paid) {
+                // If it was Paid and now it's not, cleanup related expenses
+                const relatedExpenses = expenses.filter(e => e.purchaseOrderId === orderId);
+                for (const e of relatedExpenses) {
+                    await deleteExpense(e.id);
+                }
+            }
+
             if (newStatus === PurchaseOrderStatus.Received && order.status !== PurchaseOrderStatus.Received) {
                  for (const item of order.lineItems) {
                     if (item.productId) {
@@ -841,7 +920,27 @@ const MainContent: React.FC = () => {
     };
     const deletePurchaseOrder = async (orderId: string) => {
         try {
+            const orderToDelete = purchaseOrders.find(o => o.id === orderId);
+            const refPattern = `Reception ${orderToDelete?.documentId || orderId}`;
+
+            // Cleanup related expenses
+            const relatedExpenses = expenses.filter(e => e.purchaseOrderId === orderId);
+            for(const e of relatedExpenses) {
+                await dbService.expenses.delete(e.id);
+            }
+            
+            // Cleanup related stock movements (Achat)
+            const relatedMovements = stockMovements.filter(m => m.reference === refPattern);
+            for(const m of relatedMovements) {
+                // We should also reverse the stock change if we delete the movement?
+                // Actually, if we delete a "Received" PO, we should probably reverse the stock it added.
+                await updateProductStock(m.productId, -m.quantity, m.variantId);
+                await dbService.stockMovements.delete(m.id);
+            }
+
             await dbService.purchaseOrders.delete(orderId);
+            setExpenses(prev => prev.filter(e => e.purchaseOrderId !== orderId));
+            setStockMovements(prev => prev.filter(m => m.reference !== refPattern));
             setPurchaseOrders(prev => prev.filter(o => o.id !== orderId));
         } catch (e: any) {
             alert("Erreur suppression commande: " + e.message);
@@ -920,8 +1019,8 @@ const MainContent: React.FC = () => {
                     <main className="p-4 sm:p-6 lg:p-8 w-full">
                         <Routes>
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                            <Route path="/dashboard" element={<Dashboard invoices={invoices} clients={clients} products={products} companySettings={companySettings} creditNotes={creditNotes} expenses={expenses} />} />
-                            <Route path="/statistics" element={<Statistics invoices={invoices} payments={payments} purchaseOrders={purchaseOrders} products={products} creditNotes={creditNotes} expenses={expenses} salaryPayments={salaryPayments} />} />
+                            <Route path="/dashboard" element={<Dashboard invoices={invoices} clients={clients} products={products} companySettings={companySettings} creditNotes={creditNotes} expenses={expenses} stockMovements={stockMovements} />} />
+                            <Route path="/statistics" element={<Statistics invoices={invoices} payments={payments} purchaseOrders={purchaseOrders} products={products} creditNotes={creditNotes} expenses={expenses} salaryPayments={salaryPayments} stockMovements={stockMovements} companySettings={companySettings} />} />
                             <Route path="/sales/quotes" element={<Quotes quotes={quotes} onUpdateQuoteStatus={updateQuoteStatus} onCreateInvoice={createInvoiceFromQuote} onAddQuote={addQuote} onUpdateQuote={updateQuote} onDeleteQuote={deleteQuote} clients={clients} products={products} companySettings={companySettings} />} />
                             <Route path="/sales/invoices" element={<InvoicesComponent invoices={invoices} onUpdateInvoiceStatus={updateInvoiceStatus} onAddPayment={addPayment} onCreateInvoice={addInvoice} onUpdateInvoice={updateInvoice} onDeleteInvoice={deleteInvoice} onCreateCreditNote={createCreditNoteFromInvoice} clients={clients} products={products} companySettings={companySettings} />} />
                             <Route path="/sales/credit-notes" element={<CreditNotesComponent creditNotes={creditNotes} onUpdateCreditNoteStatus={updateCreditNoteStatus} onCreateCreditNote={addCreditNote} onUpdateCreditNote={updateCreditNote} onDeleteCreditNote={deleteCreditNote} clients={clients} products={products} companySettings={companySettings} />} />
@@ -932,7 +1031,7 @@ const MainContent: React.FC = () => {
                             <Route path="/expenses" element={<Expenses expenses={expenses} onAddExpense={addExpense} onUpdateExpense={updateExpense} onDeleteExpense={deleteExpense} />} />
                             <Route path="/personnel" element={<PersonnelManagement companySettings={companySettings} onAddExpense={addExpense} initialEmployees={employees} initialAttendances={attendances} initialPayments={salaryPayments} />} />
                             <Route path="/clients" element={<ClientsComponent clients={clients} onAddClient={addClient} onUpdateClient={updateClient} onDeleteClient={deleteClient} onDeleteClients={deleteClient} />} />
-                            <Route path="/suppliers" element={<SuppliersComponent suppliers={suppliers} purchaseOrders={purchaseOrders} onUpdatePurchaseOrder={updatePurchaseOrder} onAddSupplier={addSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} onDeleteSuppliers={deleteSupplier} />} />
+                            <Route path="/suppliers" element={<SuppliersComponent suppliers={suppliers} purchaseOrders={purchaseOrders} onUpdatePurchaseOrder={updatePurchaseOrder} onAddExpense={addExpense} onAddSupplier={addSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} onDeleteSuppliers={deleteSupplier} />} />
                             <Route path="/products" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onDeleteProducts={deleteProducts} />} />
                             <Route path="/products/new" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onDeleteProducts={deleteProducts} />} />
                             <Route path="/products/edit/:productId" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onDeleteProducts={deleteProducts} />} />

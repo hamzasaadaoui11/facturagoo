@@ -471,6 +471,7 @@ export const dbService = {
     stockMovements: {
         getAll: () => getAll<StockMovement>('stock_movements'),
         add: (item: StockMovement) => add<StockMovement>('stock_movements', item),
+        delete: (id: string | string[]) => remove('stock_movements', id),
     },
     deliveryNotes: {
         getAll: () => getAll<DeliveryNote>('delivery_notes'),

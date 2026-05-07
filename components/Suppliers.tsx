@@ -5,20 +5,21 @@ import AddSupplierModal from './AddSupplierModal';
 import ImportSuppliersModal from './ImportSuppliersModal';
 import ConfirmationModal from './ConfirmationModal';
 import { Plus, Pencil, Trash2, Building2, User, Search, ChevronLeft, ChevronRight, Upload, Landmark, AlertCircle, Clock, CheckCircle2, Wallet, ArrowUpRight } from 'lucide-react';
-import { Supplier, PurchaseOrder, PurchaseOrderStatus } from '../types';
+import { Supplier, PurchaseOrder, PurchaseOrderStatus, Expense } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface SuppliersProps {
     suppliers: Supplier[];
     purchaseOrders: PurchaseOrder[];
     onUpdatePurchaseOrder: (order: PurchaseOrder) => void;
+    onAddExpense: (expense: Omit<Expense, 'id'>) => void;
     onAddSupplier: (supplier: Omit<Supplier, 'id' | 'supplierCode'>) => void;
     onUpdateSupplier: (supplier: Supplier) => void;
     onDeleteSupplier: (supplierId: string) => void;
     onDeleteSuppliers: (supplierIds: string[]) => void;
 }
 
-const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpdatePurchaseOrder, onAddSupplier, onUpdateSupplier, onDeleteSupplier, onDeleteSuppliers }) => {
+const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpdatePurchaseOrder, onAddExpense, onAddSupplier, onUpdateSupplier, onDeleteSupplier, onDeleteSuppliers }) => {
     const { t, isRTL, language } = useLanguage();
     const [activeTab, setActiveTab] = useState<'list' | 'credit'>('list');
     const [selectedSupplierForCredit, setSelectedSupplierForCredit] = useState<string | null>(null);
@@ -937,10 +938,24 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpda
                                     onClick={() => {
                                         const amount = parseFloat(paymentAmount);
                                         if (!isNaN(amount) && amount > 0) {
+                                            // Handle PO update
                                             onUpdatePurchaseOrder({
                                                 ...paymentModalOrder,
                                                 amountPaid: (paymentModalOrder.amountPaid || 0) + amount
                                             });
+
+                                            // Record as specialized expense for Statistics
+                                            const supplier = suppliers.find(s => s.id === paymentModalOrder.supplierId);
+                                            const supplierName = supplier ? (supplier.company || supplier.name) : 'Fournisseur';
+                                            
+                                            onAddExpense({
+                                                date: new Date().toISOString().split('T')[0],
+                                                description: `${language === 'fr' ? 'Paiement BC' : 'PO Payment'} #${paymentModalOrder.documentId || paymentModalOrder.id} - ${supplierName}`,
+                                                amount: amount,
+                                                category: 'Achats', // This matches our Statistics filtering
+                                                purchaseOrderId: paymentModalOrder.id
+                                            });
+
                                             setPaymentModalOrder(null);
                                             setPaymentAmount('');
                                         }
@@ -948,7 +963,7 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpda
                                     className="flex-2 h-12 bg-emerald-600 text-white rounded-2xl font-black text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
                                 >
                                     <CheckCircle2 size={18} />
-                                    {language === 'fr' ? 'Valider le paiement' : 'Validate Payment'}
+                                    {language === 'fr' ? 'Valider le paiement' : 'Valider le paiement'}
                                 </button>
                             </div>
                         </div>

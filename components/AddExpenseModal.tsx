@@ -18,7 +18,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     onSave, 
     editingExpense 
 }) => {
-    const { t, isRTL } = useLanguage();
+    const { t, isRTL, language } = useLanguage();
     const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState<Omit<Expense, 'id'>>({
         category: 'Other',
@@ -52,6 +52,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     }, [editingExpense, isOpen]);
 
     const categories = [
+        { id: 'Achats', label: language === 'fr' ? 'Achats' : 'Purchases' },
         { id: 'Water', label: t('expWater') },
         { id: 'Electricity', label: t('expElectricity') },
         { id: 'Internet', label: t('expInternet') },

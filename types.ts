@@ -64,6 +64,7 @@ export interface Product {
     hasVariants?: boolean;
     variants?: ProductVariant[];
     imageUrl?: string;
+    createdAt?: string; // Tracking for statistics initial stock cost
 }
 
 export enum QuoteStatus {
@@ -79,6 +80,7 @@ export enum PurchaseOrderStatus {
     Draft = 'Brouillon',
     Sent = 'Envoyé',
     Received = 'Reçu', // Updates stock
+    Paid = 'Payé',
     Cancelled = 'Annulé'
 }
 
@@ -242,6 +244,7 @@ export interface Expense {
     date: string;
     reference?: string;
     notes?: string;
+    purchaseOrderId?: string;
 }
 
 export interface DeliveryNote {

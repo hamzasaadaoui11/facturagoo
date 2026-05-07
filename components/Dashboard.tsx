@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip } from 'recharts';
-import { Invoice, InvoiceStatus, Client, Product, CompanySettings, CreditNote, CreditNoteStatus, Expense } from '../types';
+import { Invoice, InvoiceStatus, Client, Product, CompanySettings, CreditNote, CreditNoteStatus, Expense, StockMovement } from '../types';
 import { Users, Package, FileText, AlertCircle, AlertTriangle, DollarSign, Archive, CheckCircle, ArrowRight, UserPlus, ChevronRight, TrendingUp, CalendarDays, Filter, Clock, UserCheck, Layers, BarChart3, Receipt, Users2, Box, ShieldAlert, Wallet } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -13,6 +13,7 @@ interface DashboardProps {
     companySettings?: CompanySettings | null;
     creditNotes?: CreditNote[];
     expenses?: Expense[];
+    stockMovements?: StockMovement[];
 }
 
 const StatCard: React.FC<{
@@ -47,7 +48,7 @@ const ShortcutCard = ({ icon: Icon, label, desc, onClick, colorClass }: { icon: 
 
 type ChartPeriod = 'day' | 'week' | 'month' | 'year' | 'custom';
 
-const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, companySettings, creditNotes = [], expenses = [] }) => {
+const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, companySettings, creditNotes = [], expenses = [], stockMovements = [] }) => {
     const navigate = useNavigate();
     const { t, language } = useLanguage();
     const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('year');
@@ -86,15 +87,29 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
         
         unpaidAmount = Math.max(0, unpaidAmount - validatedCreditNotesAmount);
 
-        const monthlyExpenses = expenses
+        const monthlyExpensesAmount = expenses
             .filter(exp => {
                 const expDate = new Date(exp.date);
                 return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
             })
             .reduce((sum, exp) => sum + exp.amount, 0);
 
-        return { totalRevenue, unpaidInvoicesCount, unpaidAmount, monthlyExpenses };
-    }, [invoices, creditNotes, expenses]);
+        const initialStockCost = stockMovements
+            .filter(m => {
+                if (m.type !== 'Initial') return false;
+                const mDate = new Date(m.date);
+                return mDate.getMonth() === currentMonth && mDate.getFullYear() === currentYear;
+            })
+            .reduce((sum, m) => {
+                const productDef = products.find(p => p.id === m.productId);
+                const purchasePrice = productDef?.purchasePrice || 0;
+                return sum + (m.quantity * purchasePrice);
+            }, 0);
+
+        const totalMonthlyExpenses = monthlyExpensesAmount + initialStockCost;
+
+        return { totalRevenue, unpaidInvoicesCount, unpaidAmount, monthlyExpenses: totalMonthlyExpenses };
+    }, [invoices, creditNotes, expenses, stockMovements, products]);
 
     const stats = [
         { 

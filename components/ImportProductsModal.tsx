@@ -86,7 +86,8 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                                 unitOfMeasure,
                                 minStockAlert: isNaN(minStockAlert) ? 5 : minStockAlert,
                                 hasVariants: false,
-                                variants: []
+                                variants: [],
+                                createdAt: new Date().toISOString().split('T')[0]
                             };
                         }).filter(p => p.name);
                     } else {
@@ -148,7 +149,8 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                                 unitOfMeasure,
                                 minStockAlert: isNaN(minStockAlert) ? 5 : minStockAlert,
                                 hasVariants: true,
-                                variants
+                                variants,
+                                createdAt: new Date().toISOString().split('T')[0]
                             };
                         }).filter(p => p.name);
                     }
