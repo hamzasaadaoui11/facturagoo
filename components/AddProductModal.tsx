@@ -130,6 +130,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
             alert(t('name'));
             return;
         }
+
+        const isService = productType === 'Service';
         
         onSave({ 
             name,
@@ -141,10 +143,10 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
             salePrice, 
             purchasePrice, 
             vat,
-            stockQuantity,
-            minStockAlert,
-            hasVariants,
-            variants: hasVariants ? variants : []
+            stockQuantity: isService ? 0 : stockQuantity,
+            minStockAlert: isService ? 0 : minStockAlert,
+            hasVariants: isService ? false : hasVariants,
+            variants: (hasVariants && !isService) ? variants : []
         }, productToEdit?.id);
         onClose();
     };
@@ -281,86 +283,88 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                         </div>
                     </div>
 
-                    <div className="pt-4 border-t border-slate-100">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                                <Layers className="text-slate-400" size={18} />
-                                <span className="text-sm font-bold text-slate-700">Gestion des variantes</span>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input 
-                                    type="checkbox" 
-                                    className="sr-only peer" 
-                                    checked={hasVariants}
-                                    onChange={(e) => setHasVariants(e.target.checked)}
-                                />
-                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                                <span className="ml-3 text-xs font-bold text-slate-500 uppercase">Activer</span>
-                            </label>
-                        </div>
-
-                        {hasVariants && (
-                            <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                                <div className="grid grid-cols-12 gap-3 mb-2 px-2">
-                                    <div className="col-span-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nom de la variante</div>
-                                    <div className="col-span-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Valeur (XL, M..)</div>
-                                    <div className="col-span-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stock</div>
-                                    <div className="col-span-1"></div>
+                    {productType !== 'Service' && (
+                        <div className="pt-4 border-t border-slate-100">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Layers className="text-slate-400" size={18} />
+                                    <span className="text-sm font-bold text-slate-700">Gestion des variantes</span>
                                 </div>
-                                
-                                {variants.map((variant) => (
-                                    <div key={variant.id} className="grid grid-cols-12 gap-3 items-center">
-                                        <div className="col-span-6">
-                                            <input 
-                                                type="text"
-                                                value={variant.name}
-                                                onChange={(e) => updateVariant(variant.id, { name: e.target.value })}
-                                                placeholder="Ex: T-shirt - XL"
-                                                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:bg-white transition-all outline-none"
-                                            />
-                                        </div>
-                                        <div className="col-span-3">
-                                            <input 
-                                                type="text"
-                                                value={variant.attributeValue}
-                                                onChange={(e) => updateVariant(variant.id, { attributeValue: e.target.value })}
-                                                placeholder="XL"
-                                                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:bg-white transition-all outline-none"
-                                            />
-                                        </div>
-                                        <div className="col-span-2">
-                                            <input 
-                                                type="number"
-                                                value={variant.stockQuantity}
-                                                onChange={(e) => updateVariant(variant.id, { stockQuantity: parseFloat(e.target.value) || 0 })}
-                                                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:bg-white transition-all outline-none"
-                                            />
-                                        </div>
-                                        <div className="col-span-1 flex justify-end">
-                                            <button 
-                                                type="button" 
-                                                onClick={() => removeVariant(variant.id)}
-                                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-
-                                <button 
-                                    type="button" 
-                                    onClick={addVariant}
-                                    className="w-full mt-2 py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:text-emerald-600 hover:border-emerald-400 hover:bg-emerald-50 transition-all font-bold text-xs flex items-center justify-center gap-2"
-                                >
-                                    <Plus size={14} /> Ajouter une variante
-                                </button>
-                                <p className="text-[10px] text-slate-400 italic text-center mt-2">
-                                    Le stock total sera automatiquement calculé à partir de vos variantes.
-                                </p>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer" 
+                                        checked={hasVariants}
+                                        onChange={(e) => setHasVariants(e.target.checked)}
+                                    />
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                    <span className="ml-3 text-xs font-bold text-slate-500 uppercase">Activer</span>
+                                </label>
                             </div>
-                        )}
-                    </div>
+
+                            {hasVariants && (
+                                <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                                    <div className="grid grid-cols-12 gap-3 mb-2 px-2">
+                                        <div className="col-span-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nom de la variante</div>
+                                        <div className="col-span-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Valeur (XL, M..)</div>
+                                        <div className="col-span-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Stock</div>
+                                        <div className="col-span-1"></div>
+                                    </div>
+                                    
+                                    {variants.map((variant) => (
+                                        <div key={variant.id} className="grid grid-cols-12 gap-3 items-center">
+                                            <div className="col-span-6">
+                                                <input 
+                                                    type="text"
+                                                    value={variant.name}
+                                                    onChange={(e) => updateVariant(variant.id, { name: e.target.value })}
+                                                    placeholder="Ex: T-shirt - XL"
+                                                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:bg-white transition-all outline-none"
+                                                />
+                                            </div>
+                                            <div className="col-span-3">
+                                                <input 
+                                                    type="text"
+                                                    value={variant.attributeValue}
+                                                    onChange={(e) => updateVariant(variant.id, { attributeValue: e.target.value })}
+                                                    placeholder="XL"
+                                                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:bg-white transition-all outline-none"
+                                                />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <input 
+                                                    type="number"
+                                                    value={variant.stockQuantity}
+                                                    onChange={(e) => updateVariant(variant.id, { stockQuantity: parseFloat(e.target.value) || 0 })}
+                                                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 focus:bg-white transition-all outline-none"
+                                                />
+                                            </div>
+                                            <div className="col-span-1 flex justify-end">
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => removeVariant(variant.id)}
+                                                    className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    <button 
+                                        type="button" 
+                                        onClick={addVariant}
+                                        className="w-full mt-2 py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:text-emerald-600 hover:border-emerald-400 hover:bg-emerald-50 transition-all font-bold text-xs flex items-center justify-center gap-2"
+                                    >
+                                        <Plus size={14} /> Ajouter une variante
+                                    </button>
+                                    <p className="text-[10px] text-slate-400 italic text-center mt-2">
+                                        Le stock total sera automatiquement calculé à partir de vos variantes.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </form>
 
                 <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex gap-3">

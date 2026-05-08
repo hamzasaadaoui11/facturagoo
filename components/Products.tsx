@@ -184,14 +184,15 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const isService = productType === 'Service';
         const productData = {
             name, productCode, description, category, productType, unitOfMeasure, vat,
             salePrice: parseDecimalInput(salePriceHTStr),
             purchasePrice: parseDecimalInput(purchasePriceHTStr),
-            stockQuantity: parseDecimalInput(stockQuantityStr),
-            minStockAlert: parseDecimalInput(minStockAlertStr) || 0,
-            hasVariants,
-            variants: hasVariants ? variants : [],
+            stockQuantity: isService ? 0 : parseDecimalInput(stockQuantityStr),
+            minStockAlert: isService ? 0 : (parseDecimalInput(minStockAlertStr) || 0),
+            hasVariants: isService ? false : hasVariants,
+            variants: (hasVariants && !isService) ? variants : [],
             imageUrl
         };
         if (isEditMode && existingProduct) {
@@ -324,74 +325,76 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                         )}
                     </div>
 
-                    <div className="mt-8 pt-6 border-t border-slate-100">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2 text-neutral-900 font-bold">
-                                <Plus size={20} className="text-emerald-500" />
-                                <span>Gestion des variantes</span>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input 
-                                    type="checkbox" 
-                                    className="sr-only peer" 
-                                    checked={hasVariants}
-                                    onChange={(e) => setHasVariants(e.target.checked)}
-                                />
-                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                            </label>
-                        </div>
-
-                        {hasVariants && (
-                            <div className="space-y-4 bg-slate-50 p-4 md:p-6 rounded-xl border border-slate-200 shadow-inner">
-                                <div className="grid grid-cols-12 gap-4 px-2 hidden md:grid">
-                                    <div className="col-span-8 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Valeur / Attribut (ex: XL, Rouge..)</div>
-                                    <div className="col-span-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Quantité Stock</div>
-                                    <div className="col-span-1"></div>
-                                </div>
-                                
-                                {variants.map((variant) => (
-                                    <div key={variant.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center bg-white p-3 md:p-0 md:bg-transparent rounded-lg border border-slate-200 md:border-none shadow-sm md:shadow-none">
-                                        <div className="md:col-span-8">
-                                            <label className="block md:hidden text-[11px] font-bold text-slate-400 uppercase mb-1">Attribut</label>
-                                            <input 
-                                                type="text"
-                                                value={variant.attributeValue}
-                                                onChange={(e) => updateVariant(variant.id, { attributeValue: e.target.value })}
-                                                placeholder="Ex: XL"
-                                                className="w-full px-4 py-2 text-sm rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all outline-none"
-                                            />
-                                        </div>
-                                        <div className="md:col-span-3">
-                                            <label className="block md:hidden text-[11px] font-bold text-slate-400 uppercase mb-1">Stock</label>
-                                            <input 
-                                                type="number"
-                                                value={variant.stockQuantity}
-                                                onChange={(e) => updateVariant(variant.id, { stockQuantity: parseFloat(e.target.value) || 0 })}
-                                                className="w-full px-4 py-2 text-sm rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 text-center transition-all outline-none"
-                                            />
-                                        </div>
-                                        <div className="md:col-span-1 flex justify-end">
-                                            <button 
-                                                type="button" 
-                                                onClick={() => removeVariant(variant.id)}
-                                                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
+                        {productType !== 'Service' && (
+                            <div className="mt-8 pt-6 border-t border-slate-100">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2 text-neutral-900 font-bold">
+                                        <Plus size={20} className="text-emerald-500" />
+                                        <span>Gestion des variantes</span>
                                     </div>
-                                ))}
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer" 
+                                            checked={hasVariants}
+                                            onChange={(e) => setHasVariants(e.target.checked)}
+                                        />
+                                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                    </label>
+                                </div>
 
-                                <button 
-                                    type="button" 
-                                    onClick={addVariant}
-                                    className="w-full mt-2 py-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:text-emerald-600 hover:border-emerald-400 hover:bg-emerald-50 transition-all font-bold text-sm flex items-center justify-center gap-2"
-                                >
-                                    <Plus size={18} /> Ajouter une ligne variante
-                                </button>
+                                {hasVariants && (
+                                    <div className="space-y-4 bg-slate-50 p-4 md:p-6 rounded-xl border border-slate-200 shadow-inner">
+                                        <div className="grid grid-cols-12 gap-4 px-2 hidden md:grid">
+                                            <div className="col-span-8 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Valeur / Attribut (ex: XL, Rouge..)</div>
+                                            <div className="col-span-3 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-center">Quantité Stock</div>
+                                            <div className="col-span-1"></div>
+                                        </div>
+                                        
+                                        {variants.map((variant) => (
+                                            <div key={variant.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center bg-white p-3 md:p-0 md:bg-transparent rounded-lg border border-slate-200 md:border-none shadow-sm md:shadow-none">
+                                                <div className="md:col-span-8">
+                                                    <label className="block md:hidden text-[11px] font-bold text-slate-400 uppercase mb-1">Attribut</label>
+                                                    <input 
+                                                        type="text"
+                                                        value={variant.attributeValue}
+                                                        onChange={(e) => updateVariant(variant.id, { attributeValue: e.target.value })}
+                                                        placeholder="Ex: XL"
+                                                        className="w-full px-4 py-2 text-sm rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all outline-none"
+                                                    />
+                                                </div>
+                                                <div className="md:col-span-3">
+                                                    <label className="block md:hidden text-[11px] font-bold text-slate-400 uppercase mb-1">Stock</label>
+                                                    <input 
+                                                        type="number"
+                                                        value={variant.stockQuantity}
+                                                        onChange={(e) => updateVariant(variant.id, { stockQuantity: parseFloat(e.target.value) || 0 })}
+                                                        className="w-full px-4 py-2 text-sm rounded-lg border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 text-center transition-all outline-none"
+                                                    />
+                                                </div>
+                                                <div className="md:col-span-1 flex justify-end">
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => removeVariant(variant.id)}
+                                                        className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        <button 
+                                            type="button" 
+                                            onClick={addVariant}
+                                            className="w-full mt-2 py-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:text-emerald-600 hover:border-emerald-400 hover:bg-emerald-50 transition-all font-bold text-sm flex items-center justify-center gap-2"
+                                        >
+                                            <Plus size={18} /> Ajouter une ligne variante
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
-                    </div>
                  </div>
 
                  <div className="bg-white p-4 md:p-6 shadow-sm ring-1 ring-neutral-200 rounded-xl md:rounded-lg">

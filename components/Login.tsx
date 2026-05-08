@@ -33,8 +33,7 @@ const Login: React.FC = () => {
 
             if (error) throw error;
             
-            console.log("Login successful, navigating...");
-            navigate('/dashboard');
+            console.log("Login successful, relying on App's auth listener for navigation.");
         } catch (err: any) {
             console.error("Login error:", err);
             setError(err.message || 'Une erreur est survenue lors de la connexion.');
