@@ -75,7 +75,7 @@ export const getCurrentUserAndCompany = async () => {
     } catch (e: any) {
         console.error("Error in getCurrentUserAndCompany:", e);
         if (e?.message?.includes('Failed to fetch') || e?.name === 'TypeError') {
-            throw new Error("Erreur de connexion au serveur Supabase. Veuillez vérifier votre connexion.");
+            throw new Error(`Erreur de connexion au serveur Supabase. Veuillez vérifier votre connexion. (${e.message || e.name})`);
         }
         return { userId: null, companyId: null };
     }
@@ -124,10 +124,12 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
         // Only apply company_id filter if we have a companyId
         const filteredFetch = companyId ? fetchPromise.eq('company_id', companyId) : fetchPromise;
 
-        const result: any = await withTimeout(filteredFetch as any);
+        // Wrap in Promise.resolve to ensure compatibility with withTimeout and Promise.race
+        const result: any = await withTimeout(Promise.resolve(filteredFetch));
         const { data, error } = result;
 
         if (error) {
+            console.error(`Supabase Error for ${storeName}:`, error);
             // Check if it's a schema error (table or column missing)
             if (error.code === 'PGRST116' || error.code === '42P01' || error.code === 'PGRST205' || (error.message && error.message.includes('column') && error.message.includes('does not exist'))) {
                 console.warn(`Table or column missing for ${storeName}, returning empty array:`, error.message);
@@ -138,12 +140,11 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
             if (recovered) {
                 // Retry once
                 const retryFetch = supabase.from(tableName).select('*');
-                const retryResult: any = await withTimeout((companyId ? retryFetch.eq('company_id', companyId) : retryFetch) as any);
+                const retryResult: any = await withTimeout(Promise.resolve(companyId ? retryFetch.eq('company_id', companyId) : retryFetch));
                 if (retryResult.data) return retryResult.data;
             }
-            console.error(`Error fetching ${storeName}:`, error);
             if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
-                throw new Error("Erreur de connexion au serveur. Veuillez vérifier votre connexion.");
+                throw new Error(`Erreur de connexion au serveur Supabase. Veuillez vérifier votre connexion. (${error.message || error.name})`);
             }
             throw error;
         }
