@@ -191,15 +191,21 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const isML = calculationMode === 'ml';
     const isKg = calculationMode === 'kg';
     const isDays = calculationMode === 'days';
-    const showLengthColumn = calculationMode === 'm2' || calculationMode === 'ml';
-    const showHeightColumn = calculationMode === 'm2';
-    const showDaysColumn = calculationMode === 'days';
+
+    const hasSpecificMode = (mode: string) => lineItems.some(item => item.calculationMode === mode);
+    
+    // Determine which columns to show based on current tool selection OR existing items
+    const showLengthColumn = calculationMode === 'm2' || calculationMode === 'ml' || hasSpecificMode('m2') || hasSpecificMode('ml');
+    const showHeightColumn = calculationMode === 'm2' || hasSpecificMode('m2');
+    const showWeightColumn = calculationMode === 'kg' || hasSpecificMode('kg');
+    const showDaysColumn = calculationMode === 'days' || hasSpecificMode('days');
 
     const getLineMultiplier = (item: LineItem) => {
-        if (isM2) return (item.length || 1) * (item.height || 1);
-        if (isML) return (item.length || 1);
-        if (isKg) return (item.weight || 1);
-        if (isDays) return (item.days || 1);
+        const mode = item.calculationMode || 'piece';
+        if (mode === 'm2') return (item.length || 1) * (item.height || 1);
+        if (mode === 'ml') return (item.length || 1);
+        if (mode === 'kg') return (item.weight || 1);
+        if (mode === 'days') return (item.days || 1);
         return 1;
     };
 
@@ -223,6 +229,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 name: tempName,
                 description: tempDesc || '',
                 quantity: qty || 1,
+                calculationMode: calculationMode,
                 length: length || 1,
                 height: height || 1,
                 weight: weight || 1,
@@ -278,23 +285,10 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
         const fallbackName = language === 'es' ? 'Proveedor desconocido' : 'Fournisseur inconnu';
         const supplierNameDisplay = supplier ? (supplier.company || supplier.name) : fallbackName;
         
-        // Store metadata in the first line item to avoid schema changes
-        const updatedLineItems = [...lineItems];
-        if (updatedLineItems.length > 0) {
-            updatedLineItems[0] = { 
-                ...updatedLineItems[0], 
-                calculationMode,
-                subject: showSubjectField ? subject : undefined,
-                expectedDate: showExpectedDateField ? expectedDate : undefined,
-                notes,
-                paymentMethod: showPaymentMethodField ? paymentMethod : undefined,
-                checkNumber: (showPaymentMethodField && paymentMethod === 'Chèque') ? checkNumber : undefined,
-                bankName: (showPaymentMethodField && paymentMethod === 'Chèque') ? bankName : undefined
-            };
-        }
-
         const orderData = {
-            supplierId, supplierName: supplierNameDisplay, date, 
+            supplierId, 
+            supplierName: supplierNameDisplay, 
+            date, 
             dueDate: dueDate || undefined,
             amountPaid: parseDecimalInput(amountPaid) || 0,
             expectedDate: showExpectedDateField ? expectedDate : undefined, 
@@ -303,9 +297,11 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
             checkNumber: (showPaymentMethodField && paymentMethod === 'Chèque') ? checkNumber : undefined,
             bankName: (showPaymentMethodField && paymentMethod === 'Chèque') ? bankName : undefined,
             notes, 
-            lineItems: updatedLineItems,
+            lineItems: lineItems,
             status: orderToEdit ? orderToEdit.status : PurchaseOrderStatus.Draft,
-            subTotal: totals.subTotal, vatAmount: totals.vatAmount, totalAmount: totals.totalAmount,
+            subTotal: totals.subTotal, 
+            vatAmount: totals.vatAmount, 
+            totalAmount: totals.totalAmount,
             discountType: isDiscountEnabled ? discountType : undefined,
             discountValue: isDiscountEnabled ? parseDecimalInput(discountValue) : undefined,
         };
@@ -633,6 +629,17 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                     />
                                 </div>
                             )}
+                            {isDays && (
+                                <div className="col-span-1 md:col-span-12 lg:col-span-2">
+                                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">Jours</label>
+                                    <input 
+                                        type="text" 
+                                        value={tempDays} 
+                                        onChange={(e) => setTempDays(e.target.value)} 
+                                        className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all"
+                                    />
+                                </div>
+                            )}
                             <div className="col-span-1 md:col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">{t('vat')}</label>
                                 <select 
@@ -664,13 +671,11 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                             <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('refLabel')}</th>
                                             <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('description')}</th>
                                             <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
-                                            {showLengthColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{calculationMode === 'm2' ? 'Larg.' : 'Long.'}</th>}
+                                            {showLengthColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Long./Larg.</th>}
                                             {showHeightColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Haut.</th>}
-                                            {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Poids (kg)</th>}
-                                            {isM2 && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">M²</th>}
-                                            {isML && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">ML</th>}
-                                            {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Total kg</th>}
-                                            {isDays && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('uDay')}</th>}
+                                            {showWeightColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Poids (kg)</th>}
+                                            {showDaysColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('uDay')}</th>}
+                                            <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Multiplier</th>
                                             <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('puTTCLabel') : t('puHTLabel')}</th>
                                             <th className="px-4 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">{isModeTTC ? t('totalTTCLabel') : t('totalHTLabel')}</th>
                                             <th className="px-4 py-3 w-10"></th>
@@ -734,30 +739,37 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                                                     />
                                                 </td>
                                             )}
-                                            {isKg && (
+                                            {showWeightColumn && (
                                                 <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
                                                     <input 
                                                         type="text" 
                                                         value={formatDecimalForInput(item.weight || 1, language)} 
-                                                        onChange={(e) => updateLineItem(item.id, { weight: parseDecimalInput(e.target.value) })}
+                                                        onChange={(e) => {
+                                                            const val = parseDecimalInput(e.target.value);
+                                                            updateLineItem(item.id, { weight: val, calculationMode: item.calculationMode || 'kg' });
+                                                        }}
                                                         className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
                                                     />
                                                 </td>
                                             )}
-                                            {isM2 && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1) * (item.height || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
-                                            {isML && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
-                                            {isKg && <td className="px-4 py-3 text-center text-xs font-medium text-slate-700">{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>}
-                                            {isDays && (
+                                            {showDaysColumn && (
                                                 <td className="px-4 py-3 text-center text-xs text-slate-600 font-bold">
                                                     <input 
                                                         type="text" 
                                                         value={formatDecimalForInput(item.days || 1, language)} 
-                                                        onChange={(e) => updateLineItem(item.id, { days: parseDecimalInput(e.target.value) })}
-                                                        className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent font-mono"
+                                                        onChange={(e) => {
+                                                            const val = parseDecimalInput(e.target.value);
+                                                            updateLineItem(item.id, { days: val, calculationMode: item.calculationMode || 'days' });
+                                                        }}
+                                                        className="w-12 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
                                                     />
                                                 </td>
                                             )}
-                                                <td className="px-4 py-3 text-right text-xs">
+                                            <td className="px-4 py-3 text-center text-xs font-medium text-slate-500 italic">
+                                                {getLineMultiplier(item).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                                <span className="text-[9px] ml-1 opacity-50 uppercase">{item.calculationMode || 'piece'}</span>
+                                            </td>
+                                            <td className="px-4 py-3 text-right text-xs">
                                                      <input 
                                                         type="text" 
                                                         value={formatDecimalForInput(displayPrice, language)} 

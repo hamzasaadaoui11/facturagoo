@@ -221,6 +221,7 @@ export const translations = {
     noOrdersFound: 'Aucun bon de commande trouvé',
     firstOrderPrompt: 'Créez votre premier bon de commande pour commencer.',
     markSent: 'Marquer comme envoyé',
+    markInTransit: 'Marquer comme expédié',
     markReceived: 'Marquer comme reçu',
     searchOrderPlaceholder: 'Rechercher par numéro ou fournisseur...',
     
@@ -588,6 +589,7 @@ export const translations = {
     noOrdersFound: 'No se encontraron pedidos',
     firstOrderPrompt: 'Cree su primer pedido para comenzar.',
     markSent: 'Marcar como enviado',
+    markInTransit: 'Marcar como en tránsito',
     markReceived: 'Marcar como recibido',
     searchOrderPlaceholder: 'Buscar por número o proveedor...',
 
@@ -955,6 +957,7 @@ export const translations = {
     noOrdersFound: 'No purchase orders found',
     firstOrderPrompt: 'Create your first purchase order to start.',
     markSent: 'Mark as Sent',
+    markInTransit: 'Mark as in transit',
     markReceived: 'Mark as Received',
     searchOrderPlaceholder: 'Search by number or supplier...',
 
@@ -1322,6 +1325,7 @@ export const translations = {
     noOrdersFound: 'لم يتم العور على طلبات شراء',
     firstOrderPrompt: 'ابدأ بإنشاء أول طلب شراء لك.',
     markSent: 'تم الإرسال',
+    markInTransit: 'قيد الشحن',
     markReceived: 'تم الاستلام',
     searchOrderPlaceholder: 'البحث عن طريق الرقم أو المورد...',
 

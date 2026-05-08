@@ -807,22 +807,18 @@ const MainContent: React.FC = () => {
             await dbService.purchaseOrders.add(newOrder);
             setPurchaseOrders(prev => [newOrder, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
 
-            // If created as Paid, add expense
-            if (newOrder.status === PurchaseOrderStatus.Paid) {
+            // Add expense if any amount was paid at creation
+            if (newOrder.amountPaid && newOrder.amountPaid > 0) {
                 const supplier = suppliers.find(s => s.id === newOrder.supplierId);
                 const supplierName = supplier ? (supplier.company || supplier.name) : 'Fournisseur';
-                const useTTC = companySettings?.priceDisplayMode === 'TTC';
-                const amount = useTTC ? (newOrder.totalAmount || 0) : (newOrder.subTotal || 0);
-
-                if (amount > 0) {
-                    await addExpense({
-                        date: new Date().toISOString().split('T')[0],
-                        description: `Paiement BC #${newOrder.documentId || newOrder.id} - ${supplierName}`,
-                        amount: amount,
-                        category: 'Achats',
-                        purchaseOrderId: newOrder.id
-                    });
-                }
+                
+                await addExpense({
+                    date: new Date().toISOString().split('T')[0],
+                    description: `Paiement BC #${newOrder.documentId || newOrder.id} - ${supplierName}`,
+                    amount: newOrder.amountPaid,
+                    category: 'Achats',
+                    purchaseOrderId: newOrder.id
+                });
             }
         } catch (e: any) {
             console.error("Error creating purchase order", e);
@@ -835,20 +831,19 @@ const MainContent: React.FC = () => {
             const savedOrder = await dbService.purchaseOrders.update(updatedOrder);
             setPurchaseOrders(prev => prev.map(o => o.id === updatedOrder.id ? savedOrder : o));
 
-            // Sync expenses if status is Paid
-            if (updatedOrder.status === PurchaseOrderStatus.Paid) {
-                const existingExpense = expenses.find(e => e.purchaseOrderId === updatedOrder.id);
+            // Sync expenses with amountPaid
+            const existingExpense = expenses.find(e => e.purchaseOrderId === updatedOrder.id);
+            const amountPaid = updatedOrder.amountPaid || 0;
+
+            if (amountPaid > 0) {
                 const supplier = suppliers.find(s => s.id === updatedOrder.supplierId);
                 const supplierName = supplier ? (supplier.company || supplier.name) : 'Fournisseur';
-                const useTTC = companySettings?.priceDisplayMode === 'TTC';
-                const totalAmount = useTTC ? (updatedOrder.totalAmount || 0) : (updatedOrder.subTotal || 0);
-                // The expense should represent the total cost if status is Paid
                 
                 if (existingExpense) {
-                    if (existingExpense.amount !== totalAmount) {
+                    if (existingExpense.amount !== amountPaid) {
                         await updateExpense({
                             ...existingExpense,
-                            amount: totalAmount,
+                            amount: amountPaid,
                             description: `Paiement BC #${updatedOrder.documentId || updatedOrder.id} - ${supplierName}`
                         });
                     }
@@ -856,11 +851,14 @@ const MainContent: React.FC = () => {
                     await addExpense({
                         date: new Date().toISOString().split('T')[0],
                         description: `Paiement BC #${updatedOrder.documentId || updatedOrder.id} - ${supplierName}`,
-                        amount: totalAmount,
+                        amount: amountPaid,
                         category: 'Achats',
                         purchaseOrderId: updatedOrder.id
                     });
                 }
+            } else if (existingExpense) {
+                // If amountPaid is now 0, remove the related expense
+                await deleteExpense(existingExpense.id);
             }
         } catch (e: any) {
             console.error("Error updating purchase order", e);
@@ -870,38 +868,40 @@ const MainContent: React.FC = () => {
     const updatePurchaseOrderStatus = async (orderId: string, newStatus: PurchaseOrderStatus) => {
         const order = purchaseOrders.find(o => o.id === orderId);
         if (order) {
-            const updatedOrder = { ...order, status: newStatus };
+            const oldStatus = order.status;
+            let updatedOrder = { ...order, status: newStatus };
+
+            // If status changed to Paid, Ensure amountPaid is full (This is the only place where status=Paid forces total)
+            if (newStatus === PurchaseOrderStatus.Paid && oldStatus !== PurchaseOrderStatus.Paid) {
+                updatedOrder.amountPaid = updatedOrder.totalAmount;
+            }
+
             await dbService.purchaseOrders.update(updatedOrder);
             setPurchaseOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
             
-            // Handle Statistics/Expenses sync when status changes to Paid
+            // Sync expenses when status changes to Paid (forces sync in case updatePurchaseOrder wasn't used)
             if (newStatus === PurchaseOrderStatus.Paid) {
                 const existingExpense = expenses.find(e => e.purchaseOrderId === orderId);
-                if (!existingExpense) {
-                    const supplier = suppliers.find(s => s.id === order.supplierId);
-                    const supplierName = supplier ? (supplier.company || supplier.name) : 'Fournisseur';
-                    const useTTC = companySettings?.priceDisplayMode === 'TTC';
-                    const amount = (useTTC ? (order.totalAmount || 0) : (order.subTotal || 0)) - (order.amountPaid || 0);
-                    
-                    if (amount > 0) {
-                        await addExpense({
-                            date: new Date().toISOString().split('T')[0],
-                            description: `Paiement BC #${order.documentId || order.id} - ${supplierName}`,
-                            amount: amount,
-                            category: 'Achats',
-                            purchaseOrderId: orderId
-                        });
+                const supplier = suppliers.find(s => s.id === order.supplierId);
+                const supplierName = supplier ? (supplier.company || supplier.name) : 'Fournisseur';
+                const amount = updatedOrder.totalAmount;
+                
+                if (existingExpense) {
+                    if (existingExpense.amount !== amount) {
+                        await updateExpense({ ...existingExpense, amount });
                     }
-                }
-            } else if ((order.status as any) === PurchaseOrderStatus.Paid && (newStatus as any) !== PurchaseOrderStatus.Paid) {
-                // If it was Paid and now it's not, cleanup related expenses
-                const relatedExpenses = expenses.filter(e => e.purchaseOrderId === orderId);
-                for (const e of relatedExpenses) {
-                    await deleteExpense(e.id);
+                } else if (amount > 0) {
+                    await addExpense({
+                        date: new Date().toISOString().split('T')[0],
+                        description: `Paiement BC #${order.documentId || order.id} - ${supplierName}`,
+                        amount: amount,
+                        category: 'Achats',
+                        purchaseOrderId: orderId
+                    });
                 }
             }
 
-            if (newStatus === PurchaseOrderStatus.Received && order.status !== PurchaseOrderStatus.Received) {
+            if (newStatus === PurchaseOrderStatus.Received && oldStatus !== PurchaseOrderStatus.Received) {
                  for (const item of order.lineItems) {
                     if (item.productId) {
                         await addStockMovement({ 

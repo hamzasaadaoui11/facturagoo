@@ -133,24 +133,23 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             const paidInvoices = periodInvoices.filter(inv => inv.status === InvoiceStatus.Paid);
             const paidRevenue = paidInvoices.reduce((sum, inv) => sum + getInvAmount(inv), 0);
 
-            // Calculate Total Purchase Orders Volume for the period (Paid only as requested)
+            // Calculate Total Purchase Orders Volume for the period
             const periodPOs = purchaseOrders.filter(po => 
-                po.status === PurchaseOrderStatus.Paid && 
+                (po.amountPaid >= po.totalAmount && po.totalAmount > 0) && 
                 isInRange(po.date, s, e)
             );
             const totalPOs = periodPOs.reduce((sum, po) => sum + (useTTC ? (po.totalAmount || 0) : (po.subTotal || 0)), 0);
 
-            // Cost of goods sold (COGS): Theoretical purchase cost of items billed (used for Profit calculation)
-            let cogsAll = 0;
+            // Cost of goods sold (COGS): Theoretical purchase cost of items in PAID invoices only
+            let totalCogs = 0;
+            const paidInvoicesInPeriod = periodInvoices.filter(inv => inv.status === InvoiceStatus.Paid);
             
-            periodInvoices.forEach(inv => {
-                let invoiceCogs = 0;
+            paidInvoicesInPeriod.forEach(inv => {
                 inv.lineItems.forEach(item => {
                     const productDef = products.find(p => p.id === item.productId);
                     const purchasePrice = productDef?.purchasePrice || (item as any).purchasePrice || 0;
-                    invoiceCogs += item.quantity * purchasePrice;
+                    totalCogs += item.quantity * purchasePrice;
                 });
-                cogsAll += invoiceCogs;
             });
 
             // Total Inventory Value (Global, not range dependent usually, but here we can show current)
@@ -162,11 +161,8 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             const periodExpenses = expenses.filter(exp => isInRange(exp.date, s, e));
             const periodSalaryPayments = salaryPayments.filter(sp => sp.status === 'Paid' && isInRange(sp.paymentDate, s, e));
             
-            // Separate Purchase settlements from operational expenses
-            const purchaseSettlements = periodExpenses.filter(exp => exp.category === 'Purchases' || exp.category === 'Achats');
+            // Operational expenses are all expenses EXCEPT those manually categorized as "Achats" (since we use COGS for that)
             const otherExpenses = periodExpenses.filter(exp => exp.category !== 'Purchases' && exp.category !== 'Achats');
-            
-            const totalPurchaseSettlements = purchaseSettlements.reduce((sum, exp) => sum + exp.amount, 0);
             
             const totalOperationalExpenses = otherExpenses.reduce((sum, exp) => sum + exp.amount, 0) + periodSalaryPayments.reduce((sum, sp) => sum + Number(sp.amount), 0);
 
@@ -176,10 +172,10 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             return { 
                 revenue: finalReceived,        // Used for "Recettes Encaissées"
                 billedRevenue: finalBilled,    // Used for "CA Facturé"
-                expenses: totalPurchaseSettlements, // Used for "Coût d'Achats" - Now based on recorded purchase expenses (cash-based)
+                expenses: totalCogs,           // Used for "Coût d'Achats" - Now back to COGS based on Paid Invoices
                 operationalExpenses: totalOperationalExpenses,
                 inventoryValue,                // Used for "Valeur Stock"
-                profit: finalBilled - totalPurchaseSettlements - totalOperationalExpenses   // Profit = Billed Revenue - Purchase Payments - Operating Expenses
+                profit: finalBilled - totalCogs - totalOperationalExpenses   // Profit = Billed Revenue - COGS - Operating Expenses
             };
         };
 
@@ -193,8 +189,12 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
         });
 
         const supplierChargeMap = new Map<string, number>();
-        purchaseOrders.filter(po => po.status === PurchaseOrderStatus.Paid && isInRange(po.date, start, end)).forEach(po => {
-            supplierChargeMap.set(po.supplierName, (supplierChargeMap.get(po.supplierName) || 0) + po.totalAmount);
+        purchaseOrders.filter(po => 
+            (po.status === PurchaseOrderStatus.Paid || po.amountPaid > 0) && 
+            isInRange(po.date, start, end)
+        ).forEach(po => {
+            const amount = useTTC ? po.totalAmount : po.subTotal;
+            supplierChargeMap.set(po.supplierName, (supplierChargeMap.get(po.supplierName) || 0) + amount);
         });
 
         const financeBreakdown = {
@@ -220,7 +220,11 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
 
         // Global product performance weighted by payment ratio
         const productStats = new Map<string, { id: string, name: string, qty: number, revenue: number, cost: number }>();
-        invoices.filter(inv => inv.status !== InvoiceStatus.Draft && isInRange(inv.date, start, end)).forEach(inv => {
+        invoices.filter(inv => 
+            inv.status !== InvoiceStatus.Draft && 
+            inv.status !== InvoiceStatus.Pending && 
+            isInRange(inv.date, start, end)
+        ).forEach(inv => {
             // Ratio of what was actually paid on this invoice
             const paymentRatio = inv.amount > 0 ? (inv.amountPaid / inv.amount) : 0;
 
@@ -253,7 +257,11 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
     const clientProfitability = useMemo(() => {
         if (!selectedClientId) return null;
 
-        const clientInvoices = invoices.filter(inv => inv.clientId === selectedClientId && inv.status !== InvoiceStatus.Draft);
+        const clientInvoices = invoices.filter(inv => 
+            inv.clientId === selectedClientId && 
+            inv.status !== InvoiceStatus.Draft &&
+            inv.status !== InvoiceStatus.Pending
+        );
         const clientPayments = payments.filter(p => p.clientId === selectedClientId);
         
         // Total cash actually in hand
@@ -308,7 +316,11 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
 
         const revenueByCategory = new Map<string, { category: string, qty: number, cost: number, revenue: number }>();
 
-        const filteredInvoices = invoices.filter(inv => inv.status !== InvoiceStatus.Draft && isInRange(inv.date, start, end));
+        const filteredInvoices = invoices.filter(inv => 
+            inv.status !== InvoiceStatus.Draft && 
+            inv.status !== InvoiceStatus.Pending && 
+            isInRange(inv.date, start, end)
+        );
 
         filteredInvoices.forEach(inv => {
             const paymentRatio = inv.amount > 0 ? (inv.amountPaid / inv.amount) : 0;
