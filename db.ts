@@ -42,35 +42,43 @@ export const resetDBCache = () => {
 };
 
 export const getCurrentUserAndCompany = async () => {
-    let { data: { session } } = await supabase.auth.getSession();
-    
-    // If session is missing or expired, try to refresh it
-    if (!session) {
-        const { data: refreshData } = await supabase.auth.refreshSession();
-        session = refreshData.session;
+    try {
+        let { data: { session } } = await supabase.auth.getSession();
+        
+        // If session is missing or expired, try to refresh it
+        if (!session) {
+            const { data: refreshData } = await supabase.auth.refreshSession();
+            session = refreshData.session;
+        }
+
+        const currentUserId = session?.user?.id || null;
+
+        // Clear cache if user changed
+        if (currentUserId !== cachedUserId) {
+            cachedUserId = currentUserId;
+            cachedCompanyId = null;
+            pendingCompanyPromise = null;
+        }
+
+        if (!currentUserId) return { userId: null, companyId: null };
+        if (cachedCompanyId) return { userId: currentUserId, companyId: cachedCompanyId };
+
+        if (pendingCompanyPromise) return pendingCompanyPromise;
+
+        pendingCompanyPromise = (async () => {
+            // Fallback: The user is the owner, userId is the companyId
+            cachedCompanyId = currentUserId;
+            return { userId: currentUserId, companyId: currentUserId };
+        })();
+
+        return pendingCompanyPromise;
+    } catch (e: any) {
+        console.error("Error in getCurrentUserAndCompany:", e);
+        if (e?.message?.includes('Failed to fetch') || e?.name === 'TypeError') {
+            throw new Error("Erreur de connexion au serveur Supabase. Veuillez vérifier votre connexion.");
+        }
+        return { userId: null, companyId: null };
     }
-
-    const currentUserId = session?.user?.id || null;
-
-    // Clear cache if user changed
-    if (currentUserId !== cachedUserId) {
-        cachedUserId = currentUserId;
-        cachedCompanyId = null;
-        pendingCompanyPromise = null;
-    }
-
-    if (!currentUserId) return { userId: null, companyId: null };
-    if (cachedCompanyId) return { userId: currentUserId, companyId: cachedCompanyId };
-
-    if (pendingCompanyPromise) return pendingCompanyPromise;
-
-    pendingCompanyPromise = (async () => {
-        // Fallback: The user is the owner, userId is the companyId
-        cachedCompanyId = currentUserId;
-        return { userId: currentUserId, companyId: currentUserId };
-    })();
-
-    return pendingCompanyPromise;
 };
 
 // Listen for auth changes to update the cache
@@ -134,7 +142,7 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
                 if (retryResult.data) return retryResult.data;
             }
             console.error(`Error fetching ${storeName}:`, error);
-            if (error.message === 'Failed to fetch') {
+            if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
                 throw new Error("Erreur de connexion au serveur. Veuillez vérifier votre connexion.");
             }
             throw error;

@@ -87,29 +87,15 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
         
         unpaidAmount = Math.max(0, unpaidAmount - validatedCreditNotesAmount);
 
-        const monthlyExpensesAmount = expenses
+        const monthlyExpenses = expenses
             .filter(exp => {
                 const expDate = new Date(exp.date);
                 return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
             })
             .reduce((sum, exp) => sum + exp.amount, 0);
 
-        const initialStockCost = stockMovements
-            .filter(m => {
-                if (m.type !== 'Initial') return false;
-                const mDate = new Date(m.date);
-                return mDate.getMonth() === currentMonth && mDate.getFullYear() === currentYear;
-            })
-            .reduce((sum, m) => {
-                const productDef = products.find(p => p.id === m.productId);
-                const purchasePrice = productDef?.purchasePrice || 0;
-                return sum + (m.quantity * purchasePrice);
-            }, 0);
-
-        const totalMonthlyExpenses = monthlyExpensesAmount + initialStockCost;
-
-        return { totalRevenue, unpaidInvoicesCount, unpaidAmount, monthlyExpenses: totalMonthlyExpenses };
-    }, [invoices, creditNotes, expenses, stockMovements, products]);
+        return { totalRevenue, unpaidInvoicesCount, unpaidAmount, monthlyExpenses };
+    }, [invoices, creditNotes, expenses]);
 
     const stats = [
         { 

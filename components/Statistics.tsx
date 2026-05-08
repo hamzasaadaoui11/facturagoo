@@ -7,7 +7,7 @@ import {
 import { 
     Calendar, TrendingUp, TrendingDown, DollarSign, 
     CreditCard, ShoppingBag, ArrowUpRight, ArrowDownRight, Filter, PieChart as PieIcon, Activity,
-    ArrowRightLeft, UserCheck, Truck, BarChart2, User, Target, Info, FileText, ChevronLeft, ChevronRight
+    ArrowRightLeft, UserCheck, Truck, BarChart2, User, Target, Info, FileText, ChevronLeft, ChevronRight, Package
 } from 'lucide-react';
 import { Invoice, Payment, PurchaseOrder, Product, PurchaseOrderStatus, InvoiceStatus, CreditNote, CreditNoteStatus, Expense, SalaryPayment, StockMovement } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -102,8 +102,12 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             const periodPayments = payments.filter(p => isInRange(p.date, s, e));
             const receivedRevenue = periodPayments.reduce((sum, p) => sum + p.amount, 0);
             
-            // Revenue: Sum of invoices issued (Excluding Draft)
-            const periodInvoices = invoices.filter(inv => inv.status !== InvoiceStatus.Draft && isInRange(inv.date, s, e));
+            // Revenue: Sum of invoices issued (Excluding Draft & Pending)
+            const periodInvoices = invoices.filter(inv => 
+                inv.status !== InvoiceStatus.Draft && 
+                inv.status !== InvoiceStatus.Pending && 
+                isInRange(inv.date, s, e)
+            );
             
             // Helper to get invoice amount (HT or TTC)
             const getInvAmount = (inv: Invoice) => {
@@ -119,15 +123,19 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                 return (inv.amount || 0) / 1.2;
             };
 
-            const billedRevenue = periodInvoices.reduce((sum, inv) => sum + getInvAmount(inv), 0);
+            const billedRevenue = periodInvoices.reduce((sum, inv) => {
+                const invTotal = getInvAmount(inv);
+                const paymentRatio = inv.amount > 0 ? (inv.amountPaid / inv.amount) : 0;
+                return sum + (invTotal * paymentRatio);
+            }, 0);
             
             // Only count Paid invoices for profit calculation as requested
             const paidInvoices = periodInvoices.filter(inv => inv.status === InvoiceStatus.Paid);
             const paidRevenue = paidInvoices.reduce((sum, inv) => sum + getInvAmount(inv), 0);
 
-            // Calculate Total Purchase Orders Volume for the period
+            // Calculate Total Purchase Orders Volume for the period (Paid only as requested)
             const periodPOs = purchaseOrders.filter(po => 
-                (po.status === PurchaseOrderStatus.Received || po.status === PurchaseOrderStatus.Sent) && 
+                po.status === PurchaseOrderStatus.Paid && 
                 isInRange(po.date, s, e)
             );
             const totalPOs = periodPOs.reduce((sum, po) => sum + (useTTC ? (po.totalAmount || 0) : (po.subTotal || 0)), 0);
@@ -160,15 +168,6 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             
             const totalPurchaseSettlements = purchaseSettlements.reduce((sum, exp) => sum + exp.amount, 0);
             
-            // NEW: Add initial stock cost from movements of type 'Initial' in this period
-            const initialStockCost = stockMovements
-                .filter(m => m.type === 'Initial' && isInRange(m.date, s, e))
-                .reduce((sum, m) => {
-                    const productDef = products.find(p => p.id === m.productId);
-                    const purchasePrice = productDef?.purchasePrice || 0;
-                    return sum + (m.quantity * purchasePrice);
-                }, 0);
-
             const totalOperationalExpenses = otherExpenses.reduce((sum, exp) => sum + exp.amount, 0) + periodSalaryPayments.reduce((sum, sp) => sum + Number(sp.amount), 0);
 
             const finalReceived = receivedRevenue; // Payments are always total received
@@ -177,10 +176,10 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             return { 
                 revenue: finalReceived,        // Used for "Recettes Encaissées"
                 billedRevenue: finalBilled,    // Used for "CA Facturé"
-                expenses: totalPurchaseSettlements + initialStockCost, // Used for "Coût d'Achats" - Now includes initial stocks
+                expenses: totalPurchaseSettlements, // Used for "Coût d'Achats" - Now based on recorded purchase expenses (cash-based)
                 operationalExpenses: totalOperationalExpenses,
                 inventoryValue,                // Used for "Valeur Stock"
-                profit: (paidRevenue - totalCreditNotes) - (totalPurchaseSettlements + initialStockCost) - totalOperationalExpenses   // Profit = Paid Revenue - Purchase Payments - Operating Expenses
+                profit: finalBilled - totalPurchaseSettlements - totalOperationalExpenses   // Profit = Billed Revenue - Purchase Payments - Operating Expenses
             };
         };
 
@@ -194,7 +193,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
         });
 
         const supplierChargeMap = new Map<string, number>();
-        purchaseOrders.filter(po => (po.status === PurchaseOrderStatus.Received || po.status === PurchaseOrderStatus.Sent) && isInRange(po.date, start, end)).forEach(po => {
+        purchaseOrders.filter(po => po.status === PurchaseOrderStatus.Paid && isInRange(po.date, start, end)).forEach(po => {
             supplierChargeMap.set(po.supplierName, (supplierChargeMap.get(po.supplierName) || 0) + po.totalAmount);
         });
 
@@ -457,7 +456,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             </div>
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-5">
                 <div className="bg-white rounded-2xl md:rounded-3xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all">
                     <div className="flex justify-between items-start mb-3">
                         <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><FileText size={20} /></div>
@@ -492,6 +491,18 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                     </div>
                     <p className="text-slate-500 text-[11px] md:text-xs font-semibold uppercase tracking-wider">Charges / Dépenses</p>
                     <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-1">{formatMoney(currentMetrics.operationalExpenses)}</h3>
+                </div>
+
+                <div className="bg-white rounded-2xl md:rounded-3xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all">
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl"><Package size={20} /></div>
+                    </div>
+                    <p className="text-slate-500 text-[11px] md:text-xs font-semibold uppercase tracking-wider">Valeur du Stock</p>
+                    <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-1">{formatMoney(currentMetrics.inventoryValue)}</h3>
+                    {/* Decorative bar for stock value */}
+                    <div className="mt-3 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div className="bg-indigo-500 h-full w-[70%]" />
+                    </div>
                 </div>
 
                 <div className="bg-gradient-to-br from-emerald-500/10 via-white to-teal-500/10 rounded-2xl md:rounded-3xl p-5 shadow-md border-2 border-emerald-500/20 hover:border-emerald-500 transition-all">
