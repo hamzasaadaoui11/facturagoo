@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import Header from './Header';
 import AddSupplierModal from './AddSupplierModal';
 import ImportSuppliersModal from './ImportSuppliersModal';
@@ -21,6 +22,7 @@ interface SuppliersProps {
 
 const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpdatePurchaseOrder, onAddExpense, onAddSupplier, onUpdateSupplier, onDeleteSupplier, onDeleteSuppliers }) => {
     const { t, isRTL, language } = useLanguage();
+    const location = useLocation();
     const [activeTab, setActiveTab] = useState<'list' | 'credit'>('list');
     const [selectedSupplierForCredit, setSelectedSupplierForCredit] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -54,6 +56,16 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpda
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm]);
+
+    // Handle navigation from other sections
+    useEffect(() => {
+        if (location.state && (location.state as any).tab === 'credit') {
+            setActiveTab('credit');
+            if ((location.state as any).supplierId) {
+                setSelectedSupplierForCredit((location.state as any).supplierId);
+            }
+        }
+    }, [location.state]);
 
     // Pagination Logic
     const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);

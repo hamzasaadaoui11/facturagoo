@@ -740,7 +740,7 @@ const MainContent: React.FC = () => {
                 clientName: note.clientName, 
                 date: new Date().toISOString().split('T')[0], 
                 dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], 
-                status: InvoiceStatus.Pending, 
+                status: InvoiceStatus.Paid, 
                 subject: note.subject ? note.subject : `Facture depuis BL ${note.documentId || note.id}`, 
                 reference: note.reference, 
                 purchaseOrderNumber: note.purchaseOrderNumber, 
@@ -748,7 +748,8 @@ const MainContent: React.FC = () => {
                 subTotal: note.subTotal || 0, 
                 vatAmount: note.vatAmount || 0, 
                 amount: note.totalAmount || 0, 
-                amountPaid: 0 
+                amountPaid: note.totalAmount || 0,
+                paymentDate: new Date().toISOString().split('T')[0]
             };
             
             // Note: We do NOT deduct stock here because creating a Delivery Note already deducted the stock.
@@ -756,6 +757,21 @@ const MainContent: React.FC = () => {
             await dbService.invoices.add(newInvoiceData);
             setInvoices(prev => [newInvoiceData, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
             
+            // Add a payment record for tracking
+            const newPayment: Payment = {
+                id: generateUUID(),
+                date: new Date().toISOString().split('T')[0],
+                amount: note.totalAmount || 0,
+                method: 'Espèces',
+                clientId: note.clientId,
+                clientName: note.clientName,
+                invoiceId: newInvoiceData.id,
+                invoiceNumber: newInvoiceData.documentId || newInvoiceData.id,
+                reference: `Paiement auto depuis BL ${note.documentId || note.id}`
+            };
+            await dbService.payments.add(newPayment);
+            setPayments(prev => [newPayment, ...prev]);
+
             // Link BL to Invoice
             const updatedNote = { ...note, invoiceId: newInvoiceData.documentId || newInvoiceData.id };
             await dbService.deliveryNotes.update(updatedNote);

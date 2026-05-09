@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import Header from './Header';
 import CreatePurchaseOrderModal from './CreatePurchaseOrderModal';
 import ConfirmationModal from './ConfirmationModal';
@@ -12,7 +13,6 @@ import { useLanguage } from '../contexts/LanguageContext';
 const statusColors: { [key in PurchaseOrderStatus]: string } = {
     [PurchaseOrderStatus.Draft]: 'bg-neutral-100 text-neutral-600',
     [PurchaseOrderStatus.Sent]: 'bg-blue-100 text-blue-700',
-    [PurchaseOrderStatus.InTransit]: 'bg-indigo-100 text-indigo-700',
     [PurchaseOrderStatus.Received]: 'bg-green-100 text-green-700',
     [PurchaseOrderStatus.Paid]: 'bg-emerald-100 text-emerald-700',
     [PurchaseOrderStatus.Cancelled]: 'bg-red-100 text-red-700',
@@ -51,6 +51,7 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
     companySettings
 }) => {
     const { t, isRTL, language } = useLanguage();
+    const navigate = useNavigate();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [orderToEdit, setOrderToEdit] = useState<PurchaseOrder | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -493,15 +494,6 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                         
                         {activeOrder.status === PurchaseOrderStatus.Sent && (
                              <button 
-                                onClick={() => { handleStatusChange(activeOrder.id, PurchaseOrderStatus.InTransit); setActiveMenuId(null); }} 
-                                className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
-                            >
-                                <RefreshCw size={16} className={`text-indigo-600 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('markInTransit')}
-                            </button>
-                        )}
-                        
-                        {(activeOrder.status === PurchaseOrderStatus.Sent || activeOrder.status === PurchaseOrderStatus.InTransit) && (
-                             <button 
                                 onClick={() => { handleStatusChange(activeOrder.id, PurchaseOrderStatus.Received); setActiveMenuId(null); }} 
                                 className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
                             >
@@ -512,17 +504,7 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                         {(activeOrder.totalAmount - (activeOrder.amountPaid || 0)) > 0 && (
                             <button 
                                 onClick={() => {
-                                    const balance = activeOrder.totalAmount - (activeOrder.amountPaid || 0);
-                                    const amountStr = window.prompt(language === 'fr' ? `Régler cet achat (Reste: ${balance.toFixed(2)} DH) :` : `Pay this purchase (Balance: ${balance.toFixed(2)} DH):`, balance.toString());
-                                    if (amountStr) {
-                                        const amount = parseFloat(amountStr);
-                                        if (!isNaN(amount)) {
-                                            onUpdateOrder({
-                                                ...activeOrder,
-                                                amountPaid: (activeOrder.amountPaid || 0) + amount
-                                            });
-                                        }
-                                    }
+                                    navigate('/suppliers', { state: { supplierId: activeOrder.supplierId, tab: 'credit' } });
                                     setActiveMenuId(null);
                                 }} 
                                 className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"

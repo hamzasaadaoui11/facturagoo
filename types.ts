@@ -79,7 +79,6 @@ export enum QuoteStatus {
 export enum PurchaseOrderStatus {
     Draft = 'Brouillon',
     Sent = 'Envoyé',
-    InTransit = 'Expédié',
     Received = 'Reçu', // Updates stock
     Paid = 'Payé',
     Cancelled = 'Annulé'
