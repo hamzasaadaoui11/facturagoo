@@ -44,6 +44,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     const [tempPrice, setTempPrice] = useState<string>('0');
     const [tempVat, setTempVat] = useState(20);
     const [itemQuantity, setItemQuantity] = useState<string>('1');
+    const [tempUnit, setTempUnit] = useState<string>('');
     const [tempDays, setTempDays] = useState<string>('1');
     const [tempLength, setTempLength] = useState<string>('1');
     const [tempHeight, setTempHeight] = useState<string>('1');
@@ -125,6 +126,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         setTempPrice('0');
         setTempVat(language === 'es' ? 21 : 20);
         setItemQuantity('1');
+        setTempUnit('');
         setTempDays('1');
         setTempLength('1');
         setTempHeight('1');
@@ -180,6 +182,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setTempPrice(formatDecimalForInput(priceToDisplay, language));
                 setTempVat(product.vat);
                 setTempProductCode(product.productCode);
+                setTempUnit(product.unitOfMeasure || '');
             }
         }
     };
@@ -284,6 +287,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 name: tempName,
                 description: tempDesc || '',
                 quantity: qty || 1,
+                unit: tempUnit || '',
                 length: length || 1,
                 height: height || 1,
                 weight: weight || 1,
@@ -541,7 +545,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                     className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all"
                                 />
                             </div>
-                            <div className="col-span-1 md:col-span-12 lg:col-span-5">
+                            <div className="col-span-1 md:col-span-12 lg:col-span-4">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Package size={10} /> {t('productAutoLabel')}
                                 </label>
@@ -576,7 +580,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                     </div>
                                 )}
                             </div>
-                            <div className="col-span-1 md:col-span-24 lg:col-span-5">
+                            <div className="col-span-1 md:col-span-24 lg:col-span-4">
                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">
                                     <Tag size={10} /> {t('designationLabel')} *
                                 </label>
@@ -659,6 +663,16 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                 </div>
                             )}
                             <div className="col-span-1 md:col-span-12 lg:col-span-3">
+                                <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">{t('unit')}</label>
+                                <input 
+                                    type="text" 
+                                    value={tempUnit} 
+                                    onChange={(e) => setTempUnit(e.target.value)} 
+                                    placeholder={t('unit')}
+                                    className="block w-full rounded-xl border-slate-200 bg-slate-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-xs h-12 transition-all"
+                                />
+                            </div>
+                            <div className="col-span-1 md:col-span-12 lg:col-span-3">
                                 <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider ml-1">{t('vat')}</label>
                                 <select 
                                     value={tempVat} 
@@ -698,6 +712,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                             <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('refLabel')}</th>
                                             <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase">{t('description')}</th>
                                             <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{t('quantity')}</th>
+                                            <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase w-28">{t('unit')}</th>
                                             {showLengthColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">{calculationMode === 'm2' ? 'Larg.' : 'Long.'}</th>}
                                             {showHeightColumn && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Haut.</th>}
                                             {isKg && <th className="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase">Poids (kg)</th>}
@@ -746,6 +761,15 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                                                         value={formatDecimalForInput(item.quantity, language)} 
                                                         onChange={(e) => updateLineItem(item.id, { quantity: parseDecimalInput(e.target.value) })}
                                                         className="w-16 p-1 text-center border-none focus:ring-0 text-xs font-bold bg-transparent"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-center text-xs text-slate-600">
+                                                    <input 
+                                                        type="text" 
+                                                        value={item.unit || ''} 
+                                                        onChange={(e) => updateLineItem(item.id, { unit: e.target.value })}
+                                                        placeholder={t('unit')}
+                                                        className="w-24 p-1 text-center border-none focus:ring-0 text-xs bg-transparent"
                                                     />
                                                 </td>
                                             {showLengthColumn && (

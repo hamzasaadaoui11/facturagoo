@@ -92,6 +92,7 @@ export interface LineItem {
   name: string;
   description: string;
   quantity: number;
+  unit?: string;
   length?: number;
   height?: number;
   weight?: number;
@@ -272,7 +273,7 @@ export interface DeliveryNote {
 }
 
 export interface DocumentColumn {
-    id: 'reference' | 'name' | 'quantity' | 'unitPrice' | 'vat' | 'total' | 'length' | 'height' | 'm2' | 'ml' | 'weight' | 'totalWeight' | 'days';
+    id: 'reference' | 'name' | 'quantity' | 'unit' | 'unitPrice' | 'vat' | 'total' | 'length' | 'height' | 'm2' | 'ml' | 'weight' | 'totalWeight' | 'days';
     label: string;
     visible: boolean;
     order: number;
@@ -329,6 +330,7 @@ export interface CompanySettings {
     creditNoteNumbering?: NumberingConfig;
     documentInfoPosition?: 'right' | 'left';
     showExpiryDate?: boolean;
+    showUnitInPDF?: boolean;
 }
 
 export interface Employee {

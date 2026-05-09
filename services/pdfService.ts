@@ -204,9 +204,10 @@ const DEFAULT_COLUMNS: DocumentColumn[] = [
   { id: "reference", label: "Réf", visible: false, order: 0 },
   { id: "name", label: "Désignation", visible: true, order: 1 },
   { id: "quantity", label: "Qté", visible: true, order: 2 },
-  { id: "unitPrice", label: "P.U. HT", visible: true, order: 3 },
-  { id: "vat", label: "TVA", visible: true, order: 4 },
-  { id: "total", label: "Total HT", visible: true, order: 5 },
+  { id: "unit", label: "Unité", visible: true, order: 3 },
+  { id: "unitPrice", label: "P.U. HT", visible: true, order: 4 },
+  { id: "vat", label: "TVA", visible: true, order: 5 },
+  { id: "total", label: "Total HT", visible: true, order: 6 },
 ];
 
 const generateDocumentHTML = (
@@ -368,26 +369,39 @@ const generateDocumentHTML = (
     titleDisplay = "FACTURE D’AVOIR";
   }
 
-  let activeColumns =
-    settings.documentColumns && settings.documentColumns.length > 0
-      ? settings.documentColumns
-          .filter(
-            (c) =>
-              c.visible ||
-              (c.id === "reference" &&
-                doc.lineItems.some((item) => !!item.productCode)),
-          )
-          .sort((a, b) => a.order - b.order)
-      : DEFAULT_COLUMNS.filter(
-          (c) =>
-            c.visible ||
-            (c.id === "reference" &&
-              doc.lineItems.some((item) => !!item.productCode)),
-        );
+  let activeColumns: DocumentColumn[] = [];
+  if (settings.documentColumns && settings.documentColumns.length > 0) {
+    // Robust merge: ensure all default columns are present (important for newly added columns like 'unit')
+    activeColumns = DEFAULT_COLUMNS.map((defCol) => {
+      const savedCol = settings.documentColumns?.find((c) => c.id === defCol.id);
+      if (savedCol) {
+        return { ...defCol, ...savedCol };
+      }
+      return defCol;
+    })
+      .filter(
+        (c) =>
+          c.visible ||
+          (c.id === "reference" &&
+            doc.lineItems.some((item) => !!item.productCode)),
+      )
+      .sort((a, b) => a.order - b.order);
+  } else {
+    activeColumns = DEFAULT_COLUMNS.filter(
+      (c) =>
+        c.visible ||
+        (c.id === "reference" &&
+          doc.lineItems.some((item) => !!item.productCode)),
+    );
+  }
 
   if (isDeliveryNote && !showPrices) {
     activeColumns = activeColumns.filter(
-      (c) => c.id === "name" || c.id === "quantity" || c.id === "reference",
+      (c) =>
+        c.id === "name" ||
+        c.id === "quantity" ||
+        c.id === "reference" ||
+        c.id === "unit",
     );
   }
 
@@ -480,6 +494,8 @@ const generateDocumentHTML = (
             : lang === "en"
               ? "Weight (kg)"
               : "Poids (kg)";
+      } else if (col.id === "unit") {
+        label = dict.unit || "Unité";
       } else if (lang === "es") {
         if (col.id === "unitPrice")
           label = isModeTTC ? "P.U. Total" : "P.U. Base";
@@ -640,6 +656,9 @@ const generateDocumentHTML = (
       } else if (col.id === "vat") {
         align = "center";
         width = "width: 11%;";
+      } else if (col.id === "unit") {
+        align = "center";
+        width = "width: 12%;";
       } else if (col.id === "unitPrice") {
         align = "right";
         width = "width: 18%;";
@@ -718,6 +737,11 @@ const generateDocumentHTML = (
                 content = item.quantity.toString();
                 align = "center";
                 style = "font-weight: 700; font-size: 12.3px;";
+                break;
+              case "unit":
+                content = item.unit || "-";
+                align = "center";
+                style = "font-size: 11px; color: #4b5563;";
                 break;
               case "length":
                 content = (item.length || 1).toString();
@@ -1063,6 +1087,11 @@ const generateDocumentHTML = (
               content = item.quantity.toString();
               align = "center";
               style = "font-weight: 700; font-size: 12.3px;";
+              break;
+            case "unit":
+              content = item.unit || "-";
+              align = "center";
+              style = "font-size: 11px; color: #4b5563;";
               break;
             case "length" as any:
               content = (item.length || 1).toString();

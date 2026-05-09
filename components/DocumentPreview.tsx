@@ -187,6 +187,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                             <tr style={{ backgroundColor: primaryColor, color: 'white' }}>
                                 <th className="py-3 px-4 align-middle font-semibold uppercase text-xs rounded-tl-lg rounded-bl-lg">{t('description')}</th>
                                 <th className="py-3 px-4 align-middle text-center font-semibold uppercase text-xs w-16">{t('quantity')}</th>
+                                <th className="py-3 px-4 align-middle text-center font-semibold uppercase text-xs w-28">{t('unit')}</th>
                                 {isM2 && (
                                     <>
                                         <th className="py-3 px-4 align-middle text-center font-semibold uppercase text-xs w-16">Larg.</th>
@@ -223,6 +224,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                         {item.description && <div className="text-[10px] text-neutral-500 mt-1" dangerouslySetInnerHTML={{ __html: item.description }} />}
                                     </td>
                                     <td className="py-3 px-4 text-center align-middle font-bold text-[12px]">{item.quantity}</td>
+                                    <td className="py-3 px-4 text-center align-middle text-[12px] font-medium">{item.unit || '-'}</td>
                                     {isM2 && (
                                         <>
                                             <td className="py-3 px-4 text-center align-middle text-[12px]">{item.length || 1}</td>

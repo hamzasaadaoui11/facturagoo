@@ -18,9 +18,10 @@ const DEFAULT_COLUMNS: DocumentColumn[] = [
     { id: 'reference', label: 'Réf', visible: false, order: 0 },
     { id: 'name', label: 'Désignation', visible: true, order: 1 },
     { id: 'quantity', label: 'Qté', visible: true, order: 2 },
-    { id: 'unitPrice', label: 'P.U. HT', visible: true, order: 3 },
-    { id: 'vat', label: 'TVA', visible: true, order: 4 },
-    { id: 'total', label: 'Total HT', visible: true, order: 5 },
+    { id: 'unit', label: 'Unité', visible: false, order: 3 },
+    { id: 'unitPrice', label: 'P.U. HT', visible: true, order: 4 },
+    { id: 'vat', label: 'TVA', visible: true, order: 5 },
+    { id: 'total', label: 'Total HT', visible: true, order: 6 },
 ];
 
 const DEFAULT_LABELS: DocumentLabels = {
