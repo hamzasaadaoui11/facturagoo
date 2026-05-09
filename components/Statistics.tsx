@@ -161,8 +161,12 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             const periodExpenses = expenses.filter(exp => isInRange(exp.date, s, e));
             const periodSalaryPayments = salaryPayments.filter(sp => sp.status === 'Paid' && isInRange(sp.paymentDate, s, e));
             
-            // Operational expenses are all expenses EXCEPT those manually categorized as "Achats" (since we use COGS for that)
-            const otherExpenses = periodExpenses.filter(exp => exp.category !== 'Purchases' && exp.category !== 'Achats');
+            // Operational expenses are all expenses EXCEPT those manually categorized as "Achats" or linked to POs
+            const otherExpenses = periodExpenses.filter(exp => 
+                exp.category !== 'Purchases' && 
+                exp.category !== 'Achats' && 
+                !exp.purchaseOrderId
+            );
             
             const totalOperationalExpenses = otherExpenses.reduce((sum, exp) => sum + exp.amount, 0) + periodSalaryPayments.reduce((sum, sp) => sum + Number(sp.amount), 0);
 

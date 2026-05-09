@@ -90,7 +90,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
         const monthlyExpenses = expenses
             .filter(exp => {
                 const expDate = new Date(exp.date);
-                return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
+                return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear && !exp.purchaseOrderId;
             })
             .reduce((sum, exp) => sum + exp.amount, 0);
 

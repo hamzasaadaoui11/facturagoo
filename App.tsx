@@ -806,20 +806,6 @@ const MainContent: React.FC = () => {
             const newOrder: PurchaseOrder = { id: generateUUID(), documentId: documentId, ...orderData };
             await dbService.purchaseOrders.add(newOrder);
             setPurchaseOrders(prev => [newOrder, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
-
-            // Add expense if any amount was paid at creation
-            if (newOrder.amountPaid && newOrder.amountPaid > 0) {
-                const supplier = suppliers.find(s => s.id === newOrder.supplierId);
-                const supplierName = supplier ? (supplier.company || supplier.name) : 'Fournisseur';
-                
-                await addExpense({
-                    date: new Date().toISOString().split('T')[0],
-                    description: `Paiement BC #${newOrder.documentId || newOrder.id} - ${supplierName}`,
-                    amount: newOrder.amountPaid,
-                    category: 'Achats',
-                    purchaseOrderId: newOrder.id
-                });
-            }
         } catch (e: any) {
             console.error("Error creating purchase order", e);
             alert("Erreur création BC: " + e.message);
@@ -830,36 +816,6 @@ const MainContent: React.FC = () => {
         try {
             const savedOrder = await dbService.purchaseOrders.update(updatedOrder);
             setPurchaseOrders(prev => prev.map(o => o.id === updatedOrder.id ? savedOrder : o));
-
-            // Sync expenses with amountPaid
-            const existingExpense = expenses.find(e => e.purchaseOrderId === updatedOrder.id);
-            const amountPaid = updatedOrder.amountPaid || 0;
-
-            if (amountPaid > 0) {
-                const supplier = suppliers.find(s => s.id === updatedOrder.supplierId);
-                const supplierName = supplier ? (supplier.company || supplier.name) : 'Fournisseur';
-                
-                if (existingExpense) {
-                    if (existingExpense.amount !== amountPaid) {
-                        await updateExpense({
-                            ...existingExpense,
-                            amount: amountPaid,
-                            description: `Paiement BC #${updatedOrder.documentId || updatedOrder.id} - ${supplierName}`
-                        });
-                    }
-                } else {
-                    await addExpense({
-                        date: new Date().toISOString().split('T')[0],
-                        description: `Paiement BC #${updatedOrder.documentId || updatedOrder.id} - ${supplierName}`,
-                        amount: amountPaid,
-                        category: 'Achats',
-                        purchaseOrderId: updatedOrder.id
-                    });
-                }
-            } else if (existingExpense) {
-                // If amountPaid is now 0, remove the related expense
-                await deleteExpense(existingExpense.id);
-            }
         } catch (e: any) {
             console.error("Error updating purchase order", e);
             alert("Erreur mise à jour commande: " + e.message);
@@ -871,36 +827,9 @@ const MainContent: React.FC = () => {
             const oldStatus = order.status;
             let updatedOrder = { ...order, status: newStatus };
 
-            // If status changed to Paid, Ensure amountPaid is full (This is the only place where status=Paid forces total)
-            if (newStatus === PurchaseOrderStatus.Paid && oldStatus !== PurchaseOrderStatus.Paid) {
-                updatedOrder.amountPaid = updatedOrder.totalAmount;
-            }
-
             await dbService.purchaseOrders.update(updatedOrder);
             setPurchaseOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
             
-            // Sync expenses when status changes to Paid (forces sync in case updatePurchaseOrder wasn't used)
-            if (newStatus === PurchaseOrderStatus.Paid) {
-                const existingExpense = expenses.find(e => e.purchaseOrderId === orderId);
-                const supplier = suppliers.find(s => s.id === order.supplierId);
-                const supplierName = supplier ? (supplier.company || supplier.name) : 'Fournisseur';
-                const amount = updatedOrder.totalAmount;
-                
-                if (existingExpense) {
-                    if (existingExpense.amount !== amount) {
-                        await updateExpense({ ...existingExpense, amount });
-                    }
-                } else if (amount > 0) {
-                    await addExpense({
-                        date: new Date().toISOString().split('T')[0],
-                        description: `Paiement BC #${order.documentId || order.id} - ${supplierName}`,
-                        amount: amount,
-                        category: 'Achats',
-                        purchaseOrderId: orderId
-                    });
-                }
-            }
-
             if (newStatus === PurchaseOrderStatus.Received && oldStatus !== PurchaseOrderStatus.Received) {
                  for (const item of order.lineItems) {
                     if (item.productId) {
@@ -923,12 +852,6 @@ const MainContent: React.FC = () => {
             const orderToDelete = purchaseOrders.find(o => o.id === orderId);
             const refPattern = `Reception ${orderToDelete?.documentId || orderId}`;
 
-            // Cleanup related expenses
-            const relatedExpenses = expenses.filter(e => e.purchaseOrderId === orderId);
-            for(const e of relatedExpenses) {
-                await dbService.expenses.delete(e.id);
-            }
-            
             // Cleanup related stock movements (Achat)
             const relatedMovements = stockMovements.filter(m => m.reference === refPattern);
             for(const m of relatedMovements) {
@@ -939,7 +862,6 @@ const MainContent: React.FC = () => {
             }
 
             await dbService.purchaseOrders.delete(orderId);
-            setExpenses(prev => prev.filter(e => e.purchaseOrderId !== orderId));
             setStockMovements(prev => prev.filter(m => m.reference !== refPattern));
             setPurchaseOrders(prev => prev.filter(o => o.id !== orderId));
         } catch (e: any) {
