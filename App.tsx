@@ -926,35 +926,47 @@ const MainContent: React.FC = () => {
     }
 
     return (
-        <div className="flex h-screen bg-slate-100 text-neutral-800 overflow-hidden">
-            <div className="hidden md:flex md:w-64 md:flex-col md:shrink-0 transition-all duration-300"><Sidebar /></div>
-            {isSidebarOpen && (
-                <div className="fixed inset-0 z-50 flex md:hidden">
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out" onClick={() => setSidebarOpen(false)}></div>
-                    <div className="relative flex w-72 max-w-[80%] flex-1 flex-col bg-emerald-600 shadow-2xl animate-slide-in">
-                        <div className="absolute top-0 right-0 -mr-12 pt-4">
-                            <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 focus:outline-none ring-1 ring-white/20" onClick={() => setSidebarOpen(false)}>
-                                <X className="h-6 w-6" />
+        <div className="flex flex-col h-screen bg-slate-100 text-neutral-800 overflow-hidden">
+            <div className="bg-emerald-900 text-emerald-50 py-2 px-4 text-center text-[10px] sm:text-xs font-bold z-50 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-6 shadow-lg border-b border-emerald-800">
+                <div dir="rtl" className="flex items-center gap-1.5 leading-relaxed">
+                    <span className="opacity-90">لأي مشكلة أو مساعدة، تواصلوا معنا عبر الواتساب:</span>
+                    <span dir="ltr" className="select-all underline decoration-emerald-500/50 font-mono text-white">+212 708-256858</span>
+                </div>
+                <div className="hidden sm:block w-px h-3 bg-emerald-700/50"></div>
+                <div className="flex items-center gap-1.5 leading-relaxed">
+                    <span className="uppercase tracking-tight opacity-90">Besoin d'aide ? Message WhatsApp au :</span>
+                    <span className="select-all underline decoration-emerald-500/50 font-mono text-white">+212 708-256858</span>
+                </div>
+            </div>
+            <div className="flex flex-1 overflow-hidden">
+                <div className="hidden md:flex md:w-64 md:flex-col md:shrink-0 transition-all duration-300 shadow-xl z-20"><Sidebar /></div>
+                {isSidebarOpen && (
+                    <div className="fixed inset-0 z-50 flex md:hidden">
+                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out" onClick={() => setSidebarOpen(false)}></div>
+                        <div className="relative flex w-72 max-w-[80%] flex-1 flex-col bg-emerald-600 shadow-2xl animate-slide-in">
+                            <div className="absolute top-0 right-0 -mr-12 pt-4">
+                                <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 focus:outline-none ring-1 ring-white/20" onClick={() => setSidebarOpen(false)}>
+                                    <X className="h-6 w-6" />
+                                </button>
+                            </div>
+                            <Sidebar onClose={() => setSidebarOpen(false)} />
+                        </div>
+                    </div>
+                )}
+                <div className="flex flex-1 flex-col min-h-0 overflow-hidden w-full relative">
+                    <div className="flex-1 overflow-y-auto bg-slate-50 w-full">
+                        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md px-4 py-3 md:hidden border-b border-slate-200 shadow-sm flex items-center justify-between w-full">
+                            <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white shadow-sm">
+                                    <Files size={18} />
+                                </div>
+                                <h1 className="text-lg font-bold text-emerald-700 tracking-tight">Facturago</h1>
+                            </div>
+                            <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-neutral-600 hover:bg-neutral-100 focus:outline-none" onClick={() => setSidebarOpen(true)}>
+                                <Menu className="h-6 w-6" />
                             </button>
                         </div>
-                        <Sidebar onClose={() => setSidebarOpen(false)} />
-                    </div>
-                </div>
-            )}
-            <div className="flex flex-1 flex-col min-h-0 overflow-hidden w-full">
-                <div className="flex-1 overflow-y-auto bg-slate-50 w-full">
-                    <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md px-4 py-3 md:hidden border-b border-slate-200 shadow-sm flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 bg-emerald-600 rounded-lg flex items-center justify-center text-white shadow-sm">
-                                <Files size={18} />
-                            </div>
-                            <h1 className="text-lg font-bold text-emerald-700 tracking-tight">Facturago</h1>
-                        </div>
-                        <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-neutral-600 hover:bg-neutral-100 focus:outline-none" onClick={() => setSidebarOpen(true)}>
-                            <Menu className="h-6 w-6" />
-                        </button>
-                    </div>
-                    <main className="p-4 sm:p-6 lg:p-8 w-full">
+                        <main className="p-4 sm:p-6 lg:p-8 w-full">
                         <Routes>
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
                             <Route path="/dashboard" element={<Dashboard invoices={invoices} clients={clients} products={products} companySettings={companySettings} creditNotes={creditNotes} expenses={expenses} stockMovements={stockMovements} />} />
@@ -980,7 +992,8 @@ const MainContent: React.FC = () => {
                 </div>
             </div>
         </div>
-    );
+    </div>
+);
 };
 
 const App: React.FC = () => {
