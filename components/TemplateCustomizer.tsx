@@ -424,7 +424,19 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                             <div className="flex-1">
                                                 <div className="flex items-center bg-white border border-neutral-200 rounded-lg px-3 py-2 w-full max-w-[140px]">
                                                     <span className="text-neutral-400 mr-2">#</span>
-                                                    <input type="text" value={(localSettings.primaryColor || '#10b981').replace('#', '')} onChange={handleInputChange} name="primaryColor" className="w-full text-sm font-mono uppercase focus:outline-none text-neutral-700" />
+                                                    <input 
+                                                        type="text" 
+                                                        value={(localSettings.primaryColor || '#10b981').replace('#', '')} 
+                                                        onChange={(e) => {
+                                                            let val = e.target.value.trim();
+                                                            // Keep only valid hex characters
+                                                            val = val.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
+                                                            setLocalSettings(prev => ({ ...prev, primaryColor: `#${val}` }));
+                                                        }} 
+                                                        name="primaryColor" 
+                                                        className="w-full text-sm font-mono uppercase focus:outline-none text-neutral-700" 
+                                                        placeholder="10B981"
+                                                    />
                                                 </div>
                                                 <p className="mt-2 text-xs text-neutral-500 leading-relaxed">
                                                     {language === 'es' ? 'Usado para títulos y bordes en los PDFs.' : 'Utilisée pour les titres, bordures et accents dans vos factures.'}
