@@ -391,10 +391,10 @@ const bulkAdd = async (storeName: string, items: any[]): Promise<void> => {
     if (!tableName || items.length === 0) return;
 
     try {
-        const { userId } = await getCurrentUserAndCompany();
-        if (!userId) throw new Error("User not authenticated");
+        const { userId, companyId } = await getCurrentUserAndCompany();
+        if (!userId || !companyId) throw new Error("User not authenticated");
 
-        const itemsWithUser = items.map(item => ({ ...item, user_id: userId }));
+        const itemsWithUser = items.map(item => ({ ...item, user_id: userId, company_id: companyId }));
 
         const { error } = await supabase
             .from(tableName)

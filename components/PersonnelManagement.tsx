@@ -170,11 +170,12 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
     const handleSaveEmployee = async (emp: Employee) => {
         try {
             if (employeeToEdit) {
-                await dbService.employees.update(emp);
+                const updated = await dbService.employees.update(emp);
+                setEmployees(prev => prev.map(e => e.id === emp.id ? updated : e));
             } else {
-                await dbService.employees.add(emp);
+                const added = await dbService.employees.add(emp);
+                setEmployees(prev => [...prev, added]);
             }
-            await loadData();
             setIsAddEmployeeModalOpen(false);
             setEmployeeToEdit(null);
         } catch (err: any) {
@@ -192,17 +193,16 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
         try {
             if (employeeToDelete) {
                 await dbService.employees.delete(employeeToDelete);
+                setEmployees(prev => prev.filter(e => e.id !== employeeToDelete));
             } else if (attendanceToDelete) {
                 await dbService.attendances.delete(attendanceToDelete);
+                setAttendances(prev => prev.filter(a => a.id !== attendanceToDelete));
             } else if (paymentToDelete) {
                 await dbService.salaryPayments.delete(paymentToDelete);
+                setPayments(prev => prev.filter(p => p.id !== paymentToDelete));
                 window.dispatchEvent(new CustomEvent('refreshAppData'));
             }
-            await loadData();
-            setIsConfirmOpen(false);
-            setEmployeeToDelete(null);
-            setAttendanceToDelete(null);
-            setPaymentToDelete(null);
+            // setIsConfirmOpen(false); // Modal now handles closing after await
         } catch (err: any) {
             console.error("Failed to delete", err);
             alert(err.message || 'Error occurred');
@@ -213,13 +213,17 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
     const handleSaveAttendance = async (attData: Attendance | Attendance[]) => {
         try {
             if (attendanceToEdit && !Array.isArray(attData)) {
-                await dbService.attendances.update(attData);
+                const updated = await dbService.attendances.update(attData);
+                setAttendances(prev => prev.map(a => a.id === updated.id ? updated : a));
             } else if (Array.isArray(attData)) {
                 await dbService.bulkAdd('attendances', attData);
+                // For bulk add, reload is safer to ensure all records match DB exactly, 
+                // but we can also merge them if they all have IDs
+                setAttendances(prev => [...prev, ...attData]);
             } else {
-                await dbService.attendances.add(attData);
+                const added = await dbService.attendances.add(attData);
+                setAttendances(prev => [...prev, added]);
             }
-            await loadData();
             setIsAddAttendanceModalOpen(false);
             setAttendanceToEdit(null);
         } catch (err: any) {
@@ -237,11 +241,12 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
     const handleSavePayment = async (pay: SalaryPayment) => {
         try {
             if (paymentToEdit) {
-                await dbService.salaryPayments.update(pay);
+                const updated = await dbService.salaryPayments.update(pay);
+                setPayments(prev => prev.map(p => p.id === updated.id ? updated : p));
             } else {
-                await dbService.salaryPayments.add(pay);
+                const added = await dbService.salaryPayments.add(pay);
+                setPayments(prev => [...prev, added]);
             }
-            await loadData();
             window.dispatchEvent(new CustomEvent('refreshAppData'));
             setIsAddPaymentModalOpen(false);
             setPaymentToEdit(null);
@@ -995,10 +1000,19 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
 
             <ConfirmationModal
                 isOpen={isConfirmOpen}
-                onClose={() => { setIsConfirmOpen(false); setEmployeeToDelete(null); setAttendanceToDelete(null); }}
+                onClose={() => { 
+                    setIsConfirmOpen(false); 
+                    setEmployeeToDelete(null); 
+                    setAttendanceToDelete(null); 
+                    setPaymentToDelete(null);
+                }}
                 onConfirm={confirmDeletion}
                 title={language === 'ar' ? 'تأكيد الحذف' : 'Confirmer la suppression'}
-                message={employeeToDelete ? t('deleteConfirm') : t('deleteAttendanceConfirm')}
+                message={
+                    employeeToDelete ? t('deleteConfirm') : 
+                    attendanceToDelete ? t('deleteAttendanceConfirm') : 
+                    t('deletePaymentConfirm')
+                }
             />
         </div>
     );
