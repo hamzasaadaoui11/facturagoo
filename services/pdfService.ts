@@ -1181,7 +1181,7 @@ const generateDocumentHTML = (
   measureBox.style.visibility = "hidden";
   measureBox.style.width = "210mm";
   measureBox.innerHTML = `
-        <div style="width: 210mm; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; box-sizing: border-box; padding: 15mm 15mm 45mm 15mm;">
+        <div style="width: 210mm; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; box-sizing: border-box; padding: 15mm 15mm 28mm 15mm;">
             <div id="measure-header" style="position: relative; z-index: 2;">
                 ${topHeaderHtml}
                 ${clientInfoHtml}
@@ -1203,7 +1203,7 @@ const generateDocumentHTML = (
             </div>
         </div>
         <div id="measure-a4" style="height: 296.5mm;"></div>
-        <div id="measure-padd" style="height: 60mm;"></div>
+        <div id="measure-padd" style="height: 43mm;"></div>
     `;
 
   document.body.appendChild(measureBox);
@@ -1220,23 +1220,26 @@ const generateDocumentHTML = (
     ? Array.from(tbody.children).map((el) => (el as HTMLElement).offsetHeight)
     : items.map(() => 40);
 
-  const a4FullHeight =
+    const a4FullHeight =
     document.getElementById("measure-a4")?.offsetHeight || 1120;
-  const paddingHeights =
-    document.getElementById("measure-padd")?.offsetHeight || 226;
+  
+  // Calculate padding based on 15mm top + 28mm bottom = 43mm total padding
+  const paddingHeights = (a4FullHeight * 43) / 296.5;
 
-  document.body.removeChild(measureBox);
+  if (document.body.contains(measureBox)) {
+    document.body.removeChild(measureBox);
+  }
 
   // True Usable Pixel Height
   const maxUsableHeight = a4FullHeight - paddingHeights;
-  const SAFETY_MARGIN = 2; // small threshold in pixels
+  const SAFETY_MARGIN = 5; // allow for small rendering variations
 
   // 2. Pack items into chunks optimally
   const itemChunks: any[][] = [];
   let tempIndex = 0;
 
   while (tempIndex < items.length) {
-    let currentHeight = headerHeight + theadHeight + 20; // 20px for table margin-bottom
+    let currentHeight = headerHeight + theadHeight + 15; // 15px for table margin-bottom
     const chunk: any[] = [];
 
     while (tempIndex < items.length) {
@@ -1259,14 +1262,21 @@ const generateDocumentHTML = (
 
   // 3. Check if Totals fit on the last page
   const lastChunk = itemChunks[itemChunks.length - 1] || [];
-  let lastChunkHeight = headerHeight + theadHeight + 20;
+  let lastChunkHeight = headerHeight + theadHeight + 15;
   const lastChunkStartIndex = items.length - lastChunk.length;
   for (let i = 0; i < lastChunk.length; i++) {
     lastChunkHeight += rowHeightsPx[lastChunkStartIndex + i];
   }
 
   if (lastChunkHeight + totalsHeight + SAFETY_MARGIN > maxUsableHeight) {
-    itemChunks.push([]); // Totals get pushed to their own new page
+    // If we have only one page and it's full, try to move the last item to Page 2 
+    // This often looks better than having only totals on Page 2
+    if (itemChunks.length === 1 && itemChunks[0].length > 1) {
+      const lastItem = itemChunks[0].pop();
+      itemChunks.push([lastItem]);
+    } else {
+      itemChunks.push([]); // Totals get pushed to their own new page
+    }
   }
 
   const totalPages = itemChunks.length;
@@ -1284,7 +1294,7 @@ const generateDocumentHTML = (
       .join("");
 
     const pageHtml = `
-            <div class="pdf-page" style="width: 210mm; height: 296.5mm; background: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; display: flex; flex-direction: column; box-sizing: border-box; padding: 15mm 15mm 45mm 15mm; position: relative; overflow: hidden; ${isLastPage ? "" : "page-break-after: always;"}">
+            <div class="pdf-page" style="width: 210mm; min-height: 296.5mm; background: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; display: flex; flex-direction: column; box-sizing: border-box; padding: 15mm 15mm 28mm 15mm; position: relative; overflow: hidden; ${isLastPage ? "" : "page-break-after: always;"}">
                 <style>
                     * { box-sizing: border-box; }
                     .content-grow { flex: 1; z-index: 2; position: relative; }
@@ -1351,6 +1361,10 @@ const generateDocumentHTML = (
 
     pages.push(pageHtml);
   });
+
+  if (document.body.contains(measureBox)) {
+    document.body.removeChild(measureBox);
+  }
 
   return `<div id="pdf-container">${pages.join("")}</div>`;
 };
