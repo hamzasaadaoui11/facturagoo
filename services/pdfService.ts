@@ -631,43 +631,43 @@ const generateDocumentHTML = (
         width = "width: 10%;";
       } else if (col.id === "name") {
         align = "left";
-        width = "width: auto; min-width: 35%;";
+        width = "width: auto; min-width: 45%;";
       } else if (col.id === "quantity") {
         align = "center";
-        width = "width: 8%;";
+        width = "width: 7%;";
       } else if (isDaysCol(col)) {
         align = "center";
-        width = "width: 8%;";
+        width = "width: 7%;";
       } else if (col.id === "length") {
         align = "center";
-        width = "width: 8%;";
+        width = "width: 7%;";
       } else if (col.id === "height") {
         align = "center";
-        width = "width: 8%;";
+        width = "width: 7%;";
       } else if (col.id === "m2") {
         align = "center";
-        width = "width: 8%;";
+        width = "width: 7%;";
       } else if (col.id === "ml") {
         align = "center";
-        width = "width: 8%;";
+        width = "width: 7%;";
       } else if (col.id === "weight") {
         align = "center";
-        width = "width: 8%;";
+        width = "width: 7%;";
       } else if (col.id === "totalWeight") {
         align = "center";
-        width = "width: 8%;";
+        width = "width: 7%;";
       } else if (col.id === "vat") {
         align = "center";
-        width = "width: 7%;";
+        width = "width: 6%;";
       } else if (col.id === "unit") {
         align = "center";
-        width = "width: 10%;";
+        width = "width: 8%;";
       } else if (col.id === "unitPrice") {
         align = "right";
-        width = "width: 15%;";
+        width = "width: 12%;";
       } else if (col.id === "total") {
         align = "right";
-        width = "width: 15%;";
+        width = "width: 12%;";
       }
 
       const isFirst = idx === 0;
@@ -719,10 +719,10 @@ const generateDocumentHTML = (
             ? multiplier
             : fallbackDaysValue;
 
-          if (isDaysCol(col)) {
+            if (isDaysCol(col)) {
             content = String(finalDaysDisplayValue);
             align = "center";
-            style = "font-size: 12.3px; font-weight: 700; color: #111827;";
+            style = "font-size: 10.5px; font-weight: 700; color: #111827;";
           } else {
             switch (col.id) {
               case "reference":
@@ -732,29 +732,29 @@ const generateDocumentHTML = (
                 break;
               case "name":
                 content = `
-                            <div style="font-weight: 500; color: #111827; font-size: 12.3px; line-height: 1.2; overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap;">${item.name}</div>
-                            ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 2px; line-height: 1.1; overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap;">${item.description}</div>` : ""}
+                            <div style="font-weight: 500; color: #111827; font-size: 10.5px; line-height: 1.2; overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap;">${item.name}</div>
+                            ${item.description ? `<div style="font-size: 9px; color: #6b7280; margin-top: 2px; line-height: 1.1; overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap;">${item.description}</div>` : ""}
                         `;
                 break;
               case "quantity":
                 content = item.quantity.toString();
                 align = "center";
-                style = "font-weight: 700; font-size: 12.3px;";
+                style = "font-weight: 700; font-size: 10.5px;";
                 break;
               case "unit":
                 content = item.unit || "-";
                 align = "center";
-                style = "font-size: 11px; color: #4b5563;";
+                style = "font-size: 9.5px; color: #4b5563;";
                 break;
               case "length":
                 content = (item.length || 1).toString();
                 align = "center";
-                style = "font-size: 12.3px;";
+                style = "font-size: 10.5px;";
                 break;
               case "height":
                 content = (item.height || 1).toString();
                 align = "center";
-                style = "font-size: 12.3px;";
+                style = "font-size: 10.5px;";
                 break;
               case "m2":
                 content = (
@@ -763,38 +763,38 @@ const generateDocumentHTML = (
                   (Number(item.height) || 1)
                 ).toLocaleString("fr-MA", { maximumFractionDigits: 2 });
                 align = "center";
-                style = "font-size: 12.3px; font-weight: 500;";
+                style = "font-size: 10.5px; font-weight: 500;";
                 break;
               case "ml":
                 content = (
                   item.quantity * (Number(item.length) || 1)
                 ).toLocaleString("fr-MA", { maximumFractionDigits: 2 });
                 align = "center";
-                style = "font-size: 12.3px; font-weight: 500;";
+                style = "font-size: 10.5px; font-weight: 500;";
                 break;
               case "weight":
                 content = (item.weight || 1).toString();
                 align = "center";
-                style = "font-size: 12.3px;";
+                style = "font-size: 10.5px;";
                 break;
               case "totalWeight":
                 content = (
                   item.quantity * (Number(item.weight) || 1)
                 ).toLocaleString("fr-MA", { maximumFractionDigits: 2 });
                 align = "center";
-                style = "font-size: 12.3px; font-weight: 500;";
+                style = "font-size: 10.5px; font-weight: 500;";
                 break;
               case "unitPrice":
                 content = (
                   isModeTTC ? unitPriceTTC : item.unitPrice
                 ).toLocaleString("fr-MA", { minimumFractionDigits: 2 });
                 align = "right";
-                style = "font-size: 12.3px;";
+                style = "font-size: 10.5px;";
                 break;
               case "vat":
                 content = `${item.vat}%`;
                 align = "center";
-                style = "font-size: 12.3px;";
+                style = "font-size: 10.5px;";
                 break;
               case "total":
                 const subTotalItem =
@@ -804,12 +804,12 @@ const generateDocumentHTML = (
                   { minimumFractionDigits: 2 },
                 );
                 align = "right";
-                style = "font-weight: 700; font-size: 12.3px;";
+                style = "font-weight: 700; font-size: 10.5px;";
                 break;
               case "days":
                 content = String(finalDaysDisplayValue);
                 align = "center";
-                style = "font-size: 12.3px; font-weight: 700;";
+                style = "font-size: 10.5px; font-weight: 700;";
                 break;
               default:
                 content = "-";
@@ -1072,39 +1072,39 @@ const generateDocumentHTML = (
         if (isDaysCol(col)) {
           content = String(finalDaysDisplayValue);
           align = "center";
-          style = "font-size: 12.3px; font-weight: 700; color: #111827;";
+          style = "font-size: 10.5px; font-weight: 700; color: #111827;";
         } else {
           switch (col.id) {
             case "reference":
               content = item.productCode || "-";
               align = "left";
-              style = "font-size: 12.3px; color: #4b5563;";
+              style = "font-size: 10.5px; color: #4b5563;";
               break;
             case "name":
               content = `
-                        <div style="font-weight: 500; color: #111827; font-size: 12.3px; line-height: 1.2; overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap;">${item.name}</div>
-                        ${item.description ? `<div style="font-size: 10.5px; color: #6b7280; margin-top: 2px; line-height: 1.1; overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap;">${item.description}</div>` : ""}
+                        <div style="font-weight: 500; color: #111827; font-size: 10.5px; line-height: 1.2; overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap;">${item.name}</div>
+                        ${item.description ? `<div style="font-size: 9px; color: #6b7280; margin-top: 2px; line-height: 1.1; overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap;">${item.description}</div>` : ""}
                     `;
               break;
             case "quantity":
               content = item.quantity.toString();
               align = "center";
-              style = "font-weight: 700; font-size: 12.3px;";
+              style = "font-weight: 700; font-size: 10.5px;";
               break;
             case "unit":
               content = item.unit || "-";
               align = "center";
-              style = "font-size: 11px; color: #4b5563;";
+              style = "font-size: 9.5px; color: #4b5563;";
               break;
             case "length" as any:
               content = (item.length || 1).toString();
               align = "center";
-              style = "font-size: 12.3px;";
+              style = "font-size: 10.5px;";
               break;
             case "height" as any:
               content = (item.height || 1).toString();
               align = "center";
-              style = "font-size: 12.3px;";
+              style = "font-size: 10.5px;";
               break;
             case "m2" as any:
               content = (
@@ -1113,7 +1113,7 @@ const generateDocumentHTML = (
                 (item.height || 1)
               ).toLocaleString("fr-MA", { maximumFractionDigits: 2 });
               align = "center";
-              style = "font-size: 12.3px; font-weight: 500;";
+              style = "font-size: 10.5px; font-weight: 500;";
               break;
             case "ml" as any:
               content = (item.quantity * (item.length || 1)).toLocaleString(
@@ -1121,12 +1121,12 @@ const generateDocumentHTML = (
                 { maximumFractionDigits: 2 },
               );
               align = "center";
-              style = "font-size: 12.3px; font-weight: 500;";
+              style = "font-size: 10.5px; font-weight: 500;";
               break;
             case "weight" as any:
               content = (item.weight || 1).toString();
               align = "center";
-              style = "font-size: 12.3px;";
+              style = "font-size: 10.5px;";
               break;
             case "totalWeight" as any:
               content = (item.quantity * (item.weight || 1)).toLocaleString(
@@ -1134,19 +1134,19 @@ const generateDocumentHTML = (
                 { maximumFractionDigits: 2 },
               );
               align = "center";
-              style = "font-size: 12.3px; font-weight: 500;";
+              style = "font-size: 10.5px; font-weight: 500;";
               break;
             case "unitPrice":
               content = (
                 isModeTTC ? unitPriceTTC : item.unitPrice
               ).toLocaleString("fr-MA", { minimumFractionDigits: 2 });
               align = "right";
-              style = "font-size: 12.3px;";
+              style = "font-size: 10.5px;";
               break;
             case "vat":
               content = `${item.vat}%`;
               align = "center";
-              style = "font-size: 12.3px;";
+              style = "font-size: 10.5px;";
               break;
             case "total":
               content = (

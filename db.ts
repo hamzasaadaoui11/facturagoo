@@ -42,43 +42,45 @@ export const resetDBCache = () => {
 };
 
 export const getCurrentUserAndCompany = async () => {
-    try {
-        let { data: { session } } = await supabase.auth.getSession();
-        
-        // If session is missing or expired, try to refresh it
-        if (!session) {
-            const { data: refreshData } = await supabase.auth.refreshSession();
-            session = refreshData.session;
+    return retry(async () => {
+        try {
+            let { data: { session } } = await supabase.auth.getSession();
+            
+            // If session is missing or expired, try to refresh it
+            if (!session) {
+                const { data: refreshData } = await supabase.auth.refreshSession();
+                session = refreshData.session;
+            }
+
+            const currentUserId = session?.user?.id || null;
+
+            // Clear cache if user changed
+            if (currentUserId !== cachedUserId) {
+                cachedUserId = currentUserId;
+                cachedCompanyId = null;
+                pendingCompanyPromise = null;
+            }
+
+            if (!currentUserId) return { userId: null, companyId: null };
+            if (cachedCompanyId) return { userId: currentUserId, companyId: cachedCompanyId };
+
+            if (pendingCompanyPromise) return pendingCompanyPromise;
+
+            pendingCompanyPromise = (async () => {
+                // Fallback: The user is the owner, userId is the companyId
+                cachedCompanyId = currentUserId;
+                return { userId: currentUserId, companyId: currentUserId };
+            })();
+
+            return pendingCompanyPromise;
+        } catch (e: any) {
+            console.error("Error in getCurrentUserAndCompany:", e);
+            if (e?.message?.includes('Failed to fetch') || e?.name === 'TypeError') {
+                throw e; // Let retry handle it
+            }
+            return { userId: null, companyId: null };
         }
-
-        const currentUserId = session?.user?.id || null;
-
-        // Clear cache if user changed
-        if (currentUserId !== cachedUserId) {
-            cachedUserId = currentUserId;
-            cachedCompanyId = null;
-            pendingCompanyPromise = null;
-        }
-
-        if (!currentUserId) return { userId: null, companyId: null };
-        if (cachedCompanyId) return { userId: currentUserId, companyId: cachedCompanyId };
-
-        if (pendingCompanyPromise) return pendingCompanyPromise;
-
-        pendingCompanyPromise = (async () => {
-            // Fallback: The user is the owner, userId is the companyId
-            cachedCompanyId = currentUserId;
-            return { userId: currentUserId, companyId: currentUserId };
-        })();
-
-        return pendingCompanyPromise;
-    } catch (e: any) {
-        console.error("Error in getCurrentUserAndCompany:", e);
-        if (e?.message?.includes('Failed to fetch') || e?.name === 'TypeError') {
-            throw new Error(`Erreur de connexion au serveur Supabase. Veuillez vérifier votre connexion. (${e.message || e.name})`);
-        }
-        return { userId: null, companyId: null };
-    }
+    });
 };
 
 // Listen for auth changes to update the cache
@@ -93,6 +95,27 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number = 120000): 
     );
     return Promise.race([promise, timeoutPromise]);
 };
+
+async function retry<T>(fn: () => Promise<T>, maxRetries = 3, baseDelay = 1000): Promise<T> {
+    let lastError: any;
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await fn();
+        } catch (err: any) {
+            lastError = err;
+            const isNetworkError = err?.message?.includes('Failed to fetch') || err?.name === 'TypeError';
+            const isTimeout = err?.message?.includes('expiré');
+            
+            if (isNetworkError || isTimeout) {
+                console.warn(`Retry ${i + 1}/${maxRetries} after error:`, err.message);
+                await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, i))); 
+                continue;
+            }
+            throw err;
+        }
+    }
+    throw lastError;
+}
 
 const handleAuthError = async (error: any) => {
     if (error?.message?.includes('JWT') || error?.message?.includes('expired') || error?.code === 'PGRST301') {
@@ -113,74 +136,81 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
-    try {
-        const { companyId } = await getCurrentUserAndCompany();
-        if (!companyId) return [];
+    return retry(async () => {
+        try {
+            const { companyId } = await getCurrentUserAndCompany();
+            if (!companyId) return [];
 
-        const fetchPromise = supabase
-            .from(tableName)
-            .select('*');
-        
-        // Only apply company_id filter if we have a companyId
-        const filteredFetch = companyId ? fetchPromise.eq('company_id', companyId) : fetchPromise;
+            const fetchPromise = supabase
+                .from(tableName)
+                .select('*');
+            
+            // Only apply company_id filter if we have a companyId
+            const filteredFetch = companyId ? fetchPromise.eq('company_id', companyId) : fetchPromise;
 
-        // Wrap in Promise.resolve to ensure compatibility with withTimeout and Promise.race
-        const result: any = await withTimeout(Promise.resolve(filteredFetch));
-        const { data, error } = result;
+            // Wrap in Promise.resolve to ensure compatibility with withTimeout and Promise.race
+            const result: any = await withTimeout(Promise.resolve(filteredFetch));
+            const { data, error } = result;
 
-        if (error) {
-            console.error(`Supabase Error for ${storeName}:`, error);
-            // Check if it's a schema error (table or column missing)
-            if (error.code === 'PGRST116' || error.code === '42P01' || error.code === 'PGRST205' || (error.message && error.message.includes('column') && error.message.includes('does not exist'))) {
-                console.warn(`Table or column missing for ${storeName}, returning empty array:`, error.message);
-                return [];
+            if (error) {
+                console.error(`Supabase Error for ${storeName}:`, error);
+                
+                if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
+                    throw error; // Let retry catch it
+                }
+
+                // Check if it's a schema error (table or column missing)
+                if (error.code === 'PGRST116' || error.code === '42P01' || error.code === 'PGRST205' || (error.message && error.message.includes('column') && error.message.includes('does not exist'))) {
+                    console.warn(`Table or column missing for ${storeName}, returning empty array:`, error.message);
+                    return [];
+                }
+
+                const recovered = await handleAuthError(error);
+                if (recovered) {
+                    // Retry once
+                    const retryFetch = supabase.from(tableName).select('*');
+                    const retryResult: any = await withTimeout(Promise.resolve(companyId ? retryFetch.eq('company_id', companyId) : retryFetch));
+                    if (retryResult.data) return retryResult.data;
+                }
+                throw error;
             }
 
-            const recovered = await handleAuthError(error);
-            if (recovered) {
-                // Retry once
-                const retryFetch = supabase.from(tableName).select('*');
-                const retryResult: any = await withTimeout(Promise.resolve(companyId ? retryFetch.eq('company_id', companyId) : retryFetch));
-                if (retryResult.data) return retryResult.data;
-            }
-            if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
-                throw new Error(`Erreur de connexion au serveur Supabase. Veuillez vérifier votre connexion. (${error.message || error.name})`);
-            }
-            throw error;
+            // Restore metadata fields from first line item if missing
+            if (['quotes', 'invoices', 'purchase_orders', 'credit_notes', 'delivery_notes'].includes(tableName)) {
+                return (data as any[]).map(item => {
+                const lineItems = item.lineItems || item.line_items;
+                const firstItem = lineItems?.[0];
+                if (firstItem) {
+                    return {
+                        ...item,
+                        subject: firstItem.subject || item.subject,
+                        paymentMethod: firstItem.paymentMethod || item.paymentMethod,
+                        checkNumber: firstItem.checkNumber || item.checkNumber,
+                        bankName: firstItem.bankName || item.bankName,
+                        notes: firstItem.notes || item.notes,
+                        purchaseOrderNumber: firstItem.purchaseOrderNumber || item.purchaseOrderNumber,
+                        dueDate: firstItem.dueDate || item.dueDate,
+                        expiryDate: firstItem.expiryDate || item.expiryDate,
+                        expectedDate: firstItem.expectedDate || item.expectedDate,
+                        calculationMode: firstItem.calculationMode || item.calculationMode,
+                        showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : item.showDimensions
+                    };
+                }
+                return item;
+            }) as T[];
         }
 
-        // Restore metadata fields from first line item if missing
-        if (['quotes', 'invoices', 'purchase_orders', 'credit_notes', 'delivery_notes'].includes(tableName)) {
-            return (data as any[]).map(item => {
-            const lineItems = item.lineItems || item.line_items;
-            const firstItem = lineItems?.[0];
-            if (firstItem) {
-                return {
-                    ...item,
-                    subject: firstItem.subject || item.subject,
-                    paymentMethod: firstItem.paymentMethod || item.paymentMethod,
-                    checkNumber: firstItem.checkNumber || item.checkNumber,
-                    bankName: firstItem.bankName || item.bankName,
-                    notes: firstItem.notes || item.notes,
-                    purchaseOrderNumber: firstItem.purchaseOrderNumber || item.purchaseOrderNumber,
-                    dueDate: firstItem.dueDate || item.dueDate,
-                    expiryDate: firstItem.expiryDate || item.expiryDate,
-                    expectedDate: firstItem.expectedDate || item.expectedDate,
-                    calculationMode: firstItem.calculationMode || item.calculationMode,
-                    showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : item.showDimensions
-                };
+        return data as T[];
+        } catch (e: any) {
+            if (e?.message?.includes('Failed to fetch') || e?.name === 'TypeError') {
+                throw e; // Let retry handle it
             }
-            return item;
-        }) as T[];
-    }
-
-    return data as T[];
-    } catch (e) {
-        if (await handleAuthError(e)) {
-            return getAll(storeName);
+            if (await handleAuthError(e)) {
+                return getAll(storeName);
+            }
+            throw e;
         }
-        throw e;
-    }
+    });
 };
 
 const add = async <T>(storeName: string, item: T): Promise<T> => {
