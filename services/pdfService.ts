@@ -628,43 +628,46 @@ const generateDocumentHTML = (
       let width = "";
       if (col.id === "reference") {
         align = "left";
-        width = "width: 12%;";
+        width = "width: 10%;";
+      } else if (col.id === "name") {
+        align = "left";
+        width = "width: auto; min-width: 35%;";
       } else if (col.id === "quantity") {
         align = "center";
-        width = "width: 11%;";
+        width = "width: 8%;";
       } else if (isDaysCol(col)) {
         align = "center";
-        width = "width: 10%;";
+        width = "width: 8%;";
       } else if (col.id === "length") {
         align = "center";
-        width = "width: 10%;";
+        width = "width: 8%;";
       } else if (col.id === "height") {
         align = "center";
-        width = "width: 10%;";
+        width = "width: 8%;";
       } else if (col.id === "m2") {
         align = "center";
-        width = "width: 10%;";
+        width = "width: 8%;";
       } else if (col.id === "ml") {
         align = "center";
-        width = "width: 10%;";
+        width = "width: 8%;";
       } else if (col.id === "weight") {
         align = "center";
-        width = "width: 10%;";
+        width = "width: 8%;";
       } else if (col.id === "totalWeight") {
         align = "center";
-        width = "width: 10%;";
+        width = "width: 8%;";
       } else if (col.id === "vat") {
         align = "center";
-        width = "width: 11%;";
+        width = "width: 7%;";
       } else if (col.id === "unit") {
         align = "center";
-        width = "width: 12%;";
+        width = "width: 10%;";
       } else if (col.id === "unitPrice") {
         align = "right";
-        width = "width: 18%;";
+        width = "width: 15%;";
       } else if (col.id === "total") {
         align = "right";
-        width = "width: 18%;";
+        width = "width: 15%;";
       }
 
       const isFirst = idx === 0;
