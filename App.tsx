@@ -249,20 +249,24 @@ const MainContent: React.FC = () => {
     };
 
     const updateProductStock = async (productId: string, quantityChange: number, variantId?: string) => {
-        const product = products.find(p => p.id === productId);
-        if(product) {
-            let updatedProduct = { ...product };
-            if (variantId && product.hasVariants && product.variants) {
-                updatedProduct.variants = product.variants.map(v => 
-                    v.id === variantId ? { ...v, stockQuantity: (v.stockQuantity || 0) + quantityChange } : v
-                );
-                // Recompute total stock from variants
-                updatedProduct.stockQuantity = updatedProduct.variants.reduce((sum, v) => sum + (v.stockQuantity || 0), 0);
-            } else {
-                updatedProduct.stockQuantity = (product.stockQuantity || 0) + quantityChange;
+        try {
+            const product = await dbService.products.getById(productId);
+            if(product) {
+                let updatedProduct = { ...product };
+                if (variantId && product.hasVariants && product.variants) {
+                    updatedProduct.variants = product.variants.map(v => 
+                        v.id === variantId ? { ...v, stockQuantity: (v.stockQuantity || 0) + quantityChange } : v
+                    );
+                    // Recompute total stock from variants
+                    updatedProduct.stockQuantity = updatedProduct.variants.reduce((sum, v) => sum + (v.stockQuantity || 0), 0);
+                } else {
+                    updatedProduct.stockQuantity = (product.stockQuantity || 0) + quantityChange;
+                }
+                await dbService.products.update(updatedProduct);
+                setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
             }
-            await dbService.products.update(updatedProduct);
-            setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
+        } catch (error) {
+            console.error("Error updating product stock:", error);
         }
     };
     const addStockMovement = async (movement: Omit<StockMovement, 'id'>) => {
@@ -412,40 +416,51 @@ const MainContent: React.FC = () => {
             updatedInvoice.id = id; 
 
             // Handle stock changes
-            const hasRelatedBL = deliveryNotes.some(dn => dn.invoiceId === existingInvoice.id || dn.invoiceId === existingInvoice.documentId);
+            const hasRelatedBL = deliveryNotes.some(dn => 
+                (dn.invoiceId && dn.invoiceId === existingInvoice.id) || 
+                (dn.invoiceId && existingInvoice.documentId && dn.invoiceId === existingInvoice.documentId)
+            );
             
             if (!hasRelatedBL) {
+                const stockChanges: Map<string, { qty: number, productId: string, variantId?: string, name: string }> = new Map();
+                
+                // 1. Calculate restoration of old quantities if it was not a draft
                 if (existingInvoice.status !== InvoiceStatus.Draft) {
-                    // Restore old stock
-                    for (const item of existingInvoice.lineItems) {
+                    existingInvoice.lineItems.forEach(item => {
                         if (item.productId) {
-                            await addStockMovement({
-                                productId: item.productId,
-                                variantId: item.variantId,
-                                productName: item.name,
-                                date: new Date().toISOString().split('T')[0],
-                                quantity: item.quantity,
-                                type: 'Retour',
-                                reference: `Modif Facture ${existingInvoice.documentId || existingInvoice.id} (Restaurer)`
-                            });
+                            const key = `${item.productId}-${item.variantId || 'base'}`;
+                            const current = stockChanges.get(key) || { qty: 0, productId: item.productId, variantId: item.variantId, name: item.name };
+                            current.qty += item.quantity;
+                            stockChanges.set(key, current);
                         }
-                    }
+                    });
                 }
 
+                // 2. Calculate deduction of new quantities if it is not a draft
                 if (updatedInvoice.status !== InvoiceStatus.Draft) {
-                    // Deduct new stock
-                    for (const item of updatedInvoice.lineItems) {
+                    updatedInvoice.lineItems.forEach(item => {
                         if (item.productId) {
-                            await addStockMovement({
-                                productId: item.productId,
-                                variantId: item.variantId,
-                                productName: item.name,
-                                date: updatedInvoice.date,
-                                quantity: -item.quantity,
-                                type: 'Vente',
-                                reference: `Modif Facture ${updatedInvoice.documentId || updatedInvoice.id}`
-                            });
+                            const key = `${item.productId}-${item.variantId || 'base'}`;
+                            const current = stockChanges.get(key) || { qty: 0, productId: item.productId, variantId: item.variantId, name: item.name };
+                            current.qty -= item.quantity;
+                            stockChanges.set(key, current);
                         }
+                    });
+                }
+
+                // 3. Apply net changes sequentially
+                const changes = Array.from(stockChanges.values());
+                for (const change of changes) {
+                    if (Math.abs(change.qty) > 0.000001) {
+                        await addStockMovement({
+                            productId: change.productId,
+                            variantId: change.variantId,
+                            productName: change.name,
+                            date: updatedInvoice.date,
+                            quantity: change.qty, // positive if added back, negative if removed
+                            type: change.qty > 0 ? 'Retour' : 'Vente',
+                            reference: `Modif Facture ${updatedInvoice.documentId || updatedInvoice.id}`
+                        });
                     }
                 }
             }
@@ -469,7 +484,10 @@ const MainContent: React.FC = () => {
             if (invoiceToDelete && invoiceToDelete.status !== InvoiceStatus.Draft) {
                 // Restore stock ONLY if no active Delivery Note (BL) exists for this invoice
                 // (because if a BL exists, it's the one responsible for the stock deduction/holding)
-                const hasRelatedBL = deliveryNotes.some(dn => dn.invoiceId === invoiceToDelete.id || dn.invoiceId === invoiceToDelete.documentId);
+                const hasRelatedBL = deliveryNotes.some(dn => 
+                    (dn.invoiceId && dn.invoiceId === invoiceToDelete.id) || 
+                    (dn.invoiceId && invoiceToDelete.documentId && dn.invoiceId === invoiceToDelete.documentId)
+                );
                 
                 if (!hasRelatedBL) {
                     // Restore stock
@@ -493,8 +511,15 @@ const MainContent: React.FC = () => {
             for(const p of relatedPayments) {
                 await dbService.payments.delete(p.id);
             }
+
+            const relatedCreditNotes = creditNotes.filter(cn => cn.invoiceId === invoiceId);
+            for(const cn of relatedCreditNotes) {
+                await dbService.creditNotes.delete(cn.id);
+            }
+
             await dbService.invoices.delete(invoiceId);
             setPayments(prev => prev.filter(p => p.invoiceId !== invoiceId));
+            setCreditNotes(prev => prev.filter(cn => cn.invoiceId !== invoiceId));
             setInvoices(prev => prev.filter(inv => inv.id !== invoiceId));
         } catch (e: any) {
             alert("Erreur suppression facture: " + e.message);
@@ -535,7 +560,10 @@ const MainContent: React.FC = () => {
             if (oldStatus === InvoiceStatus.Draft && newStatus !== InvoiceStatus.Draft) {
                 // Check if a Delivery Note (BL) already exists for this invoice. 
                 // If it does, the BL already handled the stock deduction.
-                const hasRelatedBL = deliveryNotes.some(dn => dn.invoiceId === invoiceToUpdate.id || dn.invoiceId === invoiceToUpdate.documentId);
+                const hasRelatedBL = deliveryNotes.some(dn => 
+                    (dn.invoiceId && dn.invoiceId === invoiceToUpdate.id) || 
+                    (dn.invoiceId && invoiceToUpdate.documentId && dn.invoiceId === invoiceToUpdate.documentId)
+                );
                 
                 if (!hasRelatedBL) {
                     // Deduct stock

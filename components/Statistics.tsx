@@ -125,8 +125,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
 
             const billedRevenue = periodInvoices.reduce((sum, inv) => {
                 const invTotal = getInvAmount(inv);
-                const paymentRatio = inv.amount > 0 ? (inv.amountPaid / inv.amount) : 0;
-                return sum + (invTotal * paymentRatio);
+                return sum + invTotal;
             }, 0);
             
             // Only count Paid invoices for profit calculation as requested
@@ -222,16 +221,14 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             chartDataMap.get(sp.paymentDate)!.expense += Number(sp.amount);
         });
 
-        // Global product performance weighted by payment ratio
+        // Global product performance
         const productStats = new Map<string, { id: string, name: string, qty: number, revenue: number, cost: number }>();
+        
         invoices.filter(inv => 
             inv.status !== InvoiceStatus.Draft && 
             inv.status !== InvoiceStatus.Pending && 
             isInRange(inv.date, start, end)
         ).forEach(inv => {
-            // Ratio of what was actually paid on this invoice
-            const paymentRatio = inv.amount > 0 ? (inv.amountPaid / inv.amount) : 0;
-
             inv.lineItems.forEach(item => {
                 if (item.productId) {
                     const productDef = products.find(p => p.id === item.productId);
@@ -241,13 +238,38 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                     const stat = productStats.get(item.productId)!;
                     stat.qty += item.quantity;
                     
-                    // Actual revenue is weighted by payment ratio for cash-flow tracking
                     const lineUnitPrice = useTTC ? (item.unitPrice * (1 + (item.vat || 0) / 100)) : item.unitPrice;
                     const lineTotal = item.quantity * lineUnitPrice;
-                    stat.revenue += (lineTotal * paymentRatio);
+                    stat.revenue += lineTotal;
 
                     const purchasePrice = productDef?.purchasePrice || (item as any).purchasePrice || 0;
                     stat.cost += (item.quantity * purchasePrice);
+                }
+            });
+        });
+
+        // Subtract Credit Notes from performance
+        creditNotes.filter(cn => 
+            (cn.status === CreditNoteStatus.Validated || cn.status === CreditNoteStatus.Refunded) && 
+            isInRange(cn.date, start, end)
+        ).forEach(cn => {
+            cn.lineItems.forEach(item => {
+                if (item.productId) {
+                    if (!productStats.has(item.productId)) {
+                        const productDef = products.find(p => p.id === item.productId);
+                        const prodName = productDef ? productDef.name : item.name;
+                        productStats.set(item.productId, { id: item.productId, name: prodName, qty: 0, revenue: 0, cost: 0 });
+                    }
+                    const stat = productStats.get(item.productId)!;
+                    stat.qty -= item.quantity;
+                    
+                    const lineUnitPrice = useTTC ? (item.unitPrice * (1 + (item.vat || 0) / 100)) : item.unitPrice;
+                    const lineTotal = item.quantity * lineUnitPrice;
+                    stat.revenue -= lineTotal;
+
+                    const productDef = products.find(p => p.id === item.productId);
+                    const purchasePrice = productDef?.purchasePrice || (item as any).purchasePrice || 0;
+                    stat.cost -= (item.quantity * purchasePrice);
                 }
             });
         });

@@ -1155,12 +1155,12 @@ const generateDocumentHTML = (
                   : item.quantity * getLineMultiplier(item) * item.unitPrice
               ).toLocaleString("fr-MA", { minimumFractionDigits: 2 });
               align = "right";
-              style = "font-weight: 700; font-size: 12.3px;";
+              style = "font-weight: 700; font-size: 10.5px;";
               break;
             case "days":
               content = String(finalDaysDisplayValue);
               align = "center";
-              style = "font-size: 12.3px; font-weight: 700;";
+              style = "font-size: 10.5px; font-weight: 700;";
               break;
             default:
               content = "-";
@@ -1181,16 +1181,18 @@ const generateDocumentHTML = (
   const measureBox = document.createElement("div");
   measureBox.style.position = "absolute";
   measureBox.style.left = "-9999px";
+  measureBox.style.top = "0";
   measureBox.style.visibility = "hidden";
   measureBox.style.width = "210mm";
+  measureBox.style.overflow = "hidden";
   measureBox.innerHTML = `
-        <div style="width: 210mm; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; box-sizing: border-box; padding: 15mm 15mm 28mm 15mm;">
+        <div style="width: 210mm; min-width: 210mm; max-width: 210mm; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; box-sizing: border-box; padding: 15mm 15mm 28mm 15mm; -webkit-text-size-adjust: 100%; text-size-adjust: 100%;">
             <div id="measure-header" style="position: relative; z-index: 2;">
                 ${topHeaderHtml}
                 ${clientInfoHtml}
                 <div style="display: flex; gap: 40px; margin-bottom: 15px; flex-wrap: wrap;">
-                    ${doc.subject ? `<div><span style="font-weight: 600;">Objet :</span> ${doc.subject}</div>` : ""}
-                    ${doc.paymentMethod ? `<div><span style="font-weight: 600;">Mode de paiement :</span> ${doc.paymentMethod} ${doc.paymentMethod === 'Chèque' && doc.checkNumber ? `(N° ${doc.checkNumber}${doc.bankName ? ` - ${doc.bankName}` : ''})` : ''}</div>` : ""}
+                    ${doc.subject ? `<div style="font-weight: 600;">Objet : <span style="font-weight: normal;">${doc.subject}</span></div>` : ""}
+                    ${doc.paymentMethod ? `<div style="font-weight: 600;">Mode de paiement : <span style="font-weight: normal;">${doc.paymentMethod} ${doc.paymentMethod === 'Chèque' && doc.checkNumber ? `(N° ${doc.checkNumber}${doc.bankName ? ` - ${doc.bankName}` : ''})` : ''}</span></div>` : ""}
                 </div>
             </div>
             <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px;">
@@ -1205,7 +1207,7 @@ const generateDocumentHTML = (
                 ${totalsHtml}
             </div>
         </div>
-        <div id="measure-a4" style="height: 296.5mm;"></div>
+        <div id="measure-a4" style="height: 297mm;"></div>
         <div id="measure-padd" style="height: 43mm;"></div>
     `;
 
@@ -1227,26 +1229,27 @@ const generateDocumentHTML = (
     document.getElementById("measure-a4")?.offsetHeight || 1120;
   
   // Calculate padding based on 15mm top + 28mm bottom = 43mm total padding
-  const paddingHeights = (a4FullHeight * 43) / 296.5;
+  const paddingHeights = (a4FullHeight * 43) / 297;
 
   if (document.body.contains(measureBox)) {
     document.body.removeChild(measureBox);
   }
 
   // True Usable Pixel Height
-  const maxUsableHeight = a4FullHeight - paddingHeights;
-  const SAFETY_MARGIN = 5; // allow for small rendering variations
+  // Using a slightly more conservative safety margin for visual breathing room and to prevent extra pages
+  // We subtract 20px (~5mm) extra for a small buffer before the footer
+  const maxUsableHeight = a4FullHeight - paddingHeights - 8;
+  const SAFETY_MARGIN = 4; // allow for small rendering variations
 
   // 2. Pack items into chunks optimally
   const itemChunks: any[][] = [];
   let tempIndex = 0;
 
   while (tempIndex < items.length) {
-    let currentHeight = headerHeight + theadHeight + 15; // 15px for table margin-bottom
+    let currentHeight = headerHeight + theadHeight + 20; // 20px for table margin-bottom
     const chunk: any[] = [];
 
     while (tempIndex < items.length) {
-      const item = items[tempIndex];
       const rh = rowHeightsPx[tempIndex] || 35;
 
       if (
@@ -1256,7 +1259,7 @@ const generateDocumentHTML = (
         break;
       }
 
-      chunk.push(item);
+      chunk.push(items[tempIndex]);
       currentHeight += rh;
       tempIndex++;
     }
@@ -1265,17 +1268,16 @@ const generateDocumentHTML = (
 
   // 3. Check if Totals fit on the last page
   const lastChunk = itemChunks[itemChunks.length - 1] || [];
-  let lastChunkHeight = headerHeight + theadHeight + 15;
+  let lastChunkHeight = headerHeight + theadHeight + 20; // Matches table margin-bottom
   const lastChunkStartIndex = items.length - lastChunk.length;
   for (let i = 0; i < lastChunk.length; i++) {
     lastChunkHeight += rowHeightsPx[lastChunkStartIndex + i];
   }
 
   if (lastChunkHeight + totalsHeight + SAFETY_MARGIN > maxUsableHeight) {
-    // If we have only one page and it's full, try to move the last item to Page 2 
-    // This often looks better than having only totals on Page 2
-    if (itemChunks.length === 1 && itemChunks[0].length > 1) {
-      const lastItem = itemChunks[0].pop();
+    // If the last page is nearly full, move the last item to a new page to join the totals
+    if (lastChunk.length > 1) {
+      const lastItem = itemChunks[itemChunks.length - 1].pop();
       itemChunks.push([lastItem]);
     } else {
       itemChunks.push([]); // Totals get pushed to their own new page
@@ -1297,7 +1299,7 @@ const generateDocumentHTML = (
       .join("");
 
     const pageHtml = `
-            <div class="pdf-page" style="width: 210mm; min-height: 296.5mm; background: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; display: flex; flex-direction: column; box-sizing: border-box; padding: 15mm 15mm 28mm 15mm; position: relative; overflow: hidden; ${isLastPage ? "" : "page-break-after: always;"}">
+            <div class="pdf-page" style="width: 210mm; height: 296.5mm; max-height: 296.5mm; background: white; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 13px; color: #374151; display: flex; flex-direction: column; box-sizing: border-box; padding: 15mm 15mm 28mm 15mm; position: relative; overflow: hidden; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; ${isLastPage ? "" : "page-break-after: always;"}">
                 <style>
                     * { box-sizing: border-box; }
                     .content-grow { flex: 1; z-index: 2; position: relative; }
@@ -1406,6 +1408,8 @@ export const generatePDF = async (
         useCORS: true,
         logging: false,
         letterRendering: true,
+        width: 794,
+        windowWidth: 794,
         onclone: (clonedDoc: Document) => {
           // Remove all oklch color references from styles to prevent html2canvas crash
           const styleTags = clonedDoc.getElementsByTagName("style");
