@@ -8,7 +8,7 @@ import { Product, ProductVariant } from '../types';
 interface ImportProductsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onImport: (products: Omit<Product, 'id'>[]) => void;
+    onImport: (products: Omit<Product, 'id'>[]) => void | Promise<void>;
     existingCategories?: string[];
 }
 
@@ -45,7 +45,7 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
 
         try {
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 try {
                     const data = new Uint8Array(e.target?.result as ArrayBuffer);
                     const workbook = XLSX.read(data, { type: 'array' });
@@ -159,7 +159,7 @@ const ImportProductsModal: React.FC<ImportProductsModalProps> = ({ isOpen, onClo
                         throw new Error(language === 'fr' ? 'Aucun produit valide trouvé.' : 'No valid products found.');
                     }
 
-                    onImport(productsToImport);
+                    await onImport(productsToImport);
                     setSuccess(language === 'fr' ? `${productsToImport.length} produits (avec leurs variantes) importés.` : `${productsToImport.length} products (with variants) imported.`);
                     setTimeout(() => {
                         onClose();

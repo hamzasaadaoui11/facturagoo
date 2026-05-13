@@ -479,12 +479,13 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
 interface ProductListProps {
     products: Product[];
     onAddProduct: (product: Omit<Product, 'id'>) => void;
+    onAddProducts: (products: Omit<Product, 'id'>[]) => void;
     onDeleteProduct: (productId: string) => void;
     onDeleteProducts: (productIds: string[]) => void;
     companySettings?: CompanySettings | null;
 }
 
-const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts, companySettings }: ProductListProps) => {
+const ProductList = ({ products, onAddProduct, onAddProducts, onDeleteProduct, onDeleteProducts, companySettings }: ProductListProps) => {
     const { t, language, isRTL } = useLanguage();
     const navigate = useNavigate();
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -591,9 +592,9 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
         setIsConfirmOpen(true);
     };
 
-    const confirmDeletion = () => {
+    const confirmDeletion = async () => {
         if (productIdToDelete) {
-            onDeleteProduct(productIdToDelete);
+            await onDeleteProduct(productIdToDelete);
         }
         setIsConfirmOpen(false);
         setProductIdToDelete(null);
@@ -619,8 +620,8 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
         setIsBulkConfirmOpen(true);
     };
 
-    const confirmBulkDeletion = () => {
-        onDeleteProducts(selectedProductIds);
+    const confirmBulkDeletion = async () => {
+        await onDeleteProducts(selectedProductIds);
         setSelectedProductIds([]);
         setIsBulkConfirmOpen(false);
     };
@@ -666,8 +667,14 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                     isOpen={isImportOpen}
                     onClose={() => setIsImportOpen(false)}
                     existingCategories={categories}
-                    onImport={(importedProducts) => {
-                        importedProducts.forEach(product => onAddProduct(product));
+                    onImport={async (importedProducts) => {
+                        if (onAddProducts) {
+                            await onAddProducts(importedProducts);
+                        } else {
+                            for (const product of importedProducts) {
+                                await onAddProduct(product);
+                            }
+                        }
                     }}
                 />
             )}
@@ -929,7 +936,7 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                                             {/* Expandable variants if any */}
                                             {product.hasVariants && product.variants && product.variants.length > 0 && (
                                                 <tr className="bg-slate-50/30">
-                                                    <td colSpan={8} className="px-14 py-2">
+                                                    <td colSpan={9} className="px-14 py-2">
                                                         <div className="flex flex-wrap gap-2 py-1">
                                                             {product.variants.map((variant) => (
                                                                 <div key={variant.id} className="flex items-center gap-2 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] shadow-sm">
@@ -948,8 +955,8 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
                                     ))
                                  ) : (
                                     <tr>
-                                         <td colSpan={7} className="text-center py-20 px-6">
-                                            <div className="flex flex-col items-center justify-center">
+                                         <td colSpan={9} className="py-20 px-6">
+                                            <div className="flex flex-col items-center justify-center text-center">
                                                 <Package className="h-16 w-16 text-slate-200 mb-4" strokeWidth={1.5} />
                                                 <h3 className="text-lg font-bold text-slate-800">
                                                     {searchTerm ? t('noFinancialData') : t('noProducts')}
@@ -1154,6 +1161,7 @@ const ProductList = ({ products, onAddProduct, onDeleteProduct, onDeleteProducts
 interface ProductsProps {
     products: Product[];
     onAddProduct: (product: Omit<Product, 'id'>) => void;
+    onAddProducts: (products: Omit<Product, 'id'>[]) => void;
     onUpdateProduct: (product: Product) => void;
     onDeleteProduct: (productId: string) => void;
     onDeleteProducts: (productIds: string[]) => void;

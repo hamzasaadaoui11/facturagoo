@@ -141,43 +141,77 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
             const { companyId } = await getCurrentUserAndCompany();
             if (!companyId) return [];
 
-            const fetchPromise = supabase
-                .from(tableName)
-                .select('*');
-            
-            // Only apply company_id filter if we have a companyId
-            const filteredFetch = companyId ? fetchPromise.eq('company_id', companyId) : fetchPromise;
+            let allData: any[] = [];
+            let hasMore = true;
+            let page = 0;
+            const pageSize = 1000;
 
-            // Wrap in Promise.resolve to ensure compatibility with withTimeout and Promise.race
-            const result: any = await withTimeout(Promise.resolve(filteredFetch));
-            const { data, error } = result;
-
-            if (error) {
-                console.error(`Supabase Error for ${storeName}:`, error);
+            while (hasMore) {
+                const fetchPromise = supabase
+                    .from(tableName)
+                    .select('*')
+                    .order('id')
+                    .range(page * pageSize, (page + 1) * pageSize - 1);
                 
-                if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
-                    throw error; // Let retry catch it
+                // Only apply company_id filter if we have a companyId
+                const filteredFetch = companyId ? fetchPromise.eq('company_id', companyId) : fetchPromise;
+
+                // Wrap in Promise.resolve to ensure compatibility with withTimeout and Promise.race
+                const result: any = await withTimeout(Promise.resolve(filteredFetch));
+                const { data, error } = result;
+
+                if (error) {
+                    console.error(`Supabase Error for ${storeName}:`, error);
+                    
+                    if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
+                        throw error; // Let retry catch it
+                    }
+
+                    // Check if it's a schema error (table or column missing)
+                    if (error.code === 'PGRST116' || error.code === '42P01' || error.code === 'PGRST205' || (error.message && error.message.includes('column') && error.message.includes('does not exist'))) {
+                        console.warn(`Table or column missing for ${storeName}, returning empty array:`, error.message);
+                        return [];
+                    }
+
+                    const recovered = await handleAuthError(error);
+                    if (recovered) {
+                        // Retry once for this chunk
+                        const retryFetch = supabase
+                            .from(tableName)
+                            .select('*')
+                            .order('id')
+                            .range(page * pageSize, (page + 1) * pageSize - 1);
+                        const retryResult: any = await withTimeout(Promise.resolve(companyId ? retryFetch.eq('company_id', companyId) : retryFetch));
+                        if (retryResult.error) throw retryResult.error;
+                        
+                        if (retryResult.data && retryResult.data.length > 0) {
+                            allData = [...allData, ...retryResult.data];
+                        }
+                        
+                        if (!retryResult.data || retryResult.data.length < pageSize) {
+                            hasMore = false;
+                        } else {
+                            page++;
+                        }
+                        continue;
+                    }
+                    throw error;
+                }
+                
+                if (data && data.length > 0) {
+                    allData = [...allData, ...data];
                 }
 
-                // Check if it's a schema error (table or column missing)
-                if (error.code === 'PGRST116' || error.code === '42P01' || error.code === 'PGRST205' || (error.message && error.message.includes('column') && error.message.includes('does not exist'))) {
-                    console.warn(`Table or column missing for ${storeName}, returning empty array:`, error.message);
-                    return [];
+                if (!data || data.length < pageSize) {
+                    hasMore = false;
+                } else {
+                    page++;
                 }
-
-                const recovered = await handleAuthError(error);
-                if (recovered) {
-                    // Retry once
-                    const retryFetch = supabase.from(tableName).select('*');
-                    const retryResult: any = await withTimeout(Promise.resolve(companyId ? retryFetch.eq('company_id', companyId) : retryFetch));
-                    if (retryResult.data) return retryResult.data;
-                }
-                throw error;
             }
 
             // Restore metadata fields from first line item if missing
             if (['quotes', 'invoices', 'purchase_orders', 'credit_notes', 'delivery_notes'].includes(tableName)) {
-                return (data as any[]).map(item => {
+                return allData.map(item => {
                 const lineItems = item.lineItems || item.line_items;
                 const firstItem = lineItems?.[0];
                 if (firstItem) {
@@ -200,7 +234,7 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
             }) as T[];
         }
 
-        return data as T[];
+        return allData as T[];
         } catch (e: any) {
             if (e?.message?.includes('Failed to fetch') || e?.name === 'TypeError') {
                 throw e; // Let retry handle it
@@ -362,7 +396,7 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
     }
 };
 
-const remove = async (storeName: string, id: string | string[]): Promise<void> => {
+const remove = async (storeName: string, id: string | string[], columnName: string = 'id'): Promise<void> => {
     const tableName = TABLE_MAP[storeName];
     if (!tableName) throw new Error(`Table ${storeName} not mapped`);
 
@@ -370,39 +404,36 @@ const remove = async (storeName: string, id: string | string[]): Promise<void> =
         const { companyId } = await getCurrentUserAndCompany();
         if (!companyId) throw new Error("User not authenticated");
 
-        let deletePromise;
         if (Array.isArray(id)) {
-            deletePromise = supabase
-                .from(tableName)
-                .delete()
-                .in('id', id)
-                .eq('company_id', companyId);
-        } else {
-            deletePromise = supabase
-                .from(tableName)
-                .delete()
-                .eq('id', id)
-                .eq('company_id', companyId);
-        }
-
-        const result: any = await withTimeout(deletePromise as any);
-        const { error } = result;
-
-        if (error) {
-            const recovered = await handleAuthError(error);
-            if (recovered) {
-                const retryPromise = Array.isArray(id) 
-                    ? supabase.from(tableName).delete().in('id', id).eq('company_id', companyId)
-                    : supabase.from(tableName).delete().eq('id', id).eq('company_id', companyId);
-                await withTimeout(retryPromise as any);
-                return;
+            if (id.length === 0) return;
+            // Chunk IDs to avoid URL length limits (approx 20 per chunk is very safe)
+            const chunkSize = 20;
+            for (let i = 0; i < id.length; i += chunkSize) {
+                const chunk = id.slice(i, i + chunkSize);
+                const { error } = await supabase
+                    .from(tableName)
+                    .delete()
+                    .in(columnName, chunk)
+                    .eq('company_id', companyId);
+                
+                if (error) {
+                    console.error(`Error deleting chunk from ${storeName} by ${columnName}:`, error);
+                    throw error;
+                }
             }
-            console.error(`Error deleting from ${storeName}:`, error);
-            throw error;
+            return;
+        } else {
+            const { error } = await supabase
+                .from(tableName)
+                .delete()
+                .eq(columnName, id)
+                .eq('company_id', companyId);
+            
+            if (error) throw error;
         }
     } catch (e) {
         if (await handleAuthError(e)) {
-            return remove(storeName, id);
+            return remove(storeName, id, columnName);
         }
         throw e;
     }
@@ -416,32 +447,47 @@ const clearAllData = async (): Promise<void> => {
     }
 };
 
-const bulkAdd = async (storeName: string, items: any[]): Promise<void> => {
+const bulkAdd = async <T>(storeName: string, items: T[]): Promise<T[]> => {
     const tableName = TABLE_MAP[storeName];
-    if (!tableName || items.length === 0) return;
+    if (!tableName || items.length === 0) return [];
 
     try {
         const { userId, companyId } = await getCurrentUserAndCompany();
         if (!userId || !companyId) throw new Error("User not authenticated");
 
         const itemsWithUser = items.map(item => ({ ...item, user_id: userId, company_id: companyId }));
+        const allSavedItems: T[] = [];
 
-        const { error } = await supabase
-            .from(tableName)
-            .insert(itemsWithUser);
+        // Chunking for bulk insert (safe chunk size for Supabase is around 200-500 depending on row size)
+        const chunkSize = 200;
+        for (let i = 0; i < itemsWithUser.length; i += chunkSize) {
+            const chunk = itemsWithUser.slice(i, i + chunkSize);
+            const { data, error } = await supabase
+                .from(tableName)
+                .insert(chunk)
+                .select();
 
-        if (error) {
-            if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
-                console.error("Missing DB columns/table in bulk operation. Run SQL in /supabase_schema_update.sql");
-                throw new Error("Erreur de base de données. Veuillez exécuter le script SQL dans /supabase_schema_update.sql pour créer ou mettre à jour les tables.");
+            if (error) {
+                console.error(`Error bulk adding chunk to ${storeName}:`, error);
+                
+                if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
+                    throw new Error("Erreur de base de données. Veuillez exécuter le script SQL dans /supabase_schema_update.sql pour créer ou mettre à jour les tables.");
+                }
+                
+                const recovered = await handleAuthError(error);
+                if (recovered) {
+                    const { data: retryData, error: retryError } = await supabase.from(tableName).insert(chunk).select();
+                    if (retryError) throw retryError;
+                    if (retryData) allSavedItems.push(...(retryData as T[]));
+                    continue;
+                }
+                throw error;
             }
-            if (await handleAuthError(error)) {
-                await supabase.from(tableName).insert(itemsWithUser);
-                return;
-            }
-            console.error(`Error bulk adding to ${storeName}:`, error);
-            throw error;
+            
+            if (data) allSavedItems.push(...(data as T[]));
         }
+        
+        return allSavedItems;
     } catch (e) {
         if (await handleAuthError(e)) {
             return bulkAdd(storeName, items);
@@ -511,6 +557,7 @@ export const dbService = {
         getAll: () => getAll<StockMovement>('stock_movements'),
         add: (item: StockMovement) => add<StockMovement>('stock_movements', item),
         delete: (id: string | string[]) => remove('stock_movements', id),
+        deleteByProduct: (productId: string | string[]) => remove('stock_movements', productId, 'productId'),
     },
     deliveryNotes: {
         getAll: () => getAll<DeliveryNote>('delivery_notes'),

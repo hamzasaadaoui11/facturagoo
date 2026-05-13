@@ -504,7 +504,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                         })()}
                     </div>
                     <p className="text-slate-500 text-[11px] md:text-xs font-semibold uppercase tracking-wider">Ventes Facturées</p>
-                    <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-1">{formatMoney(currentMetrics.billedRevenue)}</h3>
+                    <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-1">{formatMoney(Math.max(0, currentMetrics.billedRevenue))}</h3>
                 </div>
 
                 <div className="bg-white rounded-2xl md:rounded-3xl p-5 shadow-sm border border-slate-100 hover:shadow-md transition-all">
@@ -546,10 +546,10 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
                 <div className="bg-gradient-to-br from-emerald-500/10 via-white to-teal-500/10 rounded-2xl md:rounded-3xl p-5 shadow-md border-2 border-emerald-500/20 hover:border-emerald-500 transition-all">
                     <div className="flex justify-between items-start mb-3">
                         <div className="p-2.5 bg-emerald-500 text-white rounded-xl shadow-sm shadow-emerald-500/40"><TrendingUp size={20} /></div>
-                        <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full ring-1 ring-emerald-500/20">Marge: {currentMetrics.billedRevenue > 0 ? ((currentMetrics.profit / currentMetrics.billedRevenue) * 100).toFixed(1) : 0}%</span>
+                        <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full ring-1 ring-emerald-500/20">Marge: {currentMetrics.billedRevenue > 0 ? ((Math.max(0, currentMetrics.profit) / currentMetrics.billedRevenue) * 100).toFixed(1) : 0}%</span>
                     </div>
                     <p className="text-emerald-700 text-[11px] md:text-xs font-black uppercase tracking-wider">Bénéfice Net</p>
-                    <h3 className="text-xl md:text-2xl font-black text-emerald-900 mt-1">{formatMoney(currentMetrics.profit)}</h3>
+                    <h3 className="text-xl md:text-2xl font-black text-emerald-900 mt-1">{formatMoney(Math.max(0, currentMetrics.profit))}</h3>
                 </div>
             </div>
 

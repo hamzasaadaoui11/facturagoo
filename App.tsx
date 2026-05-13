@@ -275,6 +275,73 @@ const MainContent: React.FC = () => {
         setStockMovements(prev => [newMovement, ...prev]);
         await updateProductStock(movement.productId, movement.quantity, movement.variantId);
     };
+    const addProducts = async (productsToImport: Omit<Product, 'id'>[]) => {
+        try {
+            let lastCode = 0;
+            const prefix = 'P';
+            
+            // Find the highest numeric part in existing product codes
+            products.forEach(p => {
+                if (p.productCode && p.productCode.startsWith(prefix)) {
+                    const num = parseInt(p.productCode.split('-')[1]);
+                    if (!isNaN(num) && num > lastCode) lastCode = num;
+                }
+            });
+
+            const productsWithIds: Product[] = productsToImport.map((p) => {
+                let code = p.productCode;
+                if (!code) {
+                    lastCode++;
+                    code = `${prefix}-${String(lastCode).padStart(4, '0')}`;
+                }
+                
+                return {
+                    id: generateUUID(),
+                    productCode: code,
+                    createdAt: new Date().toISOString().split('T')[0],
+                    ...p
+                };
+            });
+
+            // Use larger chunks for products themselves
+            const savedProducts = await dbService.bulkAdd<Product>('products', productsWithIds);
+            
+            // Create stock movements for products with stock
+            const movements: StockMovement[] = savedProducts
+                .filter(p => p.stockQuantity && p.stockQuantity > 0)
+                .map(p => ({
+                    id: generateUUID(),
+                    productId: p.id,
+                    productName: p.name,
+                    date: new Date().toISOString().split('T')[0],
+                    quantity: p.stockQuantity!,
+                    type: 'Initial' as const,
+                    reference: 'Import'
+                }));
+
+            if (movements.length > 0) {
+                await dbService.bulkAdd('stock_movements', movements);
+            }
+
+            setProducts(prev => [...savedProducts, ...prev].sort((a,b) => (b.productCode || '').localeCompare(a.productCode || '')));
+            
+            // Update stock movements list without full reload if possible, 
+            // but for safety in large imports, a background refresh is good
+            dbService.stockMovements.getAll().then(data => {
+                setStockMovements(data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+            });
+            
+            return savedProducts;
+        } catch (error: any) {
+            console.error("Error in bulk add products:", error);
+            const currentLang = localStorage.getItem('app_language') || 'fr';
+            alert(currentLang === 'fr' 
+                ? "Erreur lors de l'importation massive. Vérifiez que les codes produits sont uniques." 
+                : "Error during bulk import. Ensure product codes are unique.");
+            throw error;
+        }
+    };
+
     const addProduct = async (product: Omit<Product, 'id'>) => {
         const newProduct: Product = { 
             id: generateUUID(), 
@@ -299,13 +366,66 @@ const MainContent: React.FC = () => {
         await dbService.products.update(updatedProduct);
         setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
     };
-    const deleteProduct = async (productId: string) => {
-        await dbService.products.delete(productId);
-        setProducts(prev => prev.filter(p => p.id !== productId));
-    };
-    const deleteProducts = async (productIds: string[]) => {
-        await dbService.products.delete(productIds);
-        setProducts(prev => prev.filter(p => !productIds.includes(p.id)));
+    const deleteProducts = async (productIds: string | string[]) => {
+        const ids = Array.isArray(productIds) ? productIds : [productIds];
+        if (ids.length === 0) return;
+
+        const deletedIds: string[] = [];
+        const failedIds: string[] = [];
+
+        try {
+            // First, delete related stock movements to avoid foreign key constraints
+            // We do this in chunks too to be safe
+            const movementChunkSize = 20;
+            for (let i = 0; i < ids.length; i += movementChunkSize) {
+                const chunk = ids.slice(i, i + movementChunkSize);
+                try {
+                    await dbService.stockMovements.deleteByProduct(chunk);
+                } catch (err) {
+                    console.warn(`Failed to clean up stock movements for chunk starting at ${i}`, err);
+                }
+            }
+
+            // Try deleting products in smaller chunks to isolate failures
+            const productChunkSize = 20; 
+            for (let i = 0; i < ids.length; i += productChunkSize) {
+                const chunk = ids.slice(i, i + productChunkSize);
+                try {
+                    await dbService.products.delete(chunk);
+                    deletedIds.push(...chunk);
+                } catch (bulkError: any) {
+                    console.warn(`Bulk/Chunked delete failed for chunk starting at ${i}, falling back to individual deletes for this chunk`, bulkError);
+                    
+                    // Fallback: try one by one for this chunk
+                    for (const id of chunk) {
+                        try {
+                            // Try cleaning movements one last time for this specific ID
+                            await dbService.stockMovements.deleteByProduct(id);
+                            await dbService.products.delete(id);
+                            deletedIds.push(id);
+                        } catch (individualError: any) {
+                            console.error(`Individual delete failed for product ${id}:`, individualError);
+                            failedIds.push(id);
+                        }
+                    }
+                }
+            }
+
+            if (deletedIds.length > 0) {
+                setProducts(prev => prev.filter(p => !deletedIds.includes(p.id)));
+            }
+
+            if (failedIds.length > 0) {
+                const currentLang = localStorage.getItem('app_language') || 'fr';
+                const msg = currentLang === 'fr' 
+                    ? `${deletedIds.length} produits supprimés. ${failedIds.length} n'ont pas pu être supprimés (utilisés dans des documents).`
+                    : `${deletedIds.length} products deleted. ${failedIds.length} could not be deleted (referenced in documents).`;
+                alert(msg);
+            }
+        } catch (error: any) {
+            console.error('Error in deletion process:', error);
+            alert("Une erreur est survenue lors de la suppression.");
+        }
     };
 
     const addSupplier = async (supplier: Omit<Supplier, 'id' | 'supplierCode'>) => {
@@ -1010,9 +1130,9 @@ const MainContent: React.FC = () => {
                             <Route path="/personnel" element={<PersonnelManagement companySettings={companySettings} onAddExpense={addExpense} initialEmployees={employees} initialAttendances={attendances} initialPayments={salaryPayments} />} />
                             <Route path="/clients" element={<ClientsComponent clients={clients} onAddClient={addClient} onUpdateClient={updateClient} onDeleteClient={deleteClient} onDeleteClients={deleteClient} />} />
                             <Route path="/suppliers" element={<SuppliersComponent suppliers={suppliers} purchaseOrders={purchaseOrders} onUpdatePurchaseOrder={updatePurchaseOrder} onAddExpense={addExpense} onAddSupplier={addSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} onDeleteSuppliers={deleteSupplier} />} />
-                            <Route path="/products" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onDeleteProducts={deleteProducts} />} />
-                            <Route path="/products/new" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onDeleteProducts={deleteProducts} />} />
-                            <Route path="/products/edit/:productId" element={<ProductsComponent products={products} onAddProduct={addProduct} onUpdateProduct={updateProduct} onDeleteProduct={deleteProduct} onDeleteProducts={deleteProducts} />} />
+                            <Route path="/products" element={<ProductsComponent products={products} onAddProduct={addProduct} onAddProducts={addProducts} onUpdateProduct={updateProduct} onDeleteProduct={deleteProducts} onDeleteProducts={deleteProducts} companySettings={companySettings} />} />
+                            <Route path="/products/new" element={<ProductsComponent products={products} onAddProduct={addProduct} onAddProducts={addProducts} onUpdateProduct={updateProduct} onDeleteProduct={deleteProducts} onDeleteProducts={deleteProducts} companySettings={companySettings} />} />
+                            <Route path="/products/edit/:productId" element={<ProductsComponent products={products} onAddProduct={addProduct} onAddProducts={addProducts} onUpdateProduct={updateProduct} onDeleteProduct={deleteProducts} onDeleteProducts={deleteProducts} companySettings={companySettings} />} />
                             <Route path="/settings" element={<TemplateCustomizer settings={companySettings} onSave={updateCompanySettings} />} />
                             <Route path="/profile" element={<UserProfile />} />
                         </Routes>
