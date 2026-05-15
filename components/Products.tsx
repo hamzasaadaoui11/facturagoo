@@ -785,7 +785,7 @@ const ProductList = ({ products, onAddProduct, onAddProducts, onDeleteProduct, o
                                 type="search"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder={t('search')}
+                                placeholder={language === 'fr' ? 'Rechercher par nom, référence ou catégorie...' : 'Search by name, reference or category...'}
                                 className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
                             />
                         </div>

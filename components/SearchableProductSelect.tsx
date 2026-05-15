@@ -69,13 +69,19 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
                 <input
                     type="text"
                     className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 bg-white pr-10"
-                    placeholder={placeholder || t('select')}
+                    placeholder={placeholder || (language === 'fr' ? 'Rechercher par nom ou référence...' : 'Search by name or reference...')}
                     value={searchTerm}
                     onChange={(e) => {
                         setSearchTerm(e.target.value);
                         setIsOpen(true);
                     }}
                     onFocus={() => setIsOpen(true)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && isOpen && filteredProducts.length > 0) {
+                            e.preventDefault();
+                            handleSelect(filteredProducts[0]);
+                        }
+                    }}
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
                     <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />

@@ -456,7 +456,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                                     products={products}
                                     selectedProductId={selectedProductId}
                                     onSelect={setSelectedProductId}
-                                    placeholder={`-- ${t('select')} --`}
+                                    placeholder={language === 'fr' ? "Rechercher par nom ou réf..." : "Search by name or ref..."}
                                 />
                             </div>
                             <div className="col-span-1 md:col-span-24 lg:col-span-5">

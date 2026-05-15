@@ -549,7 +549,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
                                     products={products}
                                     selectedProductId={selectedProductId}
                                     onSelect={handleProductSelect}
-                                    placeholder={`-- ${t('select')} --`}
+                                    placeholder={language === 'fr' ? "Rechercher par nom ou réf..." : "Search by name or ref..."}
                                 />
                                 {selectedProductId && products.find(p => p.id === selectedProductId)?.hasVariants && (
                                     <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
