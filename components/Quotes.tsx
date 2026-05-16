@@ -6,10 +6,12 @@ import Header from './Header';
 import ChangeStatusModal from './ChangeStatusModal';
 import CreateQuoteModal from './CreateQuoteModal';
 import ConfirmationModal from './ConfirmationModal';
-import { Plus, Search, Pencil, RefreshCw, Download, FileText, MoreVertical, CheckCircle, Loader2, Printer, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Pencil, RefreshCw, Download, FileText, MoreVertical, CheckCircle, Loader2, Printer, Trash2, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
 import { Quote, QuoteStatus, Client, Product, CompanySettings } from '../types';
 import { generatePDF, printDocument } from '../services/pdfService';
 import { useLanguage } from '../contexts/LanguageContext';
+import { shareDocument } from '../services/shareService';
+import DocumentPreviewModal from './DocumentPreviewModal';
 
 const statusColors: { [key in QuoteStatus]: string } = {
     [QuoteStatus.Created]: 'bg-blue-100 text-blue-700',
@@ -111,6 +113,10 @@ const Quotes: React.FC<QuotesProps> = ({
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [quoteIdToDelete, setQuoteIdToDelete] = useState<string | null>(null);
+    const [isSharingDoc, setIsSharingDoc] = useState(false);
+    const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+    const [selectedDocForPreview, setSelectedDocForPreview] = useState<any>(null);
+    const [selectedRecipientForPreview, setSelectedRecipientForPreview] = useState<any>(null);
 
     // Menu Dropdown State
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -297,6 +303,21 @@ const Quotes: React.FC<QuotesProps> = ({
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={confirmDelete}
             />
+
+            {isPreviewModalOpen && selectedDocForPreview && (
+                <DocumentPreviewModal
+                    isOpen={isPreviewModalOpen}
+                    onClose={() => {
+                        setIsPreviewModalOpen(false);
+                        setSelectedDocForPreview(null);
+                        setSelectedRecipientForPreview(null);
+                    }}
+                    type="Devis"
+                    doc={selectedDocForPreview}
+                    settings={companySettings}
+                    recipient={selectedRecipientForPreview}
+                />
+            )}
 
             <div className="rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
                 <div className="p-4 border-b border-neutral-200">
@@ -522,6 +543,19 @@ const Quotes: React.FC<QuotesProps> = ({
                             className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group disabled:opacity-50"
                         >
                             {isDownloading ? <Loader2 size={16} className={`animate-spin ${isRTL ? 'ml-3' : 'mr-3'}`} /> : <Download size={16} className={`text-neutral-500 group-hover:text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} />} {t('download')}
+                        </button>
+
+                        <button 
+                            onClick={async () => {
+                                const client = clients.find(c => c.id === activeQuote.clientId);
+                                setSelectedDocForPreview(activeQuote);
+                                setSelectedRecipientForPreview(client);
+                                setIsPreviewModalOpen(true);
+                                setActiveMenuId(null);
+                            }}
+                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
+                        >
+                            <MessageSquare size={16} className={`text-emerald-500 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('sendWhatsApp')}
                         </button>
 
                         <div className="border-t border-slate-100 my-1 mx-2"></div>

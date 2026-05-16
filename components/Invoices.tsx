@@ -3,12 +3,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import Header from './Header';
-import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical, Trash2, ArrowLeftRight, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Printer, MoreVertical, Trash2, ArrowLeftRight, ChevronLeft, ChevronRight, Search, MessageSquare } from 'lucide-react';
 import { Invoice, InvoiceStatus, Payment, Client, Product, CompanySettings, PurchaseOrder } from '../types';
 import CreateInvoiceModal from './CreateInvoiceModal';
 import ConfirmationModal from './ConfirmationModal';
 import { generatePDF, printDocument } from '../services/pdfService';
 import { useLanguage } from '../contexts/LanguageContext';
+import { shareDocument } from '../services/shareService';
+import DocumentPreviewModal from './DocumentPreviewModal';
 
 const statusColors: { [key in InvoiceStatus]: string } = {
     [InvoiceStatus.Paid]: 'bg-green-100 text-green-700',
@@ -117,6 +119,10 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [invoiceIdToDelete, setInvoiceIdToDelete] = useState<string | null>(null);
+    const [isSharingDoc, setIsSharingDoc] = useState(false);
+    const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+    const [selectedDocForPreview, setSelectedDocForPreview] = useState<any>(null);
+    const [selectedRecipientForPreview, setSelectedRecipientForPreview] = useState<any>(null);
 
     // Menu Dropdown State
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -292,6 +298,21 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={confirmDelete}
             />
+
+            {isPreviewModalOpen && selectedDocForPreview && (
+                <DocumentPreviewModal
+                    isOpen={isPreviewModalOpen}
+                    onClose={() => {
+                        setIsPreviewModalOpen(false);
+                        setSelectedDocForPreview(null);
+                        setSelectedRecipientForPreview(null);
+                    }}
+                    type="Facture"
+                    doc={selectedDocForPreview}
+                    settings={companySettings}
+                    recipient={selectedRecipientForPreview}
+                />
+            )}
 
             {selectedInvoiceForPayment && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -601,6 +622,19 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                             className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group disabled:opacity-50"
                         >
                             {isDownloading ? <Loader2 size={16} className={`animate-spin ${isRTL ? 'ml-3' : 'mr-3'}`} /> : <Download size={16} className={`text-neutral-500 group-hover:text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} />} {t('download')}
+                        </button>
+
+                        <button 
+                            onClick={async () => {
+                                const client = clients.find(c => c.id === activeInvoice.clientId);
+                                setSelectedDocForPreview(activeInvoice);
+                                setSelectedRecipientForPreview(client);
+                                setIsPreviewModalOpen(true);
+                                setActiveMenuId(null);
+                            }}
+                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
+                        >
+                            <MessageSquare size={16} className={`text-emerald-500 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('sendWhatsApp')}
                         </button>
 
                         <div className="border-t border-slate-100 my-1 mx-2"></div>

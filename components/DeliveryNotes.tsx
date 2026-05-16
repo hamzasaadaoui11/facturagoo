@@ -3,13 +3,15 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import Header from './Header';
-import { Truck, FileText, Plus, Pencil, Download, Trash2, CheckCircle, AlertCircle, Clock, Loader2, FileCheck, MoreVertical, Printer, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Truck, FileText, Plus, Pencil, Download, Trash2, CheckCircle, AlertCircle, Clock, Loader2, FileCheck, MoreVertical, Printer, ChevronLeft, ChevronRight, Search, MessageSquare } from 'lucide-react';
 import { DeliveryNote, Invoice, Client, Product, CompanySettings } from '../types';
 import CreateDeliveryNoteModal from './CreateDeliveryNoteModal';
 import ConfirmationModal from './ConfirmationModal';
 import DeliveryNoteOptionModal from './DeliveryNoteOptionModal';
 import { generatePDF, printDocument } from '../services/pdfService';
 import { useLanguage } from '../contexts/LanguageContext';
+import { shareDocument } from '../services/shareService';
+import DocumentPreviewModal from './DocumentPreviewModal';
 
 interface DeliveryNotesProps {
     deliveryNotes: DeliveryNote[];
@@ -104,6 +106,10 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     const [noteToEdit, setNoteToEdit] = useState<DeliveryNote | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [noteIdToDelete, setNoteIdToDelete] = useState<string | null>(null);
+    const [isSharingDoc, setIsSharingDoc] = useState(false);
+    const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+    const [selectedDocForPreview, setSelectedDocForPreview] = useState<any>(null);
+    const [selectedRecipientForPreview, setSelectedRecipientForPreview] = useState<any>(null);
 
     const [isOptionModalOpen, setIsOptionModalOpen] = useState(false);
     const [selectedNoteForOutput, setSelectedNoteForOutput] = useState<DeliveryNote | null>(null);
@@ -316,6 +322,21 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={confirmDelete}
             />
+
+            {isPreviewModalOpen && selectedDocForPreview && (
+                <DocumentPreviewModal
+                    isOpen={isPreviewModalOpen}
+                    onClose={() => {
+                        setIsPreviewModalOpen(false);
+                        setSelectedDocForPreview(null);
+                        setSelectedRecipientForPreview(null);
+                    }}
+                    type="Bon de Livraison"
+                    doc={selectedDocForPreview}
+                    settings={companySettings}
+                    recipient={selectedRecipientForPreview}
+                />
+            )}
 
             <DeliveryNoteOptionModal 
                 isOpen={isOptionModalOpen}
@@ -595,6 +616,19 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                             {isDownloading ? <Loader2 size={16} className={`animate-spin ${isRTL ? 'ml-3' : 'mr-3'}`} /> : <Download size={16} className={`text-neutral-500 group-hover:text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} />} {t('download')}
                         </button>
                         
+                        <button 
+                            onClick={async () => {
+                                const client = clients.find(c => c.id === activeNote.clientId);
+                                setSelectedDocForPreview(activeNote);
+                                setSelectedRecipientForPreview(client);
+                                setIsPreviewModalOpen(true);
+                                setActiveMenuId(null);
+                            }}
+                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
+                        >
+                            <MessageSquare size={16} className={`text-emerald-500 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('sendWhatsApp')}
+                        </button>
+
                         <div className="border-t border-slate-100 my-1 mx-2"></div>
 
                         <button 

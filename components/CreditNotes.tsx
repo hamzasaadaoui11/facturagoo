@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Header from './Header';
-import { FileText, Download, Plus, Pencil, Printer, MoreVertical, Trash2, CheckCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { FileText, Download, Plus, Pencil, Printer, MoreVertical, Trash2, CheckCircle, RefreshCw, Loader2, ChevronLeft, ChevronRight, Search, MessageSquare } from 'lucide-react';
 import { CreditNote, CreditNoteStatus, Client, Product, CompanySettings } from '../types';
 import CreateCreditNoteModal from './CreateCreditNoteModal';
 import ConfirmationModal from './ConfirmationModal';
 import { generatePDF, printDocument } from '../services/pdfService';
 import { useLanguage } from '../contexts/LanguageContext';
+import { shareDocument } from '../services/shareService';
+import DocumentPreviewModal from './DocumentPreviewModal';
 
 const statusColors: { [key in CreditNoteStatus]: string } = {
     [CreditNoteStatus.Draft]: 'bg-neutral-100 text-neutral-600',
@@ -101,6 +103,10 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
     // Delete Modal State
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [idToDelete, setIdToDelete] = useState<string | null>(null);
+    const [isSharingDoc, setIsSharingDoc] = useState(false);
+    const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+    const [selectedDocForPreview, setSelectedDocForPreview] = useState<any>(null);
+    const [selectedRecipientForPreview, setSelectedRecipientForPreview] = useState<any>(null);
 
     // Menu Dropdown State
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -250,6 +256,21 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={confirmDelete}
             />
+
+            {isPreviewModalOpen && selectedDocForPreview && (
+                <DocumentPreviewModal
+                    isOpen={isPreviewModalOpen}
+                    onClose={() => {
+                        setIsPreviewModalOpen(false);
+                        setSelectedDocForPreview(null);
+                        setSelectedRecipientForPreview(null);
+                    }}
+                    type="Avoir"
+                    doc={selectedDocForPreview}
+                    settings={companySettings}
+                    recipient={selectedRecipientForPreview}
+                />
+            )}
 
             <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
                 <div className="p-4 border-b border-neutral-200">
@@ -469,6 +490,19 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                             className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group disabled:opacity-50"
                         >
                             {isDownloading ? <Loader2 size={16} className={`animate-spin ${isRTL ? 'ml-3' : 'mr-3'}`} /> : <Download size={16} className={`text-neutral-500 group-hover:text-emerald-600 ${isRTL ? 'ml-3' : 'mr-3'}`} />} {t('download')}
+                        </button>
+
+                        <button 
+                            onClick={async () => {
+                                const client = clients.find(c => c.id === activeNote.clientId);
+                                setSelectedDocForPreview(activeNote);
+                                setSelectedRecipientForPreview(client);
+                                setIsPreviewModalOpen(true);
+                                setActiveMenuId(null);
+                            }}
+                            className="flex w-full items-center px-3 py-2.5 text-[13px] font-medium text-slate-700 rounded-xl hover:bg-slate-50 hover:text-emerald-600 transition-colors group"
+                        >
+                            <MessageSquare size={16} className={`text-emerald-500 ${isRTL ? 'ml-3' : 'mr-3'}`} /> {t('sendWhatsApp')}
                         </button>
 
                         <div className="border-t border-slate-100 my-1 mx-2"></div>

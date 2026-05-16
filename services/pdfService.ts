@@ -13,7 +13,7 @@ import {
 import { translations } from "../i18n/translations";
 import html2pdf from "html2pdf.js";
 
-interface DocumentData {
+export interface DocumentData {
   id: string;
   documentId?: string;
   date: string;
@@ -45,7 +45,7 @@ interface PDFOptions {
   isPDFDownload?: boolean;
 }
 
-type DocumentType =
+export type DocumentType =
   | "Facture"
   | "Devis"
   | "Bon de Livraison"
@@ -210,7 +210,7 @@ const DEFAULT_COLUMNS: DocumentColumn[] = [
   { id: "total", label: "Total HT", visible: true, order: 6 },
 ];
 
-const generateDocumentHTML = (
+export const generateDocumentHTML = (
   docType: DocumentType,
   doc: DocumentData,
   settings: CompanySettings | null,
@@ -1372,6 +1372,67 @@ const generateDocumentHTML = (
   }
 
   return `<div id="pdf-container">${pages.join("")}</div>`;
+};
+
+export const generatePDFBlob = async (
+  docType: DocumentType,
+  doc: DocumentData,
+  settings: CompanySettings | null,
+  recipient: Client | Supplier | undefined,
+  options?: PDFOptions,
+): Promise<Blob> => {
+  const template = generateDocumentHTML(docType, doc, settings, recipient, {
+    ...options,
+    isPDFDownload: true,
+  });
+
+  const container = document.createElement("div");
+  container.style.position = "absolute";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.innerHTML = template;
+
+  document.body.appendChild(container);
+
+  try {
+    const contentElement = container.firstElementChild;
+
+    const opt: any = {
+      margin: 0,
+      image: { type: "jpeg", quality: 1 },
+      pagebreak: { mode: ["css", "legacy"] },
+      html2canvas: {
+        scale: options?.isPDFDownload ? 2 : 1.5,
+        useCORS: true,
+        logging: false,
+        letterRendering: true,
+        width: 794,
+        windowWidth: 794,
+        onclone: (clonedDoc: Document) => {
+          // Remove all oklch color references from styles to prevent html2canvas crash
+          const styleTags = clonedDoc.getElementsByTagName("style");
+          for (let i = 0; i < styleTags.length; i++) {
+            styleTags[i].innerHTML = styleTags[i].innerHTML.replace(
+              /oklch\([^)]+\)/g,
+              "#000000",
+            );
+          }
+          // Also check for link tags that might contain oklch
+          const linkTags = clonedDoc.getElementsByTagName("link");
+          for (let i = linkTags.length - 1; i >= 0; i--) {
+            if (linkTags[i].rel === "stylesheet") {
+              linkTags[i].parentNode?.removeChild(linkTags[i]);
+            }
+          }
+        },
+      },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+    };
+
+    return await (html2pdf() as any).set(opt).from(contentElement).output('blob');
+  } finally {
+    document.body.removeChild(container);
+  }
 };
 
 export const generatePDF = async (

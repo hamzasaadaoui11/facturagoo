@@ -60,6 +60,7 @@ export const translations = {
     edit: 'Modifier',
     print: 'Imprimer',
     download: 'Télécharger PDF',
+    preview: 'Aperçu',
     search: 'Rechercher...',
     filter: 'Filtrer',
     validate: 'Valider',
@@ -72,6 +73,7 @@ export const translations = {
     select: 'Sélectionner',
     manage: 'Gérer',
     history: 'Historique',
+    sendWhatsApp: 'Envoyer WhatsApp',
     
     // Form Labels
     client: 'Client',
@@ -428,6 +430,7 @@ export const translations = {
     edit: 'Editar',
     print: 'Imprimir',
     download: 'Descargar PDF',
+    preview: 'Vista previa',
     search: 'Buscar...',
     filter: 'Filtrar',
     validate: 'Validar',
@@ -440,6 +443,7 @@ export const translations = {
     select: 'Seleccionar',
     manage: 'Gestionar',
     history: 'Historial',
+    sendWhatsApp: 'Enviar WhatsApp',
 
     // Form Labels
     client: 'Cliente',
@@ -796,6 +800,7 @@ export const translations = {
     edit: 'Edit',
     print: 'Print',
     download: 'Download PDF',
+    preview: 'Preview',
     search: 'Search...',
     filter: 'Filter',
     validate: 'Validate',
@@ -808,6 +813,7 @@ export const translations = {
     select: 'Select',
     manage: 'Manage',
     history: 'History',
+    sendWhatsApp: 'Send WhatsApp',
 
     // Form Labels
     client: 'Client',
@@ -1164,6 +1170,7 @@ export const translations = {
     edit: 'تعديل',
     print: 'طباعة',
     download: 'تحميل PDF',
+    preview: 'معاينة',
     search: 'بحث...',
     filter: 'تصفية',
     validate: 'تأكيد',
@@ -1176,6 +1183,7 @@ export const translations = {
     select: 'اختيار',
     manage: 'إدارة',
     history: 'تاريخ',
+    sendWhatsApp: 'إرسال واتساب',
 
     // Form Labels
     client: 'العميل',
