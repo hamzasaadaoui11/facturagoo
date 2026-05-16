@@ -119,22 +119,25 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
             <div className={`relative w-full max-w-5xl h-[90vh] mx-4 flex flex-col bg-slate-100 rounded-2xl shadow-2xl transition-all duration-300 ease-out transform ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
                 
                 {/* Header */}
-                <div className={`flex items-center justify-between px-6 py-4 bg-white border-b border-slate-200 rounded-t-2xl ${isRTL ? 'flex-row-reverse' : ''}`}>
-                    <div className={isRTL ? 'text-right' : ''}>
-                        <h3 className="text-lg font-bold text-slate-900">{type} #{doc.documentId || doc.id}</h3>
-                        <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">{recipient?.name}</p>
+                <div className={`flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-white border-b border-slate-200 rounded-t-2xl gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <div className={`flex flex-col truncate ${isRTL ? 'text-right' : ''}`}>
+                        <h3 className="text-sm sm:text-lg font-bold text-slate-900 leading-tight truncate">
+                            {type} #{doc.documentId || doc.id}
+                        </h3>
+                        <p className="text-[10px] sm:text-xs text-slate-500 font-medium uppercase tracking-wider truncate">
+                            {recipient?.name}
+                        </p>
                     </div>
                     
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                        {/* On desktop we show the main button here, on mobile we keep it simple icons and move the main button to footer */}
                         <button 
                             onClick={handleShare}
                             disabled={isActionLoading}
-                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all font-bold text-sm shadow-sm active:scale-95 disabled:opacity-50"
+                            className="hidden sm:flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all font-bold text-sm shadow-sm active:scale-95 disabled:opacity-50"
                         >
                             {isActionLoading ? <Loader2 size={16} className="animate-spin" /> : <MessageSquare size={16} />}
-                            <span className="hidden sm:inline">
-                                {isActionLoading ? (language === 'fr' ? 'Traitement...' : 'Processing...') : t('sendWhatsApp')}
-                            </span>
+                            <span>{isActionLoading ? (language === 'fr' ? 'Traitement...' : 'Processing...') : t('sendWhatsApp')}</span>
                         </button>
                         
                         <div className="w-px h-6 bg-slate-200 mx-1 hidden sm:block"></div>
@@ -166,22 +169,22 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 </div>
 
                 {/* Preview Content */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center bg-slate-200/50">
+                <div className="flex-1 overflow-x-auto overflow-y-auto p-4 sm:p-8 bg-slate-200/50 flex justify-center">
                     <div 
                         ref={previewContainerRef}
-                        className="bg-white shadow-xl w-full max-w-[210mm] min-h-[297mm] p-0 origin-top overflow-hidden rounded-sm"
+                        className="bg-white shadow-xl min-w-[210mm] w-[210mm] min-h-[297mm] p-0 origin-top scale-[0.4] xs:scale-[0.5] sm:scale-75 md:scale-90 lg:scale-100 transition-transform duration-300 transform-gpu"
                         dangerouslySetInnerHTML={{ __html: htmlContent }}
                     />
                 </div>
 
-                {/* Footer mobile only buttons or additional info */}
-                <div className="sm:hidden p-4 bg-white border-t border-slate-200 rounded-b-2xl flex gap-2">
+                {/* Mobile Footer Action */}
+                <div className="sm:hidden p-4 bg-white border-t border-slate-200 rounded-b-2xl">
                     <button 
                         onClick={handleShare}
                         disabled={isActionLoading}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-xl font-bold active:scale-95 disabled:opacity-50"
+                        className="w-full flex items-center justify-center gap-3 py-4 bg-emerald-600 text-white rounded-2xl font-bold text-base shadow-lg shadow-emerald-200 active:scale-95 disabled:opacity-50 transition-all"
                     >
-                         {isActionLoading ? <Loader2 size={16} className="animate-spin" /> : <MessageSquare size={16} />}
+                         {isActionLoading ? <Loader2 size={20} className="animate-spin" /> : <MessageSquare size={20} />}
                          {isActionLoading ? (language === 'fr' ? 'Traitement...' : 'Processing...') : t('sendWhatsApp')}
                     </button>
                 </div>
@@ -193,20 +196,19 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                     background: white;
                     padding: 0;
                     margin: 0;
+                    width: 210mm;
                 }
                 .page-container {
                     box-shadow: none !important;
                     margin-bottom: 20px !important;
                     border: 1px solid #e2e8f0 !important;
+                    background: white !important;
                 }
+                
                 @media (max-width: 640px) {
-                    .page-container {
-                        transform: scale(0.65);
-                        transform-origin: top center;
-                        width: 210mm !important;
-                        height: auto !important;
-                        margin-left: auto;
-                        margin-right: auto;
+                    /* Adjusting container for the scaled content on mobile */
+                    .preview-wrapper {
+                        height: fit-content;
                     }
                 }
             `}</style>
