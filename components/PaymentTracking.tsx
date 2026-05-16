@@ -211,16 +211,16 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
             <Header title={t('paymentTracking')} />
 
             {/* Selection Client et Barre de recherche */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8 flex flex-col md:flex-row gap-6 items-end">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100 mb-6 flex flex-col md:flex-row gap-4 sm:gap-6 items-end">
                 <div className="w-full md:w-1/3 space-y-1.5">
-                    <label className="block text-xs font-black text-slate-400 uppercase ml-1 flex items-center gap-1.5">
-                        <Users size={14} className="text-emerald-600"/> {t('client')}
+                    <label className="block text-[10px] sm:text-xs font-black text-slate-400 uppercase ml-1 flex items-center gap-1.5">
+                        <Users size={12} className="text-emerald-600 sm:w-[14px] sm:h-[14px]"/> {t('client')}
                     </label>
                     <div className="relative">
                         <select 
                             value={selectedClientId} 
                             onChange={(e) => setSelectedClientId(e.target.value)}
-                            className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 transition-all appearance-none pr-10 rtl:pl-10 rtl:pr-3"
+                            className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-10 sm:h-12 transition-all appearance-none pr-10 rtl:pl-10 rtl:pr-3"
                         >
                             <option value="">{language === 'es' ? 'Todos los clientes' : 'Tous les clients'}</option>
                             {clients.map(c => (
@@ -228,98 +228,100 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
                             ))}
                         </select>
                         <div className={`pointer-events-none absolute inset-y-0 flex items-center px-3 ${isRTL ? 'left-0' : 'right-0'}`}>
-                            <ChevronDown size={16} className="text-slate-400" />
+                            <ChevronDown size={14} className="text-slate-400 sm:w-4 sm:h-4" />
                         </div>
                     </div>
                 </div>
 
                 <div className="w-full md:w-2/3 space-y-1.5">
-                    <label className="block text-xs font-black text-slate-400 uppercase ml-1 flex items-center gap-1.5">
-                        <Search size={14} className="text-emerald-600"/> {t('search')}
+                    <label className="block text-[10px] sm:text-xs font-black text-slate-400 uppercase ml-1 flex items-center gap-1.5">
+                        <Search size={12} className="text-emerald-600 sm:w-[14px] sm:h-[14px]"/> {t('search')}
                     </label>
                     <div className="relative">
                         <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'right-0 pr-3' : 'left-0 pl-3'}`}>
-                            <Search className="h-5 w-5 text-slate-300" aria-hidden="true" />
+                            <Search className="h-4 w-4 sm:h-5 sm:w-5 text-slate-300" aria-hidden="true" />
                         </div>
                         <input
                             type="search"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder={t('searchPaymentPlaceholder')}
-                            className={`block w-full rounded-xl border-slate-200 bg-slate-50 py-3 text-slate-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
+                            className={`block w-full rounded-xl border-slate-200 bg-slate-50 py-2 sm:py-3 text-slate-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm ${isRTL ? 'pr-9 sm:pr-10' : 'pl-9 sm:pl-10'}`}
                         />
                     </div>
                 </div>
             </div>
 
             {/* KPI Cards Dynamiques par Client */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between group hover:shadow-md transition-all">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
+                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between group hover:shadow-md transition-all">
                     <div>
-                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{t('totalCollected')}</p>
-                        <p className="text-2xl font-black text-emerald-600 mt-1">{stats.totalPaid.toLocaleString(locale, { style: 'currency', currency: currencyCode })}</p>
+                        <p className="text-[10px] sm:text-sm font-medium text-slate-500 uppercase tracking-wider">{t('totalCollected')}</p>
+                        <p className="text-lg sm:text-2xl font-black text-emerald-600 mt-0.5 sm:mt-1">{stats.totalPaid.toLocaleString(locale, { style: 'currency', currency: currencyCode })}</p>
                     </div>
-                    <div className={`p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform ${isRTL ? 'mr-4' : 'ml-4'}`}>
-                        <CheckCircle size={28} />
+                    <div className={`p-2.5 sm:p-3 bg-emerald-50 rounded-xl sm:rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform ${isRTL ? 'mr-3 sm:mr-4' : 'ml-3 sm:ml-4'}`}>
+                        <CheckCircle size={20} className="sm:w-7 sm:h-7" />
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between group hover:shadow-md transition-all">
+                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between group hover:shadow-md transition-all">
                     <div>
-                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{t('outstandingToRecover')}</p>
-                        <p className="text-2xl font-black text-red-600 mt-1">{stats.totalRemaining.toLocaleString(locale, { style: 'currency', currency: currencyCode })}</p>
+                        <p className="text-[10px] sm:text-sm font-medium text-slate-500 uppercase tracking-wider">{t('outstandingToRecover')}</p>
+                        <p className="text-lg sm:text-2xl font-black text-red-600 mt-0.5 sm:mt-1">{stats.totalRemaining.toLocaleString(locale, { style: 'currency', currency: currencyCode })}</p>
                     </div>
-                    <div className={`p-3 bg-red-50 rounded-2xl text-red-600 group-hover:scale-110 transition-transform ${isRTL ? 'mr-4' : 'ml-4'}`}>
-                        <AlertCircle size={28} />
+                    <div className={`p-2.5 sm:p-3 bg-red-50 rounded-xl sm:rounded-2xl text-red-600 group-hover:scale-110 transition-transform ${isRTL ? 'mr-3 sm:mr-4' : 'ml-3 sm:ml-4'}`}>
+                        <AlertCircle size={20} className="sm:w-7 sm:h-7" />
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between group hover:shadow-md transition-all">
+                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100 sm:col-span-2 md:col-span-1 flex items-center justify-between group hover:shadow-md transition-all">
                     <div>
-                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{t('remainingOnPartial')}</p>
-                        <p className="text-2xl font-black text-blue-600 mt-1">{stats.partialRemaining.toLocaleString(locale, { style: 'currency', currency: currencyCode })}</p>
+                        <p className="text-[10px] sm:text-sm font-medium text-slate-500 uppercase tracking-wider">{t('remainingOnPartial')}</p>
+                        <p className="text-lg sm:text-2xl font-black text-blue-600 mt-0.5 sm:mt-1">{stats.partialRemaining.toLocaleString(locale, { style: 'currency', currency: currencyCode })}</p>
                     </div>
-                    <div className={`p-3 bg-blue-50 rounded-2xl text-blue-600 group-hover:scale-110 transition-transform ${isRTL ? 'mr-4' : 'ml-4'}`}>
-                        <PieChart size={28} />
+                    <div className={`p-2.5 sm:p-3 bg-blue-50 rounded-xl sm:rounded-2xl text-blue-600 group-hover:scale-110 transition-transform ${isRTL ? 'mr-3 sm:mr-4' : 'ml-3 sm:ml-4'}`}>
+                        <PieChart size={20} className="sm:w-7 sm:h-7" />
                     </div>
                 </div>
             </div>
 
             {/* Onglets de filtrage par statut */}
-            <div className={`flex rounded-xl bg-slate-200/50 p-1.5 mb-6 w-fit ${isRTL ? 'space-x-reverse' : 'space-x-1'}`}>
-                <button
-                    onClick={() => setActiveTab('outstanding')}
-                    className={`flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-bold leading-5 focus:outline-none transition-all ${
-                        activeTab === 'outstanding'
-                            ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100'
-                            : 'text-slate-500 hover:text-emerald-600'
-                    }`}
-                >
-                    <AlertCircle size={16} />
-                    {t('outstandingBalances')}
-                </button>
-                <button
-                    onClick={() => setActiveTab('partial')}
-                    className={`flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-bold leading-5 focus:outline-none transition-all ${
-                        activeTab === 'partial'
-                            ? 'bg-white text-blue-700 shadow-sm border border-blue-100'
-                            : 'text-slate-500 hover:text-blue-600'
-                    }`}
-                >
-                    <PieChart size={16} />
-                    {t('partialPayments')}
-                </button>
-                <button
-                    onClick={() => setActiveTab('paid')}
-                    className={`flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-bold leading-5 focus:outline-none transition-all ${
-                        activeTab === 'paid'
-                            ? 'bg-white text-green-700 shadow-sm border border-green-100'
-                            : 'text-slate-500 hover:text-green-600'
-                    }`}
-                >
-                    <CheckCircle size={16} />
-                    {t('paidInvoices')}
-                </button>
+            <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+                <div className={`flex rounded-xl bg-slate-200/50 p-1.5 min-w-max ${isRTL ? 'space-x-reverse' : 'space-x-1'}`}>
+                    <button
+                        onClick={() => setActiveTab('outstanding')}
+                        className={`flex items-center gap-2 rounded-lg px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-bold leading-5 focus:outline-none transition-all ${
+                            activeTab === 'outstanding'
+                                ? 'bg-white text-emerald-700 shadow-sm border border-emerald-100'
+                                : 'text-slate-500 hover:text-emerald-600'
+                        }`}
+                    >
+                        <AlertCircle size={14} className="sm:w-4 sm:h-4" />
+                        {t('outstandingBalances')}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('partial')}
+                        className={`flex items-center gap-2 rounded-lg px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-bold leading-5 focus:outline-none transition-all ${
+                            activeTab === 'partial'
+                                ? 'bg-white text-blue-700 shadow-sm border border-blue-100'
+                                : 'text-slate-500 hover:text-blue-600'
+                        }`}
+                    >
+                        <PieChart size={14} className="sm:w-4 sm:h-4" />
+                        {t('partialPayments')}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('paid')}
+                        className={`flex items-center gap-2 rounded-lg px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-bold leading-5 focus:outline-none transition-all ${
+                            activeTab === 'paid'
+                                ? 'bg-white text-green-700 shadow-sm border border-green-100'
+                                : 'text-slate-500 hover:text-green-600'
+                        }`}
+                    >
+                        <CheckCircle size={14} className="sm:w-4 sm:h-4" />
+                        {t('paidInvoices')}
+                    </button>
+                </div>
             </div>
 
             {/* Tableau des factures filtrées */}
@@ -407,79 +409,89 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
                             const remaining = invoice.amount - paid;
                             
                             return (
-                                <div key={invoice.id} className="p-4 hover:bg-emerald-50/30 transition-colors group">
-                                    <div className={`flex justify-between items-start mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                                        <div>
-                                            <p className={`text-sm font-bold text-emerald-600 ${isRTL ? 'text-right' : 'text-left'}`}>
-                                                {invoice.documentId || invoice.id}
-                                            </p>
-                                            <p className={`text-sm text-slate-900 font-semibold mt-0.5 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                <div key={invoice.id} className="p-5 hover:bg-emerald-50/30 transition-colors group">
+                                    <div className={`flex justify-between items-start mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <div className="flex flex-col gap-1">
+                                            <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                                <span className="text-sm font-black text-emerald-600">
+                                                    {invoice.documentId || invoice.id}
+                                                </span>
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
+                                                    invoice.status === InvoiceStatus.Paid ? 'bg-green-100 text-green-700' :
+                                                    invoice.status === InvoiceStatus.Partial ? 'bg-blue-100 text-blue-700' :
+                                                    invoice.status === InvoiceStatus.Overdue ? 'bg-red-100 text-red-700' :
+                                                    'bg-amber-100 text-amber-700'
+                                                }`}>
+                                                    {invoice.status}
+                                                </span>
+                                            </div>
+                                            <p className={`text-sm text-slate-900 font-bold ${isRTL ? 'text-right' : 'text-left'}`}>
                                                 {invoice.clientName}
                                             </p>
                                         </div>
                                         <button 
                                             onClick={(e) => toggleMenu(e, invoice)}
-                                            className={`p-2 rounded-full transition-colors ${activeMenuId === invoice.id ? 'bg-slate-200 text-slate-900' : 'text-slate-300 hover:bg-slate-100 group-hover:text-slate-500'}`}
+                                            className={`p-2.5 rounded-xl transition-colors shadow-sm border border-slate-100 ${activeMenuId === invoice.id ? 'bg-slate-900 text-white' : 'bg-white text-slate-400 group-hover:text-slate-600'}`}
                                         >
                                             <MoreVertical size={18} />
                                         </button>
                                     </div>
                                     
-                                    <div className={`grid grid-cols-2 gap-2 mb-3 text-xs ${isRTL ? 'text-right' : 'text-left'}`}>
-                                        <div>
-                                            <p className="text-slate-400 uppercase font-black text-[9px]">{t('total')}</p>
-                                            <p className="font-bold text-slate-700">{invoice.amount.toLocaleString(locale, { style: 'currency', currency: currencyCode })}</p>
+                                    <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-4">
+                                        <div className={isRTL ? 'text-right' : 'text-left'}>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('total')}</p>
+                                            <p className="text-sm font-bold text-slate-700">{invoice.amount.toLocaleString(locale, { style: 'currency', currency: currencyCode })}</p>
                                         </div>
-                                        <div>
-                                            <p className="text-slate-400 uppercase font-black text-[9px]">{t('alreadyPaid')}</p>
-                                            <p className="font-bold text-emerald-600">{paid > 0 ? paid.toLocaleString(locale, { style: 'currency', currency: currencyCode }) : '-'}</p>
+                                        <div className={isRTL ? 'text-right' : 'text-left'}>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{t('alreadyPaid')}</p>
+                                            <p className="text-sm font-bold text-emerald-600">{paid > 0 ? paid.toLocaleString(locale, { style: 'currency', currency: currencyCode }) : '-'}</p>
                                         </div>
-                                    </div>
-                                    
-                                    <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                                            invoice.status === InvoiceStatus.Paid ? 'bg-green-100 text-green-700' :
-                                            invoice.status === InvoiceStatus.Partial ? 'bg-blue-100 text-blue-700' :
-                                            invoice.status === InvoiceStatus.Overdue ? 'bg-red-100 text-red-700' :
-                                            'bg-amber-100 text-amber-700'
-                                        }`}>
-                                            {invoice.status}
-                                        </span>
-                                        <div className={isRTL ? 'text-left' : 'text-right'}>
-                                            <p className="text-slate-400 uppercase font-black text-[9px]">{t('remaining')}</p>
-                                            <p className={`text-sm font-black ${remaining > 0.01 ? 'text-red-600' : 'text-slate-400'}`}>
+                                        <div className={`col-span-2 pt-3 border-t border-slate-200 flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                            <p className="text-[9px] font-black text-red-500 uppercase tracking-widest">{t('remaining')}</p>
+                                            <p className={`text-base font-black ${remaining > 0.01 ? 'text-red-600' : 'text-slate-400'}`}>
                                                 {remaining > 0.01 ? remaining.toLocaleString(locale, { style: 'currency', currency: currencyCode }) : '0.00'}
                                             </p>
                                         </div>
                                     </div>
+
+                                    {remaining > 0.01 && (
+                                        <button 
+                                            onClick={() => handleOpenPayment(invoice)}
+                                            className="w-full py-3.5 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <CreditCard size={16} />
+                                            {t('collectPayment')}
+                                        </button>
+                                    )}
                                 </div>
                             );
                         })
                     ) : (
-                        <div className="px-6 py-12 text-center">
-                            <Search className="h-12 w-12 text-slate-100 mx-auto mb-4" strokeWidth={1} />
+                        <div className="px-6 py-20 text-center">
+                            <Search className="h-16 w-16 text-slate-100 mx-auto mb-4" strokeWidth={1} />
                             <p className="text-lg font-bold text-slate-800">{t('noFinancialData')}</p>
+                            <p className="text-xs text-slate-400 mt-1">Aucune facture ne correspond.</p>
                         </div>
                     )}
                 </div>
 
                 {/* Pagination UI */}
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-between px-6 py-4 bg-white border-t border-slate-100">
-                        <div className="flex-1 flex justify-between sm:hidden">
+                    <div className="flex items-center justify-between px-6 py-5 bg-white border-t border-slate-100">
+                        <div className="flex-1 flex justify-between sm:hidden gap-3">
                             <button
                                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                 disabled={currentPage === 1}
-                                className="relative inline-flex items-center px-4 py-2 text-xs font-bold rounded-xl text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-50 transition-all uppercase tracking-wider"
+                                className="flex-1 inline-flex items-center justify-center px-4 py-3 text-[10px] font-black rounded-xl text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-30 transition-all uppercase tracking-widest shadow-sm"
                             >
-                                {isRTL ? 'التالي' : 'Précédent'}
+                                {isRTL ? 'التالي' : 'PRÉCÉDENT'}
                             </button>
                             <button
                                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                 disabled={currentPage === totalPages}
-                                className="relative ml-3 inline-flex items-center px-4 py-2 text-xs font-bold rounded-xl text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-50 transition-all uppercase tracking-wider"
+                                className="flex-1 inline-flex items-center justify-center px-4 py-3 text-[10px] font-black rounded-xl text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-30 transition-all uppercase tracking-widest shadow-sm"
                             >
-                                {isRTL ? 'السابق' : 'Suivant'}
+                                {isRTL ? 'السابق' : 'SUIVANT'}
                             </button>
                         </div>
                         <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
@@ -581,33 +593,33 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
             {/* Modal de règlement */}
             {selectedInvoice && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md animate-in fade-in zoom-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md animate-in fade-in zoom-in duration-200">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                                <CreditCard className="text-emerald-600" /> {t('recordPayment')}
+                            <h3 className="text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2">
+                                <CreditCard className="text-emerald-600 sm:w-6 sm:h-6" size={20} /> {t('recordPayment')}
                             </h3>
                             <button onClick={() => setSelectedInvoice(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-all"><X size={20} /></button>
                         </div>
 
-                        <div className="bg-slate-50 p-5 rounded-2xl mb-8 text-sm border border-slate-100 shadow-inner">
-                            <div className="flex justify-between mb-2.5">
-                                <span className="text-slate-400 font-black uppercase text-[10px] tracking-widest">{t('invoices')}</span>
+                        <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl mb-6 sm:mb-8 text-xs sm:text-sm border border-slate-100 shadow-inner">
+                            <div className="flex justify-between mb-2">
+                                <span className="text-slate-400 font-black uppercase text-[9px] sm:text-[10px] tracking-widest">{t('invoices')}</span>
                                 <span className="font-bold text-slate-900">#{selectedInvoice.documentId || selectedInvoice.id}</span>
                             </div>
-                            <div className="flex justify-between mb-2.5">
-                                <span className="text-slate-400 font-black uppercase text-[10px] tracking-widest">{t('client')}</span>
-                                <span className="font-bold text-slate-900 truncate max-w-[200px]">{selectedInvoice.clientName}</span>
+                            <div className="flex justify-between mb-2">
+                                <span className="text-slate-400 font-black uppercase text-[9px] sm:text-[10px] tracking-widest">{t('client')}</span>
+                                <span className="font-bold text-slate-900 truncate max-w-[150px] sm:max-w-[200px]">{selectedInvoice.clientName}</span>
                             </div>
-                            <div className="h-px bg-slate-200/60 my-4"></div>
+                            <div className="h-px bg-slate-200/60 my-3 sm:my-4"></div>
                             <div className="flex justify-between items-center font-black">
-                                <span className="text-red-500 uppercase text-[10px] tracking-widest">{t('remaining')}</span>
-                                <span className="text-xl text-red-600">{(selectedInvoice.amount - (selectedInvoice.amountPaid || 0)).toLocaleString(locale, { style: 'currency', currency: currencyCode })}</span>
+                                <span className="text-red-500 uppercase text-[9px] sm:text-[10px] tracking-widest">{t('remaining')}</span>
+                                <span className="text-lg sm:text-xl text-red-600">{(selectedInvoice.amount - (selectedInvoice.amountPaid || 0)).toLocaleString(locale, { style: 'currency', currency: currencyCode })}</span>
                             </div>
                         </div>
 
-                        <form onSubmit={handlePaymentSubmit} className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="block text-sm font-black text-slate-700 ml-1">{t('amount')} ({currencyCode})</label>
+                        <form onSubmit={handlePaymentSubmit} className="space-y-4 sm:space-y-6">
+                            <div className="space-y-1.5 sm:space-y-2">
+                                <label className="block text-xs sm:text-sm font-black text-slate-700 ml-1">{t('amount')} ({currencyCode})</label>
                                 <div className="relative">
                                     <input 
                                         type="number" 
@@ -615,19 +627,19 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
                                         max={selectedInvoice.amount - (selectedInvoice.amountPaid || 0)}
                                         value={paymentAmount} 
                                         onChange={e => setPaymentAmount(parseFloat(e.target.value))}
-                                        className={`block w-full rounded-2xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 font-black text-2xl h-16 ${isRTL ? 'pl-16 pr-4' : 'pl-4 pr-16'}`}
+                                        className={`block w-full rounded-2xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 font-black text-xl sm:text-2xl h-14 sm:h-16 ${isRTL ? 'pl-16 pr-4' : 'pl-4 pr-16'}`}
                                     />
                                     <div className={`pointer-events-none absolute inset-y-0 flex items-center ${isRTL ? 'left-0 pl-4' : 'right-0 pr-4'}`}>
-                                        <span className="text-slate-300 font-black text-xs">{currencyCode}</span>
+                                        <span className="text-slate-300 font-black text-[10px] sm:text-xs">{currencyCode}</span>
                                     </div>
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <label className="block text-sm font-black text-slate-700 ml-1">{t('paymentMode')}</label>
+                            <div className="space-y-1.5 sm:space-y-2">
+                                <label className="block text-xs sm:text-sm font-black text-slate-700 ml-1">{t('paymentMode')}</label>
                                 <select 
                                     value={paymentMethod} 
                                     onChange={e => setPaymentMethod(e.target.value as any)}
-                                    className="block w-full rounded-2xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 h-14 font-bold text-slate-700"
+                                    className="block w-full rounded-2xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 h-12 sm:h-14 font-bold text-slate-700 text-sm sm:text-base"
                                 >
                                     <option value="Virement">{language === 'es' ? 'Transferencia' : (language === 'ar' ? 'تحويل' : 'Virement')}</option>
                                     <option value="Chèque">{language === 'es' ? 'Cheque' : (language === 'ar' ? 'شيك' : 'Chèque')}</option>
@@ -637,37 +649,37 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
                             </div>
 
                             {paymentMethod === 'Chèque' && (
-                                <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-black text-slate-700 ml-1">
+                                <div className="grid grid-cols-2 gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-2">
+                                    <div className="space-y-1.5 sm:space-y-2">
+                                        <label className="block text-[10px] sm:text-sm font-black text-slate-700 ml-1">
                                             {language === 'es' ? 'Nº de cheque' : (language === 'ar' ? 'رقم الشيك' : 'N° de chèque')}
                                         </label>
                                         <input 
                                             type="text"
                                             value={checkNumber}
                                             onChange={(e) => setCheckNumber(e.target.value)}
-                                            className="block w-full rounded-2xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 h-12 px-4 text-sm font-bold"
+                                            className="block w-full rounded-2xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 h-10 sm:h-12 px-4 text-xs sm:text-sm font-bold"
                                             placeholder="Ex: CH-12345"
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="block text-sm font-black text-slate-700 ml-1">
+                                    <div className="space-y-1.5 sm:space-y-2">
+                                        <label className="block text-[10px] sm:text-sm font-black text-slate-700 ml-1">
                                             {language === 'es' ? 'Banco' : (language === 'ar' ? 'البنك' : 'Banque')}
                                         </label>
                                         <input 
                                             type="text"
                                             value={bankName}
                                             onChange={(e) => setBankName(e.target.value)}
-                                            className="block w-full rounded-2xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 h-12 px-4 text-sm font-bold"
+                                            className="block w-full rounded-2xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 h-10 sm:h-12 px-4 text-xs sm:text-sm font-bold"
                                             placeholder="Ex: BMCE, Attijari..."
                                         />
                                     </div>
                                 </div>
                             )}
 
-                            <div className="flex flex-col sm:flex-row gap-4 mt-10">
-                                <button type="button" onClick={() => setSelectedInvoice(null)} className="flex-1 py-4 text-sm font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-slate-100 transition-all uppercase tracking-widest">{t('cancel')}</button>
-                                <button type="submit" className="flex-[2] py-4 text-sm font-black text-white bg-emerald-600 rounded-2xl hover:bg-emerald-700 shadow-xl shadow-emerald-500/30 transition-all transform active:scale-95 uppercase tracking-widest">{t('confirm')}</button>
+                            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-8 sm:mt-10">
+                                <button type="button" onClick={() => setSelectedInvoice(null)} className="flex-1 py-3 sm:py-4 text-xs sm:text-sm font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-2xl hover:bg-slate-100 transition-all uppercase tracking-widest order-2 sm:order-1">{t('cancel')}</button>
+                                <button type="submit" className="flex-[2] py-3 sm:py-4 text-xs sm:text-sm font-black text-white bg-emerald-600 rounded-2xl hover:bg-emerald-700 shadow-xl shadow-emerald-500/30 transition-all transform active:scale-95 uppercase tracking-widest order-1 sm:order-2">{t('confirm')}</button>
                             </div>
                         </form>
                     </div>
