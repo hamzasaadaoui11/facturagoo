@@ -452,42 +452,44 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                 </div>
 
                 {/* Mobile Card View */}
-                <div className="md:hidden divide-y divide-neutral-200">
+                <div className="md:hidden divide-y divide-neutral-100 bg-slate-50/10">
                     {paginatedInvoices.length > 0 ? (
                         paginatedInvoices.map((invoice) => {
                             const remaining = invoice.amount - (invoice.amountPaid || 0);
                             return (
-                                <div key={invoice.id} className="p-4 hover:bg-emerald-50/60 transition-colors duration-200">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div>
-                                            <p className="text-sm font-bold text-emerald-600">{invoice.documentId || invoice.id}</p>
-                                            <p className="text-xs text-neutral-500">{new Date(invoice.date).toLocaleDateString('fr-FR')}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-medium ${statusColors[invoice.status]}`}>
-                                                {invoice.status}
-                                            </span>
-                                            <button 
-                                                onClick={(e) => toggleMenu(e, invoice.id)}
-                                                className={`p-1.5 rounded-full transition-colors ${activeMenuId === invoice.id ? 'bg-neutral-200 text-neutral-800' : 'text-neutral-500 hover:bg-neutral-100'}`}
-                                            >
-                                                <MoreVertical size={18} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-between items-end">
+                                <div key={invoice.id} className="p-4 sm:p-5 bg-white mb-3 first:mt-3 rounded-2xl mx-2 shadow-sm border border-slate-100 transition-all active:bg-slate-50">
+                                    <div className="flex justify-between items-start mb-3">
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-sm font-medium text-neutral-900 truncate">{invoice.clientName}</p>
-                                            {remaining > 0 && (
-                                                <p className="text-xs text-red-600 font-medium">
-                                                    {t('remaining')}: {remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}
-                                                </p>
-                                            )}
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <p className="text-xs font-black text-emerald-600">{invoice.documentId || invoice.id}</p>
+                                                <span className={`inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-bold ${statusColors[invoice.status]}`}>
+                                                    {invoice.status}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm font-bold text-slate-900 truncate pr-2">{invoice.clientName}</p>
+                                        </div>
+                                        <button 
+                                            onClick={(e) => toggleMenu(e, invoice.id)}
+                                            className={`p-2.5 rounded-xl transition-all border border-slate-100 shadow-sm active:scale-90 ${activeMenuId === invoice.id ? 'bg-slate-900 text-white' : 'bg-white text-slate-400 font-bold'}`}
+                                        >
+                                            <MoreVertical size={20} />
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="flex justify-between items-end bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('amount')}</p>
+                                            <p className="text-sm font-black text-slate-900">
+                                                {invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 })}
+                                            </p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-sm font-bold text-neutral-900">
-                                                {invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}
-                                            </p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{new Date(invoice.date).toLocaleDateString('fr-FR')}</p>
+                                            {remaining > 0 && (
+                                                <p className="text-[11px] text-red-600 font-bold">
+                                                    {t('remaining')}: {remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 })}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

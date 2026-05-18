@@ -343,23 +343,35 @@ const MainContent: React.FC = () => {
     };
 
     const addProduct = async (product: Omit<Product, 'id'>) => {
+        const { stockQuantity, ...productData } = product;
+        const newId = generateUUID();
         const newProduct: Product = { 
-            id: generateUUID(), 
+            id: newId, 
             productCode: product.productCode || getNextCode('P', products), 
             createdAt: new Date().toISOString().split('T')[0],
-            ...product 
+            stockQuantity: stockQuantity || 0,
+            ...productData 
         };
+
+        // Enregistrer le produit avec son stock initial direct
         await dbService.products.add(newProduct);
+        
+        // Mettre à jour l'état immédiatement avec la quantité correcte
         setProducts(prev => [newProduct, ...prev].sort((a,b) => (b.productCode || '').localeCompare(a.productCode || '')));
-        if(product.stockQuantity && product.stockQuantity > 0) {
-            await addStockMovement({
-                productId: newProduct.id,
+        
+        if(stockQuantity && stockQuantity > 0) {
+            // Ajouter le mouvement de stock sans appeler updateProductStock pour éviter le doublement
+            const movement: StockMovement = {
+                id: generateUUID(),
+                productId: newId,
                 productName: newProduct.name,
                 date: new Date().toISOString().split('T')[0],
-                quantity: product.stockQuantity,
+                quantity: stockQuantity,
                 type: 'Initial',
                 reference: 'Creation'
-            });
+            };
+            await dbService.stockMovements.add(movement);
+            setStockMovements(prev => [movement, ...prev]);
         }
     };
     const updateProduct = async (updatedProduct: Product) => {

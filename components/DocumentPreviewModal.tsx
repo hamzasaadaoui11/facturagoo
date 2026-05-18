@@ -24,12 +24,37 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
     recipient 
 }) => {
     const { t, isRTL, language } = useLanguage();
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
     const [isVisible, setIsVisible] = useState(false);
     const [isActionLoading, setIsActionLoading] = useState(false);
     const [isGeneratingBackground, setIsGeneratingBackground] = useState(false);
     const [htmlContent, setHtmlContent] = useState<string>('');
     const [preGeneratedBlob, setPreGeneratedBlob] = useState<Blob | null>(null);
+    const [scale, setScale] = useState(1);
     const previewContainerRef = useRef<HTMLDivElement>(null);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const updateScale = () => {
+            const width = window.innerWidth;
+            setIsMobile(width < 640);
+            
+            if (width < 640 && wrapperRef.current) {
+                // Calculate scale based on container width
+                // 210mm is roughly 794px at 96dpi
+                const targetWidth = width - 32; // padding
+                const contentWidth = 794; 
+                const newScale = targetWidth / contentWidth;
+                setScale(Math.max(newScale, 0.2));
+            } else {
+                setScale(1);
+            }
+        };
+
+        updateScale();
+        window.addEventListener('resize', updateScale);
+        return () => window.removeEventListener('resize', updateScale);
+    }, []);
 
     useEffect(() => {
         if (isOpen) {
@@ -169,12 +194,23 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
                 </div>
 
                 {/* Preview Content */}
-                <div className="flex-1 overflow-x-auto overflow-y-auto p-4 sm:p-8 bg-slate-200/50 flex justify-center">
+                <div ref={wrapperRef} className="flex-1 overflow-auto p-2 sm:p-8 bg-slate-200/50 flex flex-col items-center">
                     <div 
-                        ref={previewContainerRef}
-                        className="bg-white shadow-xl min-w-[210mm] w-[210mm] min-h-[297mm] p-0 origin-top scale-[0.4] xs:scale-[0.5] sm:scale-75 md:scale-90 lg:scale-100 transition-transform duration-300 transform-gpu"
-                        dangerouslySetInnerHTML={{ __html: htmlContent }}
-                    />
+                        className="w-full flex justify-center items-start"
+                        style={{ height: isMobile ? `calc(297mm * ${scale} + 40px)` : 'auto' }}
+                    >
+                        <div 
+                            ref={previewContainerRef}
+                            className="bg-white shadow-2xl origin-top transition-transform duration-300 transform-gpu mb-8"
+                            style={{ 
+                                width: '210mm', 
+                                minHeight: '297mm',
+                                transform: `scale(${scale})`,
+                                marginTop: isMobile ? '10px' : '20px'
+                            }}
+                            dangerouslySetInnerHTML={{ __html: htmlContent }}
+                        />
+                    </div>
                 </div>
 
                 {/* Mobile Footer Action */}
