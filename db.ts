@@ -143,69 +143,74 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
 
             let allData: any[] = [];
             let hasMore = true;
-            let page = 0;
-            const pageSize = 1000;
+            let offset = 0;
+            let currentBatchSize = 200; // Start with 200, will decrease on timeout
 
             while (hasMore) {
-                const fetchPromise = supabase
-                    .from(tableName)
-                    .select('*')
-                    .order('id')
-                    .range(page * pageSize, (page + 1) * pageSize - 1);
-                
-                // Only apply company_id filter if we have a companyId
-                const filteredFetch = companyId ? fetchPromise.eq('company_id', companyId) : fetchPromise;
-
-                // Wrap in Promise.resolve to ensure compatibility with withTimeout and Promise.race
-                const result: any = await withTimeout(Promise.resolve(filteredFetch));
-                const { data, error } = result;
-
-                if (error) {
-                    console.error(`Supabase Error for ${storeName}:`, error);
+                try {
+                    // Optimization: Always filter by company_id FIRST if available
+                    let queryBuilder = supabase.from(tableName).select('*');
                     
-                    if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
-                        throw error; // Let retry catch it
+                    if (companyId) {
+                        queryBuilder = queryBuilder.eq('company_id', companyId);
+                    }
+                    
+                    // Then order and apply range
+                    const fetchPromise = queryBuilder
+                        .order('id', { ascending: true })
+                        .range(offset, offset + currentBatchSize - 1);
+                    
+                    // Using a slightly shorter timeout for the chunk to detect issues early
+                    const result: any = await withTimeout(Promise.resolve(fetchPromise), 45000);
+                    const { data, error } = result;
+
+                    if (error) {
+                        // If we get a timeout, try with a MUCH smaller batch size
+                        if (error.code === '57014' || error.message?.includes('timeout') || error.message?.includes('expiré')) {
+                            console.warn(`Timeout detected for ${storeName} at offset ${offset}, reducing batch size...`);
+                            if (currentBatchSize <= 10) {
+                                throw error; // Cannot go smaller, throw the original error
+                            }
+                            currentBatchSize = Math.floor(currentBatchSize / 2);
+                            continue; // Retry same offset with smaller batch
+                        }
+
+                        if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
+                            throw error; // Let outer retry catch it
+                        }
+
+                        // Check if it's a schema error
+                        if (error.code === 'PGRST116' || error.code === '42P01' || error.code === 'PGRST205' || (error.message && error.message.includes('column') && error.message.includes('does not exist'))) {
+                            console.warn(`Table or column missing for ${storeName}, returning empty array:`, error.message);
+                            return [];
+                        }
+
+                        const recovered = await handleAuthError(error);
+                        if (recovered) continue; // Retry after auth refresh
+                        
+                        throw error;
                     }
 
-                    // Check if it's a schema error (table or column missing)
-                    if (error.code === 'PGRST116' || error.code === '42P01' || error.code === 'PGRST205' || (error.message && error.message.includes('column') && error.message.includes('does not exist'))) {
-                        console.warn(`Table or column missing for ${storeName}, returning empty array:`, error.message);
-                        return [];
+                    if (data && data.length > 0) {
+                        allData = [...allData, ...data];
+                        offset += data.length;
                     }
 
-                    const recovered = await handleAuthError(error);
-                    if (recovered) {
-                        // Retry once for this chunk
-                        const retryFetch = supabase
-                            .from(tableName)
-                            .select('*')
-                            .order('id')
-                            .range(page * pageSize, (page + 1) * pageSize - 1);
-                        const retryResult: any = await withTimeout(Promise.resolve(companyId ? retryFetch.eq('company_id', companyId) : retryFetch));
-                        if (retryResult.error) throw retryResult.error;
-                        
-                        if (retryResult.data && retryResult.data.length > 0) {
-                            allData = [...allData, ...retryResult.data];
-                        }
-                        
-                        if (!retryResult.data || retryResult.data.length < pageSize) {
-                            hasMore = false;
-                        } else {
-                            page++;
-                        }
+                    if (!data || data.length < currentBatchSize) {
+                        hasMore = false;
+                    } else {
+                        // Small delay between batches to let the database breathe
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                } catch (e: any) {
+                    // Handle timeout errors that bubble up from withTimeout
+                    if (e.message?.includes('expiré') || e.code === '57014') {
+                        console.warn(`Catch block timeout for ${storeName} at offset ${offset}, reducing batch size...`);
+                        if (currentBatchSize <= 10) throw e;
+                        currentBatchSize = Math.floor(currentBatchSize / 2);
                         continue;
                     }
-                    throw error;
-                }
-                
-                if (data && data.length > 0) {
-                    allData = [...allData, ...data];
-                }
-
-                if (!data || data.length < pageSize) {
-                    hasMore = false;
-                } else {
-                    page++;
+                    throw e;
                 }
             }
 
@@ -496,6 +501,44 @@ const bulkAdd = async <T>(storeName: string, items: T[]): Promise<T[]> => {
     }
 };
 
+const bulkUpdate = async <T extends { id: string }>(storeName: string, items: T[]): Promise<T[]> => {
+    const tableName = TABLE_MAP[storeName];
+    if (!tableName || items.length === 0) return [];
+
+    try {
+        const { companyId } = await getCurrentUserAndCompany();
+        if (!companyId) throw new Error("User not authenticated");
+
+        const allSavedItems: T[] = [];
+        const chunkSize = 50; 
+        for (let i = 0; i < items.length; i += chunkSize) {
+            const chunk = items.slice(i, i + chunkSize);
+            
+            const cleanedChunk = chunk.map(item => {
+                const { id, paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, userId, created_at, ...itemToSave } = item as any;
+                return { id, ...itemToSave, company_id: companyId };
+            });
+
+            const { data, error } = await supabase
+                .from(tableName)
+                .upsert(cleanedChunk)
+                .select();
+
+            if (error) {
+                console.error(`Error bulk updating chunk in ${storeName}:`, error);
+                throw error;
+            }
+            if (data) allSavedItems.push(...(data as any[]));
+        }
+        return allSavedItems as any;
+    } catch (e) {
+        if (await handleAuthError(e)) {
+            return bulkUpdate(storeName, items);
+        }
+        throw e;
+    }
+};
+
 export const dbService = {
     clients: {
         getAll: () => getAll<Client>('clients'),
@@ -528,42 +571,49 @@ export const dbService = {
         getAll: () => getAll<Quote>('quotes'),
         add: (item: Quote) => add<Quote>('quotes', item),
         update: (item: Quote) => update<Quote>('quotes', item),
+        bulkUpdate: (items: Quote[]) => bulkUpdate<Quote>('quotes', items),
         delete: (id: string | string[]) => remove('quotes', id),
     },
     purchaseOrders: {
         getAll: () => getAll<PurchaseOrder>('purchase_orders'),
         add: (item: PurchaseOrder) => add<PurchaseOrder>('purchase_orders', item),
         update: (item: PurchaseOrder) => update<PurchaseOrder>('purchase_orders', item),
+        bulkUpdate: (items: PurchaseOrder[]) => bulkUpdate<PurchaseOrder>('purchase_orders', items),
         delete: (id: string | string[]) => remove('purchase_orders', id),
     },
     invoices: {
         getAll: () => getAll<Invoice>('invoices'),
         add: (item: Invoice) => add<Invoice>('invoices', item),
         update: (item: Invoice) => update<Invoice>('invoices', item),
+        bulkUpdate: (items: Invoice[]) => bulkUpdate<Invoice>('invoices', items),
         delete: (id: string | string[]) => remove('invoices', id),
     },
     creditNotes: {
         getAll: () => getAll<CreditNote>('credit_notes'),
         add: (item: CreditNote) => add<CreditNote>('credit_notes', item),
         update: (item: CreditNote) => update<CreditNote>('credit_notes', item),
+        bulkUpdate: (items: CreditNote[]) => bulkUpdate<CreditNote>('credit_notes', items),
         delete: (id: string | string[]) => remove('credit_notes', id),
     },
     payments: {
         getAll: () => getAll<Payment>('payments'),
         add: (item: Payment) => add<Payment>('payments', item),
+        update: (item: Payment) => update<Payment>('payments', item),
+        bulkUpdate: (items: Payment[]) => bulkUpdate<Payment>('payments', items),
         delete: (id: string | string[]) => remove('payments', id),
+    },
+    deliveryNotes: {
+        getAll: () => getAll<DeliveryNote>('delivery_notes'),
+        add: (item: DeliveryNote) => add<DeliveryNote>('delivery_notes', item),
+        update: (item: DeliveryNote) => update<DeliveryNote>('delivery_notes', item),
+        bulkUpdate: (items: DeliveryNote[]) => bulkUpdate<DeliveryNote>('delivery_notes', items),
+        delete: (id: string | string[]) => remove('delivery_notes', id),
     },
     stockMovements: {
         getAll: () => getAll<StockMovement>('stock_movements'),
         add: (item: StockMovement) => add<StockMovement>('stock_movements', item),
         delete: (id: string | string[]) => remove('stock_movements', id),
         deleteByProduct: (productId: string | string[]) => remove('stock_movements', productId, 'productId'),
-    },
-    deliveryNotes: {
-        getAll: () => getAll<DeliveryNote>('delivery_notes'),
-        add: (item: DeliveryNote) => add<DeliveryNote>('delivery_notes', item),
-        update: (item: DeliveryNote) => update<DeliveryNote>('delivery_notes', item),
-        delete: (id: string | string[]) => remove('delivery_notes', id),
     },
     expenses: {
         getAll: () => getAll<Expense>('expenses'),

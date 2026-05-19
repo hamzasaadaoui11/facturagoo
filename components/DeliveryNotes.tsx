@@ -65,7 +65,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     });
     const totalPages = Math.ceil(filteredNotes.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedNotes = filteredNotes.slice().reverse().slice(startIndex, startIndex + itemsPerPage);
+    const paginatedNotes = filteredNotes.slice(startIndex, startIndex + itemsPerPage);
 
     const getPageNumbers = () => {
         const pages = [];
@@ -264,12 +264,18 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     };
 
     const getStatusDisplay = (note: DeliveryNote) => {
-        const total = note.totalAmount || 0;
-        const paid = note.paymentAmount || 0;
         if (note.invoiceId && note.invoiceId.length > 0) {
             return { label: t('statusBilled'), color: 'bg-purple-100 text-purple-800', icon: FileText };
         }
-        if (total === 0) return { label: t('statusFree'), color: 'bg-gray-100 text-gray-800', icon: CheckCircle };
+        
+        const total = note.totalAmount || 0;
+        const paid = note.paymentAmount || 0;
+
+        // If amount is 0 and not invoiced, show as Draft
+        if (total === 0) {
+            return { label: t('statusFree'), color: 'bg-slate-100 text-slate-600', icon: Clock };
+        }
+
         if (paid >= total) {
             return { label: t('paid'), color: 'bg-green-100 text-green-800', icon: CheckCircle };
         } else if (paid > 0) {

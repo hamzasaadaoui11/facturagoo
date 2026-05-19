@@ -80,43 +80,37 @@ const MainContent: React.FC = () => {
             try {
                 await initDB();
                 
-                // Group 1: Core setup
-                const [clientsData, productsData, suppliersData, settingsData] = await Promise.all([
-                    dbService.clients.getAll().catch(e => { throw new Error(`Clients: ${e.message}`); }),
-                    dbService.products.getAll().catch(e => { throw new Error(`Produits: ${e.message}`); }),
-                    dbService.suppliers.getAll().catch(e => { throw new Error(`Fournisseurs: ${e.message}`); }),
-                    dbService.settings.get().catch(e => { throw new Error(`Paramètres: ${e.message}`); })
-                ]);
+                // Sequential loading instead of Promise.all to avoid database overload and timeouts
+                const clientsData = await dbService.clients.getAll().catch(e => { throw new Error(`Clients: ${e.message}`); });
+                const productsData = await dbService.products.getAll().catch(e => { throw new Error(`Produits: ${e.message}`); });
+                const suppliersData = await dbService.suppliers.getAll().catch(e => { throw new Error(`Fournisseurs: ${e.message}`); });
+                const settingsData = await dbService.settings.get().catch(e => { throw new Error(`Paramètres: ${e.message}`); });
 
                 setClients(clientsData.sort((a,b) => (b.clientCode || '').localeCompare(a.clientCode || '')));
                 setProducts(productsData.sort((a,b) => (b.productCode || '').localeCompare(a.productCode || '')));
                 setSuppliers(suppliersData.sort((a,b) => (b.supplierCode || '').localeCompare(a.supplierCode || '')));
                 setCompanySettings(settingsData);
 
-                // Group 2: Main documents
-                const [quotesData, invoicesData, deliveryData, purchaseOrdersData] = await Promise.all([
-                    dbService.quotes.getAll().catch(e => { throw new Error(`Devis: ${e.message}`); }),
-                    dbService.invoices.getAll().catch(e => { throw new Error(`Factures: ${e.message}`); }),
-                    dbService.deliveryNotes.getAll().catch(e => { throw new Error(`Bons de livraison: ${e.message}`); }),
-                    dbService.purchaseOrders.getAll().catch(e => { throw new Error(`Commandes: ${e.message}`); })
-                ]);
+                // Group 2: Main documents - Still sequential
+                const quotesData = await dbService.quotes.getAll().catch(e => { throw new Error(`Devis: ${e.message}`); });
+                const invoicesData = await dbService.invoices.getAll().catch(e => { throw new Error(`Factures: ${e.message}`); });
+                const deliveryData = await dbService.deliveryNotes.getAll().catch(e => { throw new Error(`Bons de livraison: ${e.message}`); });
+                const purchaseOrdersData = await dbService.purchaseOrders.getAll().catch(e => { throw new Error(`Commandes: ${e.message}`); });
 
                 setQuotes(quotesData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
                 setInvoices(invoicesData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
                 setDeliveryNotes(deliveryData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
                 setPurchaseOrders(purchaseOrdersData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
 
-                // Group 3: Secondary data
+                // Group 3: Secondary data - Sequential for stability
                 try {
-                    const [creditNotesData, paymentsData, movementsData, expensesData, salaryPaymentsData, employeesData, attendancesData] = await Promise.all([
-                        dbService.creditNotes.getAll().catch(e => { console.warn("CreditNotes load failed", e); return []; }), 
-                        dbService.payments.getAll().catch(e => { console.warn("Payments load failed", e); return []; }),
-                        dbService.stockMovements.getAll().catch(e => { console.warn("Mouvements Stock load failed", e); return []; }),
-                        dbService.expenses.getAll().catch(e => { console.warn("Dépenses load failed", e); return []; }),
-                        dbService.salaryPayments.getAll().catch(e => { console.warn("SalaryPayments load failed", e); return []; }),
-                        dbService.employees.getAll().catch(e => { console.warn("Employees load failed", e); return []; }),
-                        dbService.attendances.getAll().catch(e => { console.warn("Attendances load failed", e); return []; })
-                    ]);
+                    const creditNotesData = await dbService.creditNotes.getAll().catch(e => { console.warn("CreditNotes load failed", e); return []; });
+                    const paymentsData = await dbService.payments.getAll().catch(e => { console.warn("Payments load failed", e); return []; });
+                    const movementsData = await dbService.stockMovements.getAll().catch(e => { console.warn("Mouvements Stock load failed", e); return []; });
+                    const expensesData = await dbService.expenses.getAll().catch(e => { console.warn("Dépenses load failed", e); return []; });
+                    const salaryPaymentsData = await dbService.salaryPayments.getAll().catch(e => { console.warn("SalaryPayments load failed", e); return []; });
+                    const employeesData = await dbService.employees.getAll().catch(e => { console.warn("Employees load failed", e); return []; });
+                    const attendancesData = await dbService.attendances.getAll().catch(e => { console.warn("Attendances load failed", e); return []; });
 
                     setCreditNotes(creditNotesData.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
                     setPayments(paymentsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
@@ -176,8 +170,8 @@ const MainContent: React.FC = () => {
         return `${prefix}${(maxCode + 1).toString().padStart(3, '0')}`;
     };
 
-    const generateDocumentId = (type: 'quote' | 'invoice' | 'purchaseOrder' | 'deliveryNote' | 'creditNote', currentItems: { id: string, documentId?: string }[]) => {
-        const currentYear = new Date().getFullYear();
+    const generateDocumentId = (type: 'quote' | 'invoice' | 'purchaseOrder' | 'deliveryNote' | 'creditNote', currentItems: { id: string, documentId?: string }[], forcedRank?: number, overrideYear?: number) => {
+        const currentYear = overrideYear || new Date().getFullYear();
         const configKeys: Record<string, keyof CompanySettings> = {
             invoice: 'invoiceNumbering',
             quote: 'quoteNumbering',
@@ -193,16 +187,22 @@ const MainContent: React.FC = () => {
             if (config.yearFormat === 'YYYY') yearStr = String(currentYear);
             else if (config.yearFormat === 'YY') yearStr = String(currentYear).slice(-2);
             const pattern = yearStr ? `${customPrefix}${sep}${yearStr}${sep}` : `${customPrefix}${sep}`;
-            const numbers = currentItems.map(item => {
-                const idToCheck = item.documentId || item.id;
-                if (idToCheck && idToCheck.startsWith(pattern)) {
-                    const numberPart = idToCheck.replace(pattern, '');
-                    return !isNaN(Number(numberPart)) ? parseInt(numberPart, 10) : 0;
-                }
-                return 0;
-            });
-            const maxExisting = numbers.length > 0 ? Math.max(...numbers) : 0;
-            const nextNumber = Math.max(config.startNumber || 1, maxExisting + 1);
+            
+            let nextNumber;
+            if (forcedRank !== undefined) {
+                nextNumber = (config.startNumber || 1) + forcedRank - 1;
+            } else {
+                const numbers = currentItems.map(item => {
+                    const idToCheck = item.documentId || item.id;
+                    if (idToCheck && idToCheck.startsWith(pattern)) {
+                        const numberPart = idToCheck.replace(pattern, '');
+                        return !isNaN(Number(numberPart)) ? parseInt(numberPart, 10) : 0;
+                    }
+                    return 0;
+                });
+                const maxExisting = numbers.length > 0 ? Math.max(...numbers) : 0;
+                nextNumber = Math.max(config.startNumber || 1, maxExisting + 1);
+            }
             return `${pattern}${String(nextNumber).padStart(config.padding || 5, '0')}`;
         }
         let prefix = '';
@@ -215,19 +215,106 @@ const MainContent: React.FC = () => {
             default: prefix = 'DOC';
         }
         const pattern = `${prefix}/${currentYear}/`;
-        const numbers = currentItems.map(item => {
-            const idToCheck = item.documentId || item.id;
-            if (idToCheck && idToCheck.startsWith(pattern)) {
-                const numberPart = idToCheck.replace(pattern, '');
-                return !isNaN(Number(numberPart)) ? parseInt(numberPart, 10) : 0;
+        let nextNumber;
+        if (forcedRank !== undefined) {
+            nextNumber = forcedRank;
+        } else {
+            const numbers = currentItems.map(item => {
+                const idToCheck = item.documentId || item.id;
+                if (idToCheck && idToCheck.startsWith(pattern)) {
+                    const numberPart = idToCheck.replace(pattern, '');
+                    return !isNaN(Number(numberPart)) ? parseInt(numberPart, 10) : 0;
+                }
+                return 0;
+            });
+            nextNumber = (numbers.length > 0 ? Math.max(...numbers) : 0) + 1;
+            if (nextNumber === 1 && currentItems.length > 0) {
+                nextNumber = currentItems.length + 1;
             }
-            return 0;
-        });
-        let nextNumber = (numbers.length > 0 ? Math.max(...numbers) : 0) + 1;
-        if (nextNumber === 1 && currentItems.length > 0) {
-            nextNumber = currentItems.length + 1;
         }
         return `${pattern}${nextNumber.toString().padStart(5, '0')}`;
+    };
+
+    const resequenceDocumentIds = async (type: 'invoice' | 'quote' | 'deliveryNote' | 'purchaseOrder' | 'creditNote', itemsAfterDeletion: any[]) => {
+        // 1. Filter out items that are NOT from the current year to avoid mixing sequences
+        // Actually, for simplicity we sort ALL of them by date. 
+        // If they have distinct years, the generateDocumentId (based on current date) might be problematic.
+        // But usually people only delete recent ones.
+        
+        // Sorting items by date ASC then by current documentId to maintain relative order
+        const sorted = [...itemsAfterDeletion].sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            if (dateA !== dateB) return dateA - dateB;
+            return (a.documentId || '').localeCompare(b.documentId || '');
+        });
+
+        const updates: any[] = [];
+        const paymentUpdates: Payment[] = [];
+
+        for (let i = 0; i < sorted.length; i++) {
+            const item = sorted[i];
+            const newRank = i + 1;
+            const docYear = item.date ? new Date(item.date).getFullYear() : new Date().getFullYear();
+            const newDocId = generateDocumentId(type, [], newRank, docYear);
+
+            if (item.documentId !== newDocId) {
+                const updatedItem = { ...item, documentId: newDocId };
+                updates.push(updatedItem);
+                
+                // Special case: update related payments if invoice
+                if (type === 'invoice') {
+                    const relatedPayments = payments.filter(p => p.invoiceId === item.id);
+                    relatedPayments.forEach(p => {
+                        if (p.invoiceNumber !== newDocId) {
+                            paymentUpdates.push({ ...p, invoiceNumber: newDocId });
+                        }
+                    });
+                }
+            }
+        }
+
+        if (updates.length > 0) {
+            try {
+                // Batch updates in database
+                const storeName = type === 'purchaseOrder' ? 'purchaseOrders' : type + 's';
+                await (dbService[storeName] as any).bulkUpdate(updates);
+                
+                if (paymentUpdates.length > 0) {
+                    await dbService.payments.bulkUpdate(paymentUpdates);
+                    setPayments(prev => {
+                        const newPayments = [...prev];
+                        paymentUpdates.forEach(upd => {
+                            const idx = newPayments.findIndex(p => p.id === upd.id);
+                            if (idx !== -1) newPayments[idx] = upd;
+                        });
+                        return newPayments;
+                    });
+                }
+
+                // Update UI state
+                const setters: Record<string, any> = {
+                    invoice: setInvoices,
+                    quote: setQuotes,
+                    deliveryNote: setDeliveryNotes,
+                    purchaseOrder: setPurchaseOrders,
+                    creditNote: setCreditNotes
+                };
+                
+                setters[type](prev => {
+                    const newState = [...prev];
+                    updates.forEach(upd => {
+                        const idx = newState.findIndex(it => it.id === upd.id);
+                        if (idx !== -1) newState[idx] = upd;
+                    });
+                    // Re-sort by documentId DESC for standard display
+                    return newState.sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id));
+                });
+
+            } catch (err) {
+                console.error(`Failed to resequence ${type}:`, err);
+            }
+        }
     };
 
     const addClient = async (client: Omit<Client, 'id' | 'clientCode'>) => {
@@ -496,7 +583,9 @@ const MainContent: React.FC = () => {
     const deleteQuote = async (quoteId: string) => {
         try {
             await dbService.quotes.delete(quoteId);
-            setQuotes(prev => prev.filter(q => q.id !== quoteId));
+            const remaining = quotes.filter(q => q.id !== quoteId);
+            setQuotes(remaining);
+            await resequenceDocumentIds('quote', remaining);
         } catch (e: any) {
             alert("Erreur suppression devis: " + e.message);
         }
@@ -652,7 +741,10 @@ const MainContent: React.FC = () => {
             await dbService.invoices.delete(invoiceId);
             setPayments(prev => prev.filter(p => p.invoiceId !== invoiceId));
             setCreditNotes(prev => prev.filter(cn => cn.invoiceId !== invoiceId));
-            setInvoices(prev => prev.filter(inv => inv.id !== invoiceId));
+            
+            const remaining = invoices.filter(inv => inv.id !== invoiceId);
+            setInvoices(remaining);
+            await resequenceDocumentIds('invoice', remaining);
         } catch (e: any) {
             alert("Erreur suppression facture: " + e.message);
         }
@@ -790,7 +882,9 @@ const MainContent: React.FC = () => {
     const deleteCreditNote = async (id: string) => {
         try {
             await dbService.creditNotes.delete(id);
-            setCreditNotes(prev => prev.filter(cn => cn.id !== id));
+            const remaining = creditNotes.filter(cn => cn.id !== id);
+            setCreditNotes(remaining);
+            await resequenceDocumentIds('creditNote', remaining);
         } catch (e: any) {
             alert("Erreur suppression avoir: " + e.message);
         }
@@ -822,7 +916,7 @@ const MainContent: React.FC = () => {
             const documentId = generateDocumentId('deliveryNote', deliveryNotes);
             const newNote: DeliveryNote = { id: generateUUID(), documentId: documentId, ...noteData };
             await dbService.deliveryNotes.add(newNote);
-            setDeliveryNotes(prev => [newNote, ...prev]);
+            setDeliveryNotes(prev => [newNote, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
             // Only deduct stock if this BL is NOT created from an existing invoice that already deducted stock
             const sourceInvoice = noteData.invoiceId ? invoices.find(inv => inv.documentId === noteData.invoiceId || inv.id === noteData.invoiceId) : null;
             const stockAlreadyDeducted = sourceInvoice && sourceInvoice.status !== InvoiceStatus.Draft;
@@ -883,7 +977,9 @@ const MainContent: React.FC = () => {
                 }
             }
             await dbService.deliveryNotes.delete(noteId);
-            setDeliveryNotes(prev => prev.filter(n => n.id !== noteId));
+            const remaining = deliveryNotes.filter(n => n.id !== noteId);
+            setDeliveryNotes(remaining);
+            await resequenceDocumentIds('deliveryNote', remaining);
         } catch (e: any) {
             alert("Erreur suppression BL: " + e.message);
         }
@@ -1023,7 +1119,9 @@ const MainContent: React.FC = () => {
 
             await dbService.purchaseOrders.delete(orderId);
             setStockMovements(prev => prev.filter(m => m.reference !== refPattern));
-            setPurchaseOrders(prev => prev.filter(o => o.id !== orderId));
+            const remaining = purchaseOrders.filter(o => o.id !== orderId);
+            setPurchaseOrders(remaining);
+            await resequenceDocumentIds('purchaseOrder', remaining);
         } catch (e: any) {
             alert("Erreur suppression commande: " + e.message);
         }
