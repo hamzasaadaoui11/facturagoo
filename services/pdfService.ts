@@ -674,7 +674,7 @@ export const generateDocumentHTML = (
       const isLast = idx === activeColumns.length - 1;
       const borderStyle = "";
 
-      return `<th style="padding: ${options?.isPDFDownload ? "6px 12px 14px 12px" : "10px 12px"}; text-align: ${align}; vertical-align: middle; line-height: 1.2; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; ${borderStyle} ${width}">${col.label}</th>`;
+      return `<th style="padding: ${options?.isPDFDownload ? "6px 12px 14px 12px" : "10px 12px"}; text-align: ${align}; vertical-align: middle; line-height: 1.2; font-size: 11px; text-transform: uppercase; white-space: nowrap; letter-spacing: 0.05em; ${borderStyle} ${width}">${col.label}</th>`;
     })
     .join("");
 

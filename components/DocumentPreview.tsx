@@ -187,34 +187,34 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                     <table className="w-full text-left table-auto" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
                         <thead>
                             <tr style={{ backgroundColor: primaryColor, color: 'white' }}>
-                                {showReference && <th className="py-3 px-4 align-middle font-semibold uppercase text-[10px] rounded-tl-lg rounded-bl-lg w-20">{t('refLabel')}</th>}
-                                <th className={`py-3 px-2 align-middle font-semibold uppercase text-[10px] ${!showReference ? 'rounded-tl-lg rounded-bl-lg' : ''} min-w-[320px]`}>{t('description')}</th>
-                                <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-14">{t('unit')}</th>
-                                <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-10">{t('quantity')}</th>
+                                {showReference && <th className="py-3 px-4 align-middle font-semibold uppercase text-[10px] rounded-tl-lg rounded-bl-lg w-20 whitespace-nowrap">{t('refLabel')}</th>}
+                                <th className={`py-3 px-2 align-middle font-semibold uppercase text-[10px] ${!showReference ? 'rounded-tl-lg rounded-bl-lg' : ''} min-w-[320px] whitespace-nowrap`}>{t('description')}</th>
+                                <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-14 whitespace-nowrap">{t('unit')}</th>
+                                <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-10 whitespace-nowrap">{t('quantity')}</th>
                                 {isM2 && (
                                     <>
-                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-10">Larg.</th>
-                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-10">Haut.</th>
-                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-12">M²</th>
+                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-10 whitespace-nowrap">Larg.</th>
+                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-10 whitespace-nowrap">Haut.</th>
+                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-12 whitespace-nowrap">M²</th>
                                     </>
                                 )}
                                 {isML && (
                                     <>
-                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-12">Long.</th>
-                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-12">ML</th>
+                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-12 whitespace-nowrap">Long.</th>
+                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-12 whitespace-nowrap">ML</th>
                                     </>
                                 )}
                                 {isKg && (
                                     <>
-                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-14">Poids</th>
-                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-14">Total kg</th>
+                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-14 whitespace-nowrap">Poids</th>
+                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-14 whitespace-nowrap">Total kg</th>
                                     </>
                                 )}
                                 {!isDeliveryNote && (
                                     <>
-                                        <th className="py-3 px-2 align-middle text-right font-semibold uppercase text-[10px] w-20">{t('unitPrice')}</th>
-                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-10">{t('vat')}</th>
-                                        <th className="py-3 px-4 align-middle text-right font-semibold uppercase text-[10px] w-24 rounded-tr-lg rounded-br-lg">{t('totalHT')}</th>
+                                        <th className="py-3 px-2 align-middle text-right font-semibold uppercase text-[10px] w-20 whitespace-nowrap">{t('unitPrice')}</th>
+                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-10 whitespace-nowrap">{t('vat')}</th>
+                                        <th className="py-3 px-4 align-middle text-right font-semibold uppercase text-[10px] w-24 rounded-tr-lg rounded-br-lg whitespace-nowrap">{t('totalHT')}</th>
                                     </>
                                 )}
                             </tr>
