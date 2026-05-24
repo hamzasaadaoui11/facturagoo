@@ -22,9 +22,6 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const wrapperRef = useRef<HTMLDivElement>(null);
 
-    const [hoveredImage, setHoveredImage] = useState<string | null>(null);
-    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-
     const selectedProduct = products.find(p => p.id === selectedProductId);
 
     useEffect(() => {
@@ -99,34 +96,8 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
                                     className={`w-full text-left px-4 py-2.5 text-xs flex flex-col hover:bg-emerald-50 transition-colors ${selectedProductId === product.id ? 'bg-emerald-50 border-l-2 border-emerald-500' : ''}`}
                                     onClick={() => handleSelect(product)}
                                 >
-                                    <div className="flex items-start gap-2">
-                                        <div 
-                                            className="relative h-8 w-8 flex-shrink-0"
-                                            onMouseEnter={(e) => {
-                                                if (product.imageUrl) {
-                                                    setHoveredImage(product.imageUrl);
-                                                    setMousePos({ x: e.clientX, y: e.clientY });
-                                                }
-                                            }}
-                                            onMouseMove={(e) => {
-                                                if (product.imageUrl) {
-                                                    setMousePos({ x: e.clientX, y: e.clientY });
-                                                }
-                                            }}
-                                            onMouseLeave={() => setHoveredImage(null)}
-                                        >
-                                            {product.imageUrl ? (
-                                                <img 
-                                                    src={product.imageUrl} 
-                                                    alt={product.name} 
-                                                    className="h-full w-full object-cover rounded border border-slate-100 cursor-zoom-in" 
-                                                />
-                                            ) : (
-                                                <div className="h-full w-full flex items-center justify-center bg-slate-50 rounded border border-slate-100">
-                                                    <Package className="h-4 w-4 text-slate-300" />
-                                                </div>
-                                            )}
-                                        </div>
+                                    <div className="flex items-start gap-2.5">
+                                        <Package className="h-4 w-4 text-emerald-500 mt-1 flex-shrink-0" />
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-start">
                                                 <div className="flex flex-col">
@@ -170,24 +141,6 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
                             {t('noResults')}
                         </div>
                     )}
-                </div>
-            )}
-
-            {hoveredImage && (
-                <div 
-                    className="fixed z-[9999] pointer-events-none shadow-2xl p-1 bg-white rounded-2xl border border-slate-200 animate-in fade-in zoom-in duration-200"
-                    style={{ 
-                        left: `${mousePos.x + 20}px`, 
-                        top: `${Math.min(mousePos.y - 100, window.innerHeight - 320)}px`,
-                        width: '300px',
-                        height: '300px'
-                    }}
-                >
-                    <img 
-                        src={hoveredImage} 
-                        alt="Preview" 
-                        className="w-full h-full object-cover rounded-xl"
-                    />
                 </div>
             )}
         </div>
