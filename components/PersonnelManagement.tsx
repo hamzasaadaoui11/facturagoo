@@ -89,6 +89,353 @@ const translate = (key: string, language: string) => {
     return translations[language]?.[key] || translations['fr'][key] || key;
 };
 
+// Employee Form Component
+interface EmployeeFormProps {
+    employee?: Employee | null;
+    onSave: (e: Employee) => void;
+    onCancel: () => void;
+    t: (key: string) => string;
+}
+
+const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onSave, onCancel, t }) => {
+    const [formData, setFormData] = useState<Partial<Employee>>(employee || {
+        firstName: '', lastName: '', role: '', phone: '', email: '', 
+        dailyRate: 0, monthlySalary: 0, paymentType: 'Monthly', 
+        joinDate: new Date().toISOString().split('T')[0], isActive: true
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave({
+            ...formData,
+            id: employee?.id || crypto.randomUUID(),
+        } as Employee);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <UserCheck className="w-6 h-6 text-emerald-600" />
+                        {employee ? t('edit') : t('addEmployee')}
+                    </h2>
+                    <button onClick={onCancel} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-full transition-colors">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                <div className="p-6 overflow-y-auto flex-1">
+                    <form id="employeeForm" onSubmit={handleSubmit} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">{t('firstName')} *</label>
+                                <input required type="text" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">{t('lastName')} *</label>
+                                <input required type="text" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">{t('role')} *</label>
+                                <input required type="text" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">{t('joinDate')} *</label>
+                                <input required type="date" value={formData.joinDate} onChange={e => setFormData({...formData, joinDate: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Phone</label>
+                                <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Email</label>
+                                <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 mt-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">{t('paymentType')} *</label>
+                                <select value={formData.paymentType} onChange={e => setFormData({...formData, paymentType: e.target.value as any})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
+                                    <option value="Monthly">Mensuel</option>
+                                    <option value="Daily">Journalier</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">
+                                    {formData.paymentType === 'Monthly' ? t('monthlySalary') : t('dailyRate')} *
+                                </label>
+                                <input required type="number" step="1" min="0" value={formData.paymentType === 'Monthly' ? formData.monthlySalary : formData.dailyRate} onChange={e => {
+                                    if (formData.paymentType === 'Monthly') setFormData({...formData, monthlySalary: parseFloat(e.target.value)});
+                                    else setFormData({...formData, dailyRate: parseFloat(e.target.value)});
+                                }} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
+                    <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                        {t('cancel')}
+                    </button>
+                    <button form="employeeForm" type="submit" className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                        {t('save')}
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
+// Attendance Form Component
+interface AttendanceFormProps {
+    attendance?: Attendance | null;
+    onSave: (a: Attendance | Attendance[]) => void;
+    onCancel: () => void;
+    onDelete?: (id: string) => void;
+    employeesList: Employee[];
+    t: (key: string) => string;
+}
+
+const AttendanceForm: React.FC<AttendanceFormProps> = ({ attendance, onSave, onCancel, onDelete, employeesList, t }) => {
+    const [formData, setFormData] = useState<Partial<Attendance>>(attendance || {
+        employeeId: employeesList.length > 0 ? employeesList[0].id : '',
+        date: new Date().toISOString().split('T')[0],
+        status: 'Present',
+        note: ''
+    });
+    const [endDate, setEndDate] = useState(formData.date || new Date().toISOString().split('T')[0]);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!attendance && (formData.status === 'Absent' || formData.status === 'Leave') && formData.date && endDate && new Date(formData.date) <= new Date(endDate)) {
+            // Generate range
+            const records: Attendance[] = [];
+            let current = new Date(formData.date);
+            const end = new Date(endDate);
+            while (current <= end) {
+                records.push({
+                    ...formData,
+                    id: crypto.randomUUID(),
+                    date: current.toISOString().split('T')[0]
+                } as Attendance);
+                current.setDate(current.getDate() + 1);
+            }
+            onSave(records);
+        } else {
+            onSave({
+                ...formData,
+                id: attendance?.id || crypto.randomUUID(),
+            } as Attendance);
+        }
+    };
+
+    const isRange = !attendance && (formData.status === 'Absent' || formData.status === 'Leave');
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <Calendar className="w-6 h-6 text-emerald-600" />
+                        {attendance ? t('edit') : t('addAttendance')}
+                    </h2>
+                    <button type="button" onClick={onCancel} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-full transition-colors">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                <div className="p-6 overflow-y-auto flex-1">
+                    <form id="attendanceForm" onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700">{t('employee')} *</label>
+                            <select required value={formData.employeeId} onChange={e => setFormData({...formData, employeeId: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" disabled={!!attendance}>
+                                <option value="" disabled>{t('selectEmployee')}</option>
+                                {employeesList.map(emp => (
+                                    <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className={`grid ${isRange ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'} gap-4`}>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">{t('status')} *</label>
+                                <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
+                                    <option value="Present">{t('present')}</option>
+                                    <option value="Absent">{t('absent')}</option>
+                                    <option value="Half-day">{t('halfDay')}</option>
+                                    <option value="Leave">{t('leave')}</option>
+                                </select>
+                            </div>
+                            {isRange ? (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">De *</label>
+                                        <input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">Jusqu'à *</label>
+                                        <input required type="date" value={endDate} min={formData.date} onChange={e => setEndDate(e.target.value)} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                    </div>
+                                </>
+                            ) : (
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">{t('date')} *</label>
+                                    <input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700">{t('note')}</label>
+                            <textarea value={formData.note || ''} onChange={e => setFormData({...formData, note: e.target.value})} rows={3} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center gap-3 rounded-b-2xl">
+                    {attendance && onDelete ? (
+                        <button type="button" onClick={() => onDelete(attendance.id)} className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors rounded-lg flex items-center gap-2">
+                            <Trash2 className="w-4 h-4" />
+                            {t('delete')}
+                        </button>
+                    ) : (
+                        <div></div>
+                    )}
+                    <div className="flex justify-end gap-3">
+                        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                            {t('cancel')}
+                        </button>
+                        <button form="attendanceForm" type="submit" className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                            {t('save')}
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
+// Payment Form Component
+interface PaymentFormProps {
+    payment?: SalaryPayment | null;
+    onSave: (p: SalaryPayment) => void;
+    onCancel: () => void;
+    employeesList: Employee[];
+    t: (key: string) => string;
+}
+
+const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSave, onCancel, employeesList, t }) => {
+    const [formData, setFormData] = useState<Partial<SalaryPayment>>(payment || {
+        employeeId: employeesList.length > 0 ? employeesList[0].id : '',
+        amount: 0,
+        paymentDate: new Date().toISOString().split('T')[0],
+        periodStart: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+        periodEnd: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0],
+        status: 'Paid',
+        type: 'Salary',
+        note: ''
+    });
+
+    // When employee changes, update default amount
+    useEffect(() => {
+        if (!payment && formData.employeeId && formData.type === 'Salary') {
+            const emp = employeesList.find(e => e.id === formData.employeeId);
+            if (emp) {
+                setFormData(prev => ({ ...prev, amount: emp.monthlySalary || 0 }));
+            }
+        }
+    }, [formData.employeeId, formData.type, employeesList, payment]);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSave({
+            ...formData,
+            id: payment?.id || crypto.randomUUID(),
+        } as SalaryPayment);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
+                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <DollarSign className="w-6 h-6 text-emerald-600" />
+                        {payment ? t('edit') : 'Nouveau paiement'}
+                    </h2>
+                    <button type="button" onClick={onCancel} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-full transition-colors">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                <div className="p-6 overflow-y-auto flex-1">
+                    <form id="paymentForm" onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700">{t('employee')} *</label>
+                            <select required value={formData.employeeId} onChange={e => setFormData({...formData, employeeId: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
+                                <option value="" disabled>{t('selectEmployee')}</option>
+                                {employeesList.map(emp => (
+                                    <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Type de paiement *</label>
+                                <select required value={formData.type as string} onChange={e => setFormData({...formData, type: e.target.value as any})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
+                                    <option value="Salary">Salaire</option>
+                                    <option value="Advance">Avance</option>
+                                    <option value="Bonus">Prime / Bonus</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">{t('amount')} *</label>
+                                <input required type="number" step="0.01" min="0" value={formData.amount} onChange={e => setFormData({...formData, amount: parseFloat(e.target.value)})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700">Date de paiement *</label>
+                            <input required type="date" value={formData.paymentDate} onChange={e => setFormData({...formData, paymentDate: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Période du</label>
+                                <input required type="date" value={formData.periodStart} onChange={e => setFormData({...formData, periodStart: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Période au</label>
+                                <input required type="date" value={formData.periodEnd} onChange={e => setFormData({...formData, periodEnd: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Statut *</label>
+                                <select required value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
+                                    <option value="Paid">Payé</option>
+                                    <option value="Pending">En attente</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">Référence</label>
+                                <input type="text" value={formData.reference || ''} onChange={e => setFormData({...formData, reference: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700">{t('note')}</label>
+                            <textarea value={formData.note || ''} onChange={e => setFormData({...formData, note: e.target.value})} rows={2} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
+                    <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                        {t('cancel')}
+                    </button>
+                    <button form="paymentForm" type="submit" className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                        {t('save')}
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
 interface PersonnelManagementProps {
     companySettings?: CompanySettings | null;
     onAddExpense?: (expense: Omit<any, 'id'>) => Promise<void>;
@@ -263,327 +610,6 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
     const handleDeletePayment = (id: string) => {
         setPaymentToDelete(id);
         setIsConfirmOpen(true);
-    };
-
-    // Employee Form Component
-    const EmployeeForm = ({ employee, onSave, onCancel }: { employee?: Employee | null, onSave: (e: Employee) => void, onCancel: () => void }) => {
-        const [formData, setFormData] = useState<Partial<Employee>>(employee || {
-            firstName: '', lastName: '', role: '', phone: '', email: '', 
-            dailyRate: 0, monthlySalary: 0, paymentType: 'Monthly', 
-            joinDate: new Date().toISOString().split('T')[0], isActive: true
-        });
-
-        const handleSubmit = (e: React.FormEvent) => {
-            e.preventDefault();
-            onSave({
-                ...formData,
-                id: employee?.id || crypto.randomUUID(),
-            } as Employee);
-        };
-
-        return (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
-                        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                            <UserCheck className="w-6 h-6 text-emerald-600" />
-                            {employee ? t('edit') : t('addEmployee')}
-                        </h2>
-                        <button onClick={onCancel} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-full transition-colors">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-                    <div className="p-6 overflow-y-auto flex-1">
-                        <form id="employeeForm" onSubmit={handleSubmit} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">{t('firstName')} *</label>
-                                    <input required type="text" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">{t('lastName')} *</label>
-                                    <input required type="text" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">{t('role')} *</label>
-                                    <input required type="text" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">{t('joinDate')} *</label>
-                                    <input required type="date" value={formData.joinDate} onChange={e => setFormData({...formData, joinDate: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">Phone</label>
-                                    <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">Email</label>
-                                    <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 mt-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">{t('paymentType')} *</label>
-                                    <select value={formData.paymentType} onChange={e => setFormData({...formData, paymentType: e.target.value as any})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
-                                        <option value="Monthly">Mensuel</option>
-                                        <option value="Daily">Journalier</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">
-                                        {formData.paymentType === 'Monthly' ? t('monthlySalary') : t('dailyRate')} *
-                                    </label>
-                                    <input required type="number" step="1" min="0" value={formData.paymentType === 'Monthly' ? formData.monthlySalary : formData.dailyRate} onChange={e => {
-                                        if (formData.paymentType === 'Monthly') setFormData({...formData, monthlySalary: parseFloat(e.target.value)});
-                                        else setFormData({...formData, dailyRate: parseFloat(e.target.value)});
-                                    }} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
-                        <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-                            {t('cancel')}
-                        </button>
-                        <button form="employeeForm" type="submit" className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
-                            {t('save')}
-                        </button>
-                    </div>
-                </motion.div>
-            </div>
-        );
-    };
-
-    const AttendanceForm = ({ attendance, onSave, onCancel, onDelete, employeesList }: { attendance?: Attendance | null, onSave: (a: Attendance | Attendance[]) => void, onCancel: () => void, onDelete?: (id: string) => void, employeesList: Employee[] }) => {
-        const [formData, setFormData] = useState<Partial<Attendance>>(attendance || {
-            employeeId: employeesList.length > 0 ? employeesList[0].id : '',
-            date: new Date().toISOString().split('T')[0],
-            status: 'Present',
-            note: ''
-        });
-        const [endDate, setEndDate] = useState(formData.date || new Date().toISOString().split('T')[0]);
-
-        const handleSubmit = (e: React.FormEvent) => {
-            e.preventDefault();
-            if (!attendance && (formData.status === 'Absent' || formData.status === 'Leave') && formData.date && endDate && new Date(formData.date) <= new Date(endDate)) {
-                // Generate range
-                const records: Attendance[] = [];
-                let current = new Date(formData.date);
-                const end = new Date(endDate);
-                while (current <= end) {
-                    records.push({
-                        ...formData,
-                        id: crypto.randomUUID(),
-                        date: current.toISOString().split('T')[0]
-                    } as Attendance);
-                    current.setDate(current.getDate() + 1);
-                }
-                onSave(records);
-            } else {
-                onSave({
-                    ...formData,
-                    id: attendance?.id || crypto.randomUUID(),
-                } as Attendance);
-            }
-        };
-
-        const isRange = !attendance && (formData.status === 'Absent' || formData.status === 'Leave');
-
-        return (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
-                        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                            <Calendar className="w-6 h-6 text-emerald-600" />
-                            {attendance ? t('edit') : t('addAttendance')}
-                        </h2>
-                        <button type="button" onClick={onCancel} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-full transition-colors">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-                    <div className="p-6 overflow-y-auto flex-1">
-                        <form id="attendanceForm" onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700">{t('employee')} *</label>
-                                <select required value={formData.employeeId} onChange={e => setFormData({...formData, employeeId: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" disabled={!!attendance}>
-                                    <option value="" disabled>{t('selectEmployee')}</option>
-                                    {employeesList.map(emp => (
-                                        <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className={`grid ${isRange ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'} gap-4`}>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">{t('status')} *</label>
-                                    <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
-                                        <option value="Present">{t('present')}</option>
-                                        <option value="Absent">{t('absent')}</option>
-                                        <option value="Half-day">{t('halfDay')}</option>
-                                        <option value="Leave">{t('leave')}</option>
-                                    </select>
-                                </div>
-                                {isRange ? (
-                                    <>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700">De *</label>
-                                            <input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700">Jusqu'à *</label>
-                                            <input required type="date" value={endDate} min={formData.date} onChange={e => setEndDate(e.target.value)} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700">{t('date')} *</label>
-                                        <input required type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                    </div>
-                                )}
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700">{t('note')}</label>
-                                <textarea value={formData.note || ''} onChange={e => setFormData({...formData, note: e.target.value})} rows={3} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"></textarea>
-                            </div>
-                        </form>
-                    </div>
-                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center gap-3 rounded-b-2xl">
-                        {attendance && onDelete ? (
-                            <button type="button" onClick={() => onDelete(attendance.id)} className="px-4 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors rounded-lg flex items-center gap-2">
-                                <Trash2 className="w-4 h-4" />
-                                {t('delete')}
-                            </button>
-                        ) : (
-                            <div></div>
-                        )}
-                        <div className="flex justify-end gap-3">
-                            <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-                                {t('cancel')}
-                            </button>
-                            <button form="attendanceForm" type="submit" className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
-                                {t('save')}
-                            </button>
-                        </div>
-                    </div>
-                </motion.div>
-            </div>
-        );
-    };
-
-    const PaymentForm = ({ payment, onSave, onCancel, employeesList }: { payment?: SalaryPayment | null, onSave: (p: SalaryPayment) => void, onCancel: () => void, employeesList: Employee[] }) => {
-        const [formData, setFormData] = useState<Partial<SalaryPayment>>(payment || {
-            employeeId: employeesList.length > 0 ? employeesList[0].id : '',
-            amount: 0,
-            paymentDate: new Date().toISOString().split('T')[0],
-            periodStart: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-            periodEnd: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0],
-            status: 'Paid',
-            type: 'Salary',
-            note: ''
-        });
-
-        // When employee changes, update default amount
-        useEffect(() => {
-            if (!payment && formData.employeeId && formData.type === 'Salary') {
-                const emp = employeesList.find(e => e.id === formData.employeeId);
-                if (emp) {
-                    setFormData(prev => ({ ...prev, amount: emp.monthlySalary || 0 }));
-                }
-            }
-        }, [formData.employeeId, formData.type, employeesList, payment]);
-
-        const handleSubmit = (e: React.FormEvent) => {
-            e.preventDefault();
-            onSave({
-                ...formData,
-                id: payment?.id || crypto.randomUUID(),
-            } as SalaryPayment);
-        };
-
-        return (
-            <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
-                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-2xl">
-                        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                            <DollarSign className="w-6 h-6 text-emerald-600" />
-                            {payment ? t('edit') : 'Nouveau paiement'}
-                        </h2>
-                        <button type="button" onClick={onCancel} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-full transition-colors">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-                    <div className="p-6 overflow-y-auto flex-1">
-                        <form id="paymentForm" onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700">{t('employee')} *</label>
-                                <select required value={formData.employeeId} onChange={e => setFormData({...formData, employeeId: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
-                                    <option value="" disabled>{t('selectEmployee')}</option>
-                                    {employeesList.map(emp => (
-                                        <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">Type de paiement *</label>
-                                    <select required value={formData.type as string} onChange={e => setFormData({...formData, type: e.target.value as any})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
-                                        <option value="Salary">Salaire</option>
-                                        <option value="Advance">Avance</option>
-                                        <option value="Bonus">Prime / Bonus</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">{t('amount')} *</label>
-                                    <input required type="number" step="0.01" min="0" value={formData.amount} onChange={e => setFormData({...formData, amount: parseFloat(e.target.value)})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700">Date de paiement *</label>
-                                <input required type="date" value={formData.paymentDate} onChange={e => setFormData({...formData, paymentDate: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">Période du</label>
-                                    <input required type="date" value={formData.periodStart} onChange={e => setFormData({...formData, periodStart: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">Période au</label>
-                                    <input required type="date" value={formData.periodEnd} onChange={e => setFormData({...formData, periodEnd: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">Statut *</label>
-                                    <select required value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm">
-                                        <option value="Paid">Payé</option>
-                                        <option value="Pending">En attente</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">Référence</label>
-                                    <input type="text" value={formData.reference || ''} onChange={e => setFormData({...formData, reference: e.target.value})} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm" />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700">{t('note')}</label>
-                                <textarea value={formData.note || ''} onChange={e => setFormData({...formData, note: e.target.value})} rows={2} className="mt-1 block w-full rounded-lg border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"></textarea>
-                            </div>
-                        </form>
-                    </div>
-                    <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
-                        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-                            {t('cancel')}
-                        </button>
-                        <button form="paymentForm" type="submit" className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
-                            {t('save')}
-                        </button>
-                    </div>
-                </motion.div>
-            </div>
-        );
     };
 
     const renderCalendar = () => {
@@ -982,7 +1008,7 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
             </div>
 
             {isAddEmployeeModalOpen && (
-                <EmployeeForm employee={employeeToEdit} onSave={handleSaveEmployee} onCancel={() => { setIsAddEmployeeModalOpen(false); setEmployeeToEdit(null); }} />
+                <EmployeeForm employee={employeeToEdit} onSave={handleSaveEmployee} onCancel={() => { setIsAddEmployeeModalOpen(false); setEmployeeToEdit(null); }} t={t} />
             )}
 
             {isAddAttendanceModalOpen && (
@@ -995,11 +1021,12 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
                         handleDeleteAttendance(id);
                     }}
                     employeesList={employees} 
+                    t={t}
                 />
             )}
 
             {isAddPaymentModalOpen && (
-                <PaymentForm payment={paymentToEdit} onSave={handleSavePayment} onCancel={() => { setIsAddPaymentModalOpen(false); setPaymentToEdit(null); }} employeesList={employees} />
+                <PaymentForm payment={paymentToEdit} onSave={handleSavePayment} onCancel={() => { setIsAddPaymentModalOpen(false); setPaymentToEdit(null); }} employeesList={employees} t={t} />
             )}
 
             <ConfirmationModal
