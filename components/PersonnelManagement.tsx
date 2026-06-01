@@ -176,6 +176,7 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
                 const added = await dbService.employees.add(emp);
                 setEmployees(prev => [...prev, added]);
             }
+            window.dispatchEvent(new CustomEvent('refreshAppData'));
             setIsAddEmployeeModalOpen(false);
             setEmployeeToEdit(null);
         } catch (err: any) {
@@ -194,9 +195,11 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
             if (employeeToDelete) {
                 await dbService.employees.delete(employeeToDelete);
                 setEmployees(prev => prev.filter(e => e.id !== employeeToDelete));
+                window.dispatchEvent(new CustomEvent('refreshAppData'));
             } else if (attendanceToDelete) {
                 await dbService.attendances.delete(attendanceToDelete);
                 setAttendances(prev => prev.filter(a => a.id !== attendanceToDelete));
+                window.dispatchEvent(new CustomEvent('refreshAppData'));
             } else if (paymentToDelete) {
                 await dbService.salaryPayments.delete(paymentToDelete);
                 setPayments(prev => prev.filter(p => p.id !== paymentToDelete));
@@ -224,6 +227,7 @@ const PersonnelManagement: React.FC<PersonnelManagementProps> = ({ companySettin
                 const added = await dbService.attendances.add(attData);
                 setAttendances(prev => [...prev, added]);
             }
+            window.dispatchEvent(new CustomEvent('refreshAppData'));
             setIsAddAttendanceModalOpen(false);
             setAttendanceToEdit(null);
         } catch (err: any) {

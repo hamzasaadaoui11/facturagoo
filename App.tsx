@@ -75,8 +75,10 @@ const MainContent: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const loadData = async (isRetry = false) => {
-            setIsLoading(true);
+        const loadData = async (isRetry = false, silent = false) => {
+            if (!silent) {
+                setIsLoading(true);
+            }
             setError(null);
             try {
                 await initDB();
@@ -131,18 +133,23 @@ const MainContent: React.FC = () => {
                     console.warn("JWT expired in loadData, attempting refresh...");
                     const { data, error: refreshError } = await supabase.auth.refreshSession();
                     if (!refreshError && data.session) {
-                        return loadData(true); // Retry once
+                        return loadData(true, silent); // Retry once
                     }
                 }
                 
                 setError(err.message || "Impossible de charger les données.");
             } finally {
-                setIsLoading(false);
+                if (!silent) {
+                    setIsLoading(false);
+                }
             }
         };
         loadData();
         
-        const handleRefresh = () => loadData();
+        const handleRefresh = (e?: any) => {
+            const silent = e?.detail?.silent !== false;
+            loadData(false, silent);
+        };
         window.addEventListener('refreshAppData', handleRefresh);
         return () => window.removeEventListener('refreshAppData', handleRefresh);
     }, []);
