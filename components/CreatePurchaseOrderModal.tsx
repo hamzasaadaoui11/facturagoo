@@ -161,8 +161,8 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
         if (productId) {
             const product = products.find(p => p.id === productId);
             if (product) {
-                setTempName(stripHtml(product.name));
-                setTempDesc('');
+                setTempName(stripHtml(product.description || product.name));
+                setTempDesc(stripHtml(product.description || ''));
                 const priceToDisplay = isModeTTC ? (product.purchasePrice * (1 + product.vat / 100)) : product.purchasePrice;
                 setTempPrice(formatDecimalForInput(priceToDisplay, language));
                 setTempVat(product.vat);

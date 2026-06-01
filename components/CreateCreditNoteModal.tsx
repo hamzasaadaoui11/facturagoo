@@ -139,8 +139,8 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
         if (selectedProductId) {
             const product = products.find(p => p.id === selectedProductId);
             if (product) {
-                setTempName(stripHtml(product.name));
-                setTempDesc('');
+                setTempName(stripHtml(product.description || product.name));
+                setTempDesc(stripHtml(product.description || ''));
                 const priceToDisplay = isModeTTC ? (product.salePrice * (1 + product.vat / 100)) : product.salePrice;
                 setTempPrice(priceToDisplay);
                 setTempVat(product.vat);

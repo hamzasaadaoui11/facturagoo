@@ -48,11 +48,19 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [selectedProduct]);
 
-    const filteredProducts = products.filter(product => 
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (product.productCode && product.productCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const isShowingPreselected = selectedProduct && searchTerm === selectedProduct.name;
+
+    const filteredProducts = products.filter(product => {
+        if (isShowingPreselected) return true;
+        
+        const term = searchTerm.toLowerCase().trim();
+        if (!term) return true;
+        
+        return product.name.toLowerCase().includes(term) ||
+            (product.description && product.description.toLowerCase().includes(term)) ||
+            (product.productCode && product.productCode.toLowerCase().includes(term)) ||
+            (product.category && product.category.toLowerCase().includes(term));
+    });
 
     const handleSelect = (product: Product) => {
         onSelect(product.id);
@@ -72,7 +80,10 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
                         setSearchTerm(e.target.value);
                         setIsOpen(true);
                     }}
-                    onFocus={() => setIsOpen(true)}
+                    onFocus={(e) => {
+                        setIsOpen(true);
+                        e.target.select();
+                    }}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && isOpen && filteredProducts.length > 0) {
                             e.preventDefault();

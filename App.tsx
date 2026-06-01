@@ -28,6 +28,7 @@ import Expenses from './components/Expenses';
 import PersonnelManagement from './components/PersonnelManagement';
 import LandingPage from './components/LandingPage';
 import Login from './components/Login';
+import ResetPassword from './components/ResetPassword';
 import UserProfile from './components/UserProfile';
 
 const LoadingScreen = () => (
@@ -1241,7 +1242,19 @@ const MainContent: React.FC = () => {
 const App: React.FC = () => {
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
+
     useEffect(() => {
+        // Detect password recovery in URL elements on first load
+        if (
+            window.location.hash.includes('type=recovery') || 
+            window.location.href.includes('type=recovery') ||
+            window.location.hash.includes('error_code=')
+        ) {
+            console.log("Detected password recovery trigger from URL parameters");
+            setIsResettingPassword(true);
+        }
+
         const initSession = async () => {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
@@ -1262,13 +1275,34 @@ const App: React.FC = () => {
                 // Clear any local storage that might interfere
                 localStorage.removeItem('supabase.auth.token');
             }
+            if (_event === 'PASSWORD_RECOVERY') {
+                console.log("Supabase PASSWORD_RECOVERY event received!");
+                setIsResettingPassword(true);
+            }
             setSession(session);
             setLoading(false);
         });
 
         return () => subscription.unsubscribe();
     }, []);
+
     if (loading) { return <LoadingScreen />; }
+
+    if (isResettingPassword) {
+        return (
+            <LanguageProvider>
+                <ResetPassword onClose={() => {
+                    setIsResettingPassword(false);
+                    try {
+                        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                        window.location.hash = '#/dashboard';
+                    } catch (e) {
+                        console.error("Failed to clean up hash after password update:", e);
+                    }
+                }} />
+            </LanguageProvider>
+        );
+    }
 
     return (
         <LanguageProvider>

@@ -213,23 +213,39 @@ const DEFAULT_COLUMNS: DocumentColumn[] = [
 export const generateDocumentHTML = (
   docType: DocumentType,
   doc: DocumentData,
-  settings: CompanySettings | null,
+  originalSettings: CompanySettings | null,
   recipient: Client | Supplier | undefined,
   options?: PDFOptions,
 ): string => {
-  if (!settings || !settings.companyName) {
-    throw new Error(
-      "Impossible de générer le document : Les informations de l'entreprise (Nom) sont manquantes dans les paramètres.",
-    );
-  }
+  const lang = localStorage.getItem("app_language") || "fr";
+  const defaultCompanyName = lang === "es" ? "Mi Empresa" : "Votre Entreprise";
+  
+  const settings = originalSettings ? {
+    ...originalSettings,
+    companyName: originalSettings.companyName || defaultCompanyName
+  } : {
+    id: "default",
+    companyName: defaultCompanyName,
+    primaryColor: "#10b981",
+    showAmountInWords: true,
+    priceDisplayMode: "HT",
+    address: "",
+    phone: "",
+    email: "",
+    website: "",
+    ice: "",
+    rc: "",
+    fiscalId: "",
+    patente: "",
+    cnss: "",
+    capital: "",
+  } as CompanySettings;
 
   if (!recipient) {
     throw new Error(
       "Impossible de générer le document : Les informations du client/fournisseur sont introuvables.",
     );
   }
-
-  const lang = localStorage.getItem("app_language") || "fr";
   const dict = (translations as any)[lang] || translations["fr"];
   const showPrices = options?.showPrices !== false;
   const showAmountInWords = settings.showAmountInWords !== false;
