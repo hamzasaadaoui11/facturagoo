@@ -312,6 +312,8 @@ export interface CompanySettings {
     capital?: string;  
     logo?: string;
     logoWidth?: number;
+    showLogoWatermark?: boolean;
+    logoWatermarkOpacity?: number;
     stamp?: string;
     primaryColor?: string;
     footerNotes?: string;

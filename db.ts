@@ -24,7 +24,9 @@ const LOCAL_STORAGE_KEYS = {
     SHOW_AMOUNT_IN_WORDS: 'facturago_show_amount_in_words',
     DOCUMENT_INFO_POSITION: 'facturago_document_info_position',
     SHOW_EXPIRY_DATE: 'facturago_show_expiry_date',
-    LOGO_WIDTH: 'facturago_logo_width'
+    LOGO_WIDTH: 'facturago_logo_width',
+    SHOW_LOGO_WATERMARK: 'facturago_show_logo_watermark',
+    LOGO_WATERMARK_OPACITY: 'facturago_logo_watermark_opacity'
 };
 
 export const initDB = async (): Promise<any> => {
@@ -691,12 +693,29 @@ export const dbService = {
                     } else if (settings.logoWidth === undefined) {
                         settings.logoWidth = 200;
                     }
+
+                    const localShowWatermark = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_LOGO_WATERMARK);
+                    if (localShowWatermark !== null) {
+                        settings.showLogoWatermark = localShowWatermark === 'true';
+                    } else if (settings.showLogoWatermark === undefined) {
+                        settings.showLogoWatermark = true;
+                    }
+
+                    const localWatermarkOpacity = localStorage.getItem(LOCAL_STORAGE_KEYS.LOGO_WATERMARK_OPACITY);
+                    if (localWatermarkOpacity !== null) {
+                        settings.logoWatermarkOpacity = parseFloat(localWatermarkOpacity);
+                    } else if (settings.logoWatermarkOpacity === undefined) {
+                        settings.logoWatermarkOpacity = 0.07;
+                    }
                 } catch (e) {
                     console.error("Error accessing localStorage in db.ts:", e);
                     // Fallback to defaults if localStorage fails
                     settings.showAmountInWords = settings.showAmountInWords ?? true;
                     settings.documentInfoPosition = settings.documentInfoPosition ?? 'right';
                     settings.showExpiryDate = settings.showExpiryDate ?? true;
+                    settings.logoWidth = settings.logoWidth ?? 200;
+                    settings.showLogoWatermark = settings.showLogoWatermark ?? true;
+                    settings.logoWatermarkOpacity = settings.logoWatermarkOpacity ?? 0.07;
                 }
             }
             return settings;
@@ -727,6 +746,14 @@ export const dbService = {
 
                 if (settings.logoWidth !== undefined) {
                     localStorage.setItem(LOCAL_STORAGE_KEYS.LOGO_WIDTH, String(settings.logoWidth));
+                 }
+
+                if (settings.showLogoWatermark !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_LOGO_WATERMARK, String(settings.showLogoWatermark));
+                }
+
+                if (settings.logoWatermarkOpacity !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.LOGO_WATERMARK_OPACITY, String(settings.logoWatermarkOpacity));
                 }
             } catch (e) {
                 console.error("Error saving to localStorage in db.ts:", e);
@@ -750,6 +777,8 @@ export const dbService = {
             delete (cleanData as any).documentInfoPosition; // Remove to avoid Supabase schema error
             delete (cleanData as any).showExpiryDate; // Remove to avoid Supabase schema error
             delete (cleanData as any).logoWidth; // Remove to avoid Supabase schema error
+            delete (cleanData as any).showLogoWatermark; // Remove to avoid Supabase schema error
+            delete (cleanData as any).logoWatermarkOpacity; // Remove to avoid Supabase schema error
 
             let resultData, resultError;
 
@@ -783,7 +812,9 @@ export const dbService = {
                 showAmountInWords: settings.showAmountInWords,
                 documentInfoPosition: settings.documentInfoPosition,
                 showExpiryDate: settings.showExpiryDate,
-                logoWidth: settings.logoWidth
+                logoWidth: settings.logoWidth,
+                showLogoWatermark: settings.showLogoWatermark,
+                logoWatermarkOpacity: settings.logoWatermarkOpacity
             };
             return finalResult;
         }

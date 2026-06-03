@@ -218,7 +218,7 @@ export const generateDocumentHTML = (
   options?: PDFOptions,
 ): string => {
   const lang = localStorage.getItem("app_language") || "fr";
-  const defaultCompanyName = lang === "es" ? "Mi Empresa" : "Votre Entreprise";
+  const defaultCompanyName = "";
   
   const settings = originalSettings ? {
     ...originalSettings,
@@ -1335,9 +1335,9 @@ export const generateDocumentHTML = (
                 </style>
                 
                 ${
-                  settings.logo
+                  settings.logo && (settings.showLogoWatermark ?? true)
                     ? `
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; z-index: 0; opacity: 0.07; pointer-events: none;">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; z-index: 0; opacity: ${settings.logoWatermarkOpacity ?? 0.07}; pointer-events: none;">
                         <img src="${settings.logo}" style="width: 100%; height: auto; object-fit: contain;" />
                     </div>
                 `

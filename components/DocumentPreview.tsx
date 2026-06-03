@@ -98,12 +98,13 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
         <div className="bg-white p-12 shadow-2xl font-sans text-sm text-neutral-800 relative overflow-hidden flex flex-col" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
             
             {/* Watermark / Logo en arrière-plan */}
-            {settings.logo && (
+            {settings.logo && (settings.showLogoWatermark ?? true) && (
                 <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
                     <img 
                         src={settings.logo} 
                         alt="Watermark" 
-                        className="w-[80%] max-h-[60%] object-contain opacity-[0.07] translate-y-16"
+                        className="w-[80%] max-h-[60%] object-contain translate-y-16"
+                        style={{ opacity: settings.logoWatermarkOpacity ?? 0.07 }}
                     />
                 </div>
             )}
@@ -125,7 +126,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                         {settings.logo ? (
                             <img src={settings.logo} alt="Company Logo" style={{ maxHeight: '80px', maxWidth: '240px' }} />
                         ) : (
-                            <h1 className="text-2xl font-bold" style={{ color: primaryColor }}>{settings.companyName || 'Votre Entreprise'}</h1>
+                            <h1 className="text-2xl font-bold" style={{ color: primaryColor }}>{settings.companyName || ''}</h1>
                         )}
                         <div className="mt-4 text-xs leading-relaxed text-neutral-600">
                             {settings.address && <p className="font-medium text-neutral-800 mb-1">{renderAddress(settings.address)}</p>}

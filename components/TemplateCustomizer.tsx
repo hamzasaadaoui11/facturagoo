@@ -5,7 +5,7 @@ import { CompanySettings, DocumentColumn, NumberingConfig, DocumentLabels } from
 import { 
     Save, Upload, Building, Palette, FileText, CheckCircle, X, 
     ArrowUp, ArrowDown, LayoutTemplate, Briefcase, 
-    CreditCard, MapPin, Globe, Mail, Phone, Hash, ShieldCheck, Loader2, Type, Settings2, FileBarChart, Truck, ShoppingBag, FileMinus, PencilLine, Eye
+    CreditCard, MapPin, Globe, Mail, Phone, Hash, ShieldCheck, Loader2, Type, Settings2, FileBarChart, Truck, ShoppingBag, FileMinus, PencilLine, Eye, Trash2
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -152,6 +152,18 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
         } else {
             alert("Veuillez sélectionner un fichier image valide.");
         }
+    };
+
+    const handleRemoveLogo = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setLocalSettings(prev => ({ ...prev, logo: null as any }));
+    };
+
+    const handleRemoveStamp = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setLocalSettings(prev => ({ ...prev, stamp: null as any }));
     };
 
     const toggleColumnVisibility = (id: string) => {
@@ -356,6 +368,14 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <span className="text-white font-medium flex items-center gap-2"><Upload size={18}/> {language === 'es' ? 'Cambiar' : 'Changer'}</span>
                                                     </div>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={handleRemoveLogo}
+                                                        className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-red-50 hover:text-red-600 text-neutral-700 rounded-full z-20 shadow-md transition-all border border-neutral-200 duration-150 hover:scale-105 active:scale-95 animate-fadeIn"
+                                                        title={language === 'es' ? 'Eliminar logo' : "Supprimer le logo"}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 </div>
                                             ) : (
                                                 <div className="text-center p-6">
@@ -386,9 +406,56 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                                     onChange={(e) => setLocalSettings(prev => ({ ...prev, logoWidth: parseInt(e.target.value) }))}
                                                     className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                                                 />
-                                                <div className="flex justify-between mt-1">
+                                                <div className="flex justify-between mt-1 mb-4">
                                                     <span className="text-[10px] text-neutral-400">Min</span>
                                                     <span className="text-[10px] text-neutral-400">Max</span>
+                                                </div>
+
+                                                {/* Filigrane (Watermark) settings */}
+                                                <div className="pt-4 border-t border-neutral-100 flex flex-col gap-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <span className="text-xs font-bold text-neutral-700">
+                                                                {language === 'es' ? 'Activar logotipo de fondo' : 'Activer le logo en arrière-plan'}
+                                                            </span>
+                                                            <p className="text-[10px] text-neutral-400">
+                                                                {language === 'es' ? 'Centrado con opacidad en documentos' : 'Centré et estompé au milieu des documents'}
+                                                            </p>
+                                                        </div>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setLocalSettings(prev => ({ ...prev, showLogoWatermark: !(prev.showLogoWatermark ?? true) }))}
+                                                            className={`w-12 h-7 rounded-full flex items-center transition-colors duration-300 px-1 ${(localSettings.showLogoWatermark ?? true) ? 'bg-emerald-500 justify-end' : 'bg-neutral-300 justify-start'}`}
+                                                        >
+                                                            <div className="w-5 h-5 rounded-full bg-white shadow-md animate-scaleIn" />
+                                                        </button>
+                                                    </div>
+
+                                                    {(localSettings.showLogoWatermark ?? true) && (
+                                                        <div className="mt-1 animate-fadeIn">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
+                                                                    {language === 'es' ? 'Opacidad del logotipo' : 'Opacité du logo'}
+                                                                </span>
+                                                                <span className="text-xs font-mono font-bold text-emerald-600 bg-white px-2 py-0.5 rounded border border-neutral-200">
+                                                                    {Math.round((localSettings.logoWatermarkOpacity ?? 0.07) * 100)}%
+                                                                </span>
+                                                            </div>
+                                                            <input 
+                                                                type="range" 
+                                                                min="0.01" 
+                                                                max="0.25" 
+                                                                step="0.01"
+                                                                value={localSettings.logoWatermarkOpacity ?? 0.07} 
+                                                                onChange={(e) => setLocalSettings(prev => ({ ...prev, logoWatermarkOpacity: parseFloat(e.target.value) }))}
+                                                                className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                                                            />
+                                                            <div className="flex justify-between mt-1">
+                                                                <span className="text-[9px] text-neutral-400">1% ({language === 'es' ? 'Sutil' : 'Subtil'})</span>
+                                                                <span className="text-[9px] text-neutral-400">25% ({language === 'es' ? 'Visible' : 'Visible'})</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}
@@ -403,6 +470,14 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <span className="text-white font-medium flex items-center gap-2"><Upload size={18}/> {language === 'es' ? 'Cambiar' : 'Changer'}</span>
                                                     </div>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={handleRemoveStamp}
+                                                        className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-red-50 hover:text-red-600 text-neutral-700 rounded-full z-20 shadow-md transition-all border border-neutral-200 duration-150 hover:scale-105 active:scale-95 animate-fadeIn"
+                                                        title={language === 'es' ? 'Eliminar sello' : "Supprimer le cachet"}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 </div>
                                             ) : (
                                                 <div className="text-center p-6">
