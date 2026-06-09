@@ -108,7 +108,15 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
                                     onClick={() => handleSelect(product)}
                                 >
                                     <div className="flex items-start gap-2.5">
-                                        <Package className="h-4 w-4 text-emerald-500 mt-1 flex-shrink-0" />
+                                        {product.imageUrl ? (
+                                            <div className="w-9 h-9 rounded shrink-0 overflow-hidden border border-slate-200 mt-0.5 bg-white">
+                                                <img src={product.imageUrl} alt="" className="w-full h-full object-cover" />
+                                            </div>
+                                        ) : (
+                                            <div className="w-9 h-9 rounded shrink-0 bg-emerald-50 text-emerald-500 border border-emerald-100 flex items-center justify-center mt-0.5">
+                                                <Package className="h-4 w-4 flex-shrink-0" />
+                                            </div>
+                                        )}
                                         <div className="flex-1 min-w-0">
                                             <div className="flex justify-between items-start">
                                                 <div className="flex flex-col">

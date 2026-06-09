@@ -171,14 +171,53 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
         setVariants(variants.map(v => v.id === id ? { ...v, ...updates } : v));
     };
     
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
+    const compressImage = (file: File): Promise<string> => {
+        return new Promise((resolve) => {
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setImageUrl(reader.result as string);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    const MAX_SIZE = 300; // Super small size
+                    
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0, width, height);
+                        // Convert to highly compressed JPEG
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.15); 
+                        resolve(compressedDataUrl);
+                    } else {
+                        resolve(event.target?.result as string);
+                    }
+                };
+                img.src = event.target?.result as string;
             };
             reader.readAsDataURL(file);
+        });
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const compressedImage = await compressImage(file);
+            setImageUrl(compressedImage);
         }
     };
 
@@ -247,6 +286,38 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
                         <div className="sm:col-span-2">
                             <label htmlFor="description" className="block text-sm font-medium text-neutral-700">{t('description')}</label>
                             <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder={t('description')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm" />
+                        </div>
+                        <div className="sm:col-span-2 mt-2">
+                            <label className="block text-sm font-medium text-neutral-700 mb-2">Image du produit/service</label>
+                            <div className="flex items-start gap-4">
+                                {imageUrl ? (
+                                    <div className="relative w-24 h-24 border rounded-md overflow-hidden bg-white group shadow-sm flex items-center justify-center">
+                                        <img src={imageUrl} alt="Product preview" className="max-w-full max-h-full object-contain" />
+                                        <button
+                                            type="button"
+                                            onClick={() => setImageUrl('')}
+                                            className="absolute top-1 right-1 p-1 bg-white/90 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className="flex flex-col items-center justify-center w-24 h-24 border-2 border-dashed border-neutral-300 rounded-md bg-neutral-50 cursor-pointer hover:bg-neutral-100 hover:border-emerald-400 transition-colors">
+                                        <Upload size={20} className="text-neutral-400 mb-1" />
+                                        <span className="text-[10px] text-neutral-500">Ajouter</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                )}
+                                <div className="text-xs text-neutral-500 flex flex-col justify-center h-24 gap-1">
+                                    <p>Taille optimale pour sauvegarder : JPEG compressé</p>
+                                    <p>Dimensions max : 300x300 (redimensionnement auto).</p>
+                                </div>
+                            </div>
                         </div>
                         <div>
                             <label htmlFor="productType" className="block text-sm font-medium text-neutral-700">{t('type')}</label>
@@ -830,13 +901,33 @@ const ProductList = ({ products, onAddProduct, onAddProducts, onDeleteProduct, o
                                                 </td>
                                                 <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 font-mono ${isRTL ? 'text-right' : 'text-left'}`}>{product.productCode}</td>
                                                 <td className={`px-6 py-4 text-sm font-medium text-neutral-900 whitespace-pre-line ${isRTL ? 'text-right' : 'text-left'}`}>
-                                                    <div className="flex flex-col">
-                                                        <span>{product.name}</span>
-                                                        {product.hasVariants && (
-                                                            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-bold uppercase mt-1 bg-emerald-50 px-1.5 py-0.5 rounded w-fit">
-                                                                <Layers size={10} /> {product.variants?.length || 0} {language === 'fr' ? 'variantes' : 'variants'}
-                                                            </span>
+                                                    <div className="flex items-center gap-3">
+                                                        {product.imageUrl ? (
+                                                            <div 
+                                                                className="w-10 h-10 shrink-0 cursor-pointer"
+                                                                onMouseEnter={() => setHoveredImage(product.imageUrl || null)}
+                                                                onMouseLeave={() => setHoveredImage(null)}
+                                                                onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                                                            >
+                                                                <img 
+                                                                    src={product.imageUrl} 
+                                                                    alt="" 
+                                                                    className="w-full h-full object-cover rounded border border-neutral-200 bg-white"
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-10 h-10 shrink-0 bg-neutral-100 rounded border border-neutral-200 flex items-center justify-center text-neutral-400">
+                                                                <Package size={20} />
+                                                            </div>
                                                         )}
+                                                        <div className="flex flex-col">
+                                                            <span>{product.name}</span>
+                                                            {product.hasVariants && (
+                                                                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-bold uppercase mt-1 bg-emerald-50 px-1.5 py-0.5 rounded w-fit">
+                                                                    <Layers size={10} /> {product.variants?.length || 0} {language === 'fr' ? 'variantes' : 'variants'}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -930,7 +1021,7 @@ const ProductList = ({ products, onAddProduct, onAddProducts, onDeleteProduct, o
                             >
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex items-start gap-3 min-w-0">
-                                        <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                                        <div className="pt-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                                             <input
                                                 type="checkbox"
                                                 className="h-5 w-5 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
@@ -938,6 +1029,24 @@ const ProductList = ({ products, onAddProduct, onAddProducts, onDeleteProduct, o
                                                 onChange={() => handleSelectProduct(product.id)}
                                             />
                                         </div>
+                                        {product.imageUrl ? (
+                                            <div 
+                                                className="w-12 h-12 shrink-0 my-0.5 cursor-pointer"
+                                                onMouseEnter={() => setHoveredImage(product.imageUrl || null)}
+                                                onMouseLeave={() => setHoveredImage(null)}
+                                                onMouseMove={(e) => setMousePos({ x: e.clientX, y: e.clientY })}
+                                            >
+                                                <img 
+                                                    src={product.imageUrl} 
+                                                    alt="" 
+                                                    className="w-full h-full object-cover rounded border border-neutral-200 bg-white"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="w-12 h-12 shrink-0 bg-neutral-100 rounded border border-neutral-200 flex items-center justify-center text-neutral-400 my-0.5">
+                                                <Package size={20} />
+                                            </div>
+                                        )}
                                         <div className="min-w-0">
                                             <h4 className="text-base font-bold text-neutral-900 whitespace-pre-line">{product.name}</h4>
                                             {product.hasVariants && (
