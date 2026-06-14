@@ -348,6 +348,10 @@ export const generateDocumentHTML = (
 
   let primaryColor = settings.primaryColor || "#10b981";
   if (primaryColor.includes("oklch")) primaryColor = "#10b981";
+  let headerTextColor = settings.headerTextColor || "#ffffff";
+  let tableHeaderBgColor = settings.tableHeaderBgColor || primaryColor;
+  const showTableBorders = settings.showTableBorders !== false;
+  const clientPosition = settings.clientPosition || "right";
 
   const dateStr = new Date(doc.date).toLocaleDateString(
     lang === "es" ? "es-ES" : lang === "en" ? "en-US" : "fr-FR",
@@ -704,7 +708,7 @@ export const generateDocumentHTML = (
 
           const isFirst = cIdx === 0;
           const isLast = cIdx === activeColumns.length - 1;
-          const cellBorder = isLast ? "" : "border-right: 0.5px solid #d1d5db;";
+          const cellBorder = (isLast || !showTableBorders) ? "" : "border-right: 0.5px solid #d1d5db;";
 
           const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
           const totalTTC =
@@ -902,7 +906,7 @@ export const generateDocumentHTML = (
     `;
 
   const clientInfoHtml = `
-        <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: ${clientPosition === 'left' ? 'flex-start' : 'flex-end'}; margin-bottom: 20px;">
             <div style="width: 45%; background-color: #f9fafb; padding: ${options?.isPDFDownload ? "8px 16px 12px 16px" : "12px 16px"}; border-radius: 6px; border: 1px solid #e5e7eb; line-height: 1.4; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;">
                 <div style="font-size: 10px; text-transform: uppercase; font-weight: 700; color: #9ca3af; margin-bottom: 6px; line-height: 1;">${dict.pdfAddressedTo || "Adressé à"}</div>
                 <div style="font-size: 14px; color: #111827; font-weight: 600;">
@@ -931,7 +935,7 @@ export const generateDocumentHTML = (
   const itemsTableHtml = `
         <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px;">
             <thead>
-                <tr style="background-color: ${primaryColor}; color: white; -webkit-print-color-adjust: exact;">
+                <tr style="background-color: ${tableHeaderBgColor}; color: ${headerTextColor}; -webkit-print-color-adjust: exact;">
                     ${headerRowHtml}
                 </tr>
             </thead>
@@ -1058,7 +1062,7 @@ export const generateDocumentHTML = (
 
         const isFirst = cIdx === 0;
         const isLast = cIdx === activeColumns.length - 1;
-        const cellBorder = isLast ? "" : "border-right: 0.5px solid #d1d5db;";
+        const cellBorder = (isLast || !showTableBorders) ? "" : "border-right: 0.5px solid #d1d5db;";
 
         const unitPriceTTC = item.unitPrice * (1 + item.vat / 100);
         const totalTTC =
@@ -1359,7 +1363,7 @@ export const generateDocumentHTML = (
                         ? `
                     <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px;">
                         <thead>
-                            <tr style="background-color: ${primaryColor}; color: white; -webkit-print-color-adjust: exact;">
+                            <tr style="background-color: ${tableHeaderBgColor}; color: ${headerTextColor}; -webkit-print-color-adjust: exact;">
                                 ${headerRowHtml}
                             </tr>
                         </thead>

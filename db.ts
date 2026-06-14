@@ -26,7 +26,11 @@ const LOCAL_STORAGE_KEYS = {
     SHOW_EXPIRY_DATE: 'facturago_show_expiry_date',
     LOGO_WIDTH: 'facturago_logo_width',
     SHOW_LOGO_WATERMARK: 'facturago_show_logo_watermark',
-    LOGO_WATERMARK_OPACITY: 'facturago_logo_watermark_opacity'
+    LOGO_WATERMARK_OPACITY: 'facturago_logo_watermark_opacity',
+    HEADER_TEXT_COLOR: 'facturago_header_text_color',
+    TABLE_HEADER_BG_COLOR: 'facturago_table_header_bg_color',
+    SHOW_TABLE_BORDERS: 'facturago_show_table_borders',
+    CLIENT_POSITION: 'facturago_client_position'
 };
 
 export const initDB = async (): Promise<any> => {
@@ -707,6 +711,34 @@ export const dbService = {
                     } else if (settings.logoWatermarkOpacity === undefined) {
                         settings.logoWatermarkOpacity = 0.07;
                     }
+
+                    const localHeaderTextColor = localStorage.getItem(LOCAL_STORAGE_KEYS.HEADER_TEXT_COLOR);
+                    if (localHeaderTextColor !== null) {
+                        settings.headerTextColor = localHeaderTextColor;
+                    } else if (settings.headerTextColor === undefined) {
+                        settings.headerTextColor = '#ffffff';
+                    }
+
+                    const localTableHeaderBgColor = localStorage.getItem(LOCAL_STORAGE_KEYS.TABLE_HEADER_BG_COLOR);
+                    if (localTableHeaderBgColor !== null) {
+                        settings.tableHeaderBgColor = localTableHeaderBgColor;
+                    } else if (settings.tableHeaderBgColor === undefined) {
+                        settings.tableHeaderBgColor = settings.primaryColor || '#10b981';
+                    }
+
+                    const localShowTableBorders = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_TABLE_BORDERS);
+                    if (localShowTableBorders !== null) {
+                        settings.showTableBorders = localShowTableBorders === 'true';
+                    } else if (settings.showTableBorders === undefined) {
+                        settings.showTableBorders = true;
+                    }
+
+                    const localClientPosition = localStorage.getItem(LOCAL_STORAGE_KEYS.CLIENT_POSITION);
+                    if (localClientPosition !== null) {
+                        settings.clientPosition = localClientPosition as 'left' | 'right';
+                    } else if (settings.clientPosition === undefined) {
+                        settings.clientPosition = 'right';
+                    }
                 } catch (e) {
                     console.error("Error accessing localStorage in db.ts:", e);
                     // Fallback to defaults if localStorage fails
@@ -716,6 +748,10 @@ export const dbService = {
                     settings.logoWidth = settings.logoWidth ?? 200;
                     settings.showLogoWatermark = settings.showLogoWatermark ?? true;
                     settings.logoWatermarkOpacity = settings.logoWatermarkOpacity ?? 0.07;
+                    settings.headerTextColor = settings.headerTextColor ?? '#ffffff';
+                    settings.tableHeaderBgColor = settings.tableHeaderBgColor ?? settings.primaryColor ?? '#10b981';
+                    settings.showTableBorders = settings.showTableBorders ?? true;
+                    settings.clientPosition = settings.clientPosition ?? 'right';
                 }
             }
             return settings;
@@ -755,6 +791,22 @@ export const dbService = {
                 if (settings.logoWatermarkOpacity !== undefined) {
                     localStorage.setItem(LOCAL_STORAGE_KEYS.LOGO_WATERMARK_OPACITY, String(settings.logoWatermarkOpacity));
                 }
+
+                if (settings.headerTextColor !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.HEADER_TEXT_COLOR, settings.headerTextColor);
+                }
+
+                if (settings.tableHeaderBgColor !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.TABLE_HEADER_BG_COLOR, settings.tableHeaderBgColor);
+                }
+
+                if (settings.showTableBorders !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_TABLE_BORDERS, String(settings.showTableBorders));
+                }
+
+                if (settings.clientPosition !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.CLIENT_POSITION, settings.clientPosition);
+                }
             } catch (e) {
                 console.error("Error saving to localStorage in db.ts:", e);
             }
@@ -779,6 +831,10 @@ export const dbService = {
             delete (cleanData as any).logoWidth; // Remove to avoid Supabase schema error
             delete (cleanData as any).showLogoWatermark; // Remove to avoid Supabase schema error
             delete (cleanData as any).logoWatermarkOpacity; // Remove to avoid Supabase schema error
+            delete (cleanData as any).headerTextColor; // Remove to avoid Supabase schema error
+            delete (cleanData as any).tableHeaderBgColor; // Remove to avoid Supabase schema error
+            delete (cleanData as any).showTableBorders; // Remove to avoid Supabase schema error
+            delete (cleanData as any).clientPosition; // Remove to avoid Supabase schema error
 
             let resultData, resultError;
 
@@ -814,7 +870,11 @@ export const dbService = {
                 showExpiryDate: settings.showExpiryDate,
                 logoWidth: settings.logoWidth,
                 showLogoWatermark: settings.showLogoWatermark,
-                logoWatermarkOpacity: settings.logoWatermarkOpacity
+                logoWatermarkOpacity: settings.logoWatermarkOpacity,
+                headerTextColor: settings.headerTextColor,
+                tableHeaderBgColor: settings.tableHeaderBgColor,
+                showTableBorders: settings.showTableBorders,
+                clientPosition: settings.clientPosition
             };
             return finalResult;
         }

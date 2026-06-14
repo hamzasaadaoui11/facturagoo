@@ -316,6 +316,10 @@ export interface CompanySettings {
     logoWatermarkOpacity?: number;
     stamp?: string;
     primaryColor?: string;
+    headerTextColor?: string;
+    tableHeaderBgColor?: string;
+    showTableBorders?: boolean;
+    clientPosition?: 'left' | 'right';
     footerNotes?: string;
     defaultPaymentTerms?: string; 
     documentColumns?: DocumentColumn[]; 

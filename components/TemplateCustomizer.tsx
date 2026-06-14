@@ -5,7 +5,7 @@ import { CompanySettings, DocumentColumn, NumberingConfig, DocumentLabels } from
 import { 
     Save, Upload, Building, Palette, FileText, CheckCircle, X, 
     ArrowUp, ArrowDown, LayoutTemplate, Briefcase, 
-    CreditCard, MapPin, Globe, Mail, Phone, Hash, ShieldCheck, Loader2, Type, Settings2, FileBarChart, Truck, ShoppingBag, FileMinus, PencilLine, Eye, Trash2
+    CreditCard, MapPin, Globe, Mail, Phone, Hash, ShieldCheck, Loader2, Type, Settings2, FileBarChart, Truck, ShoppingBag, FileMinus, PencilLine, Eye, Trash2, Grid
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -82,6 +82,10 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
         if (!mergedSettings.documentInfoPosition) mergedSettings.documentInfoPosition = 'right';
         if (mergedSettings.showExpiryDate === undefined) mergedSettings.showExpiryDate = true;
         if (!mergedSettings.logoWidth) mergedSettings.logoWidth = 200;
+        if (!mergedSettings.headerTextColor) mergedSettings.headerTextColor = '#ffffff';
+        if (!mergedSettings.tableHeaderBgColor) mergedSettings.tableHeaderBgColor = mergedSettings.primaryColor || '#10b981';
+        if (mergedSettings.showTableBorders === undefined) mergedSettings.showTableBorders = true;
+        if (!mergedSettings.clientPosition) mergedSettings.clientPosition = 'right';
 
         setLocalSettings(mergedSettings); 
         
@@ -519,6 +523,64 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                             </div>
                                         </div>
                                     </div>
+                                    <div>
+                                        <label htmlFor="headerTextColor" className="block text-sm font-semibold text-neutral-700 mb-3">{language === 'es' ? 'Color del texto del encabezado' : "Couleur du texte de l'en-tête (tableau)"}</label>
+                                        <div className="flex items-center gap-4 bg-neutral-50 p-4 rounded-xl border border-neutral-100">
+                                            <div className="relative overflow-hidden w-16 h-16 rounded-xl shadow-sm ring-2 ring-white ring-offset-2 ring-offset-neutral-100">
+                                                <input type="color" id="headerTextColor" name="headerTextColor" value={localSettings.headerTextColor || '#ffffff'} onChange={handleInputChange} className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 cursor-pointer p-0 border-0" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center bg-white border border-neutral-200 rounded-lg px-3 py-2 w-full max-w-[140px]">
+                                                    <span className="text-neutral-400 mr-2">#</span>
+                                                    <input 
+                                                        type="text" 
+                                                        value={(localSettings.headerTextColor || '#ffffff').replace('#', '')} 
+                                                        onChange={(e) => {
+                                                            let val = e.target.value.trim();
+                                                            // Keep only valid hex characters
+                                                            val = val.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
+                                                            setLocalSettings(prev => ({ ...prev, headerTextColor: `#${val}` }));
+                                                        }} 
+                                                        name="headerTextColor" 
+                                                        className="w-full text-sm font-mono uppercase focus:outline-none text-neutral-700" 
+                                                        placeholder="FFFFFF"
+                                                    />
+                                                </div>
+                                                <p className="mt-2 text-xs text-neutral-500 leading-relaxed">
+                                                    {language === 'es' ? 'Usado para el color de los textos en la cabecera de las tablas.' : "Utilisée pour la couleur du texte dans l'en-tête du tableau (ex: désignation, Qté, etc.)."}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label htmlFor="tableHeaderBgColor" className="block text-sm font-semibold text-neutral-700 mb-3">{language === 'es' ? 'Color de la barra del encabezado' : "Couleur de la barre de l'en-tête (tableau)"}</label>
+                                        <div className="flex items-center gap-4 bg-neutral-50 p-4 rounded-xl border border-neutral-100">
+                                            <div className="relative overflow-hidden w-16 h-16 rounded-xl shadow-sm ring-2 ring-white ring-offset-2 ring-offset-neutral-100">
+                                                <input type="color" id="tableHeaderBgColor" name="tableHeaderBgColor" value={localSettings.tableHeaderBgColor || '#10b981'} onChange={handleInputChange} className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 cursor-pointer p-0 border-0" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center bg-white border border-neutral-200 rounded-lg px-3 py-2 w-full max-w-[140px]">
+                                                    <span className="text-neutral-400 mr-2">#</span>
+                                                    <input 
+                                                        type="text" 
+                                                        value={(localSettings.tableHeaderBgColor || '#10b981').replace('#', '')} 
+                                                        onChange={(e) => {
+                                                            let val = e.target.value.trim();
+                                                            // Keep only valid hex characters
+                                                            val = val.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
+                                                            setLocalSettings(prev => ({ ...prev, tableHeaderBgColor: `#${val}` }));
+                                                        }} 
+                                                        name="tableHeaderBgColor" 
+                                                        className="w-full text-sm font-mono uppercase focus:outline-none text-neutral-700" 
+                                                        placeholder="10B981"
+                                                    />
+                                                </div>
+                                                <p className="mt-2 text-xs text-neutral-500 leading-relaxed">
+                                                    {language === 'es' ? 'Color de fondo personalizado para la barra de la cabecera de la tabla.' : "Couleur de fond personnalisée pour la barre de l'en-tête du tableau."}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -780,6 +842,56 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                     >
                                         <div className="w-5 h-5 rounded-full bg-white shadow-md" />
                                     </button>
+                                </div>
+
+                                <div className="mt-4 flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-white rounded-lg shadow-sm text-slate-600">
+                                            <Grid size={20}/>
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-slate-900">{language === 'es' ? 'Líneas de la tabla' : 'Lignes verticales du tableau'}</div>
+                                            <div className="text-xs text-slate-500">{language === 'es' ? 'Activar o desactivar las líneas verticales grises en las tablas.' : 'Activer ou désactiver les lignes verticales grises dans le tableau.'}</div>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => setLocalSettings(prev => ({ ...prev, showTableBorders: prev.showTableBorders === undefined ? false : !prev.showTableBorders }))}
+                                        className={`w-12 h-7 rounded-full flex items-center transition-colors duration-300 px-1 ${localSettings.showTableBorders !== false ? 'bg-emerald-500 justify-end' : 'bg-neutral-300 justify-start'}`}
+                                    >
+                                        <div className="w-5 h-5 rounded-full bg-white shadow-md" />
+                                    </button>
+                                </div>
+
+                                <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="p-2 bg-white rounded-lg shadow-sm text-slate-600">
+                                            <Building size={20}/>
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-slate-900">{language === 'es' ? 'Posición del recuadro del cliente' : "Position de l'encadré du client"}</div>
+                                            <div className="text-xs text-slate-500">{language === 'es' ? 'Elija si desea colocar el recuadro del cliente a la izquierda o a la derecha.' : "Choisissez d'aligner l'encadré d'adresse du client à gauche ou à droite."}</div>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <button 
+                                            onClick={() => setLocalSettings(prev => ({ ...prev, clientPosition: 'right' }))}
+                                            className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${(!localSettings.clientPosition || localSettings.clientPosition === 'right') ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300'}`}
+                                        >
+                                            <div className="w-4 h-4 rounded-full border-2 border-current flex items-center justify-center">
+                                                {(!localSettings.clientPosition || localSettings.clientPosition === 'right') && <div className="w-2 h-2 rounded-full bg-current" />}
+                                            </div>
+                                            <span className="font-semibold text-sm">{language === 'es' ? 'A la derecha' : 'À droite (Défaut)'}</span>
+                                        </button>
+                                        <button 
+                                            onClick={() => setLocalSettings(prev => ({ ...prev, clientPosition: 'left' }))}
+                                            className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${localSettings.clientPosition === 'left' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300'}`}
+                                        >
+                                            <div className="w-4 h-4 rounded-full border-2 border-current flex items-center justify-center">
+                                                {localSettings.clientPosition === 'left' && <div className="w-2 h-2 rounded-full bg-current" />}
+                                            </div>
+                                            <span className="font-semibold text-sm">{language === 'es' ? 'A la izquierda' : 'À gauche'}</span>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="mt-4 p-4 bg-slate-50 rounded-xl border border-slate-200">

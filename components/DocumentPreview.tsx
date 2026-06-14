@@ -12,6 +12,11 @@ interface DocumentPreviewProps {
 const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, client }) => {
     const { t, language } = useLanguage();
     const primaryColor = settings.primaryColor || '#059669'; // Default to emerald-600
+    const headerTextColor = settings.headerTextColor || '#ffffff';
+    const tableHeaderBgColor = settings.tableHeaderBgColor || primaryColor;
+    const showTableBorders = settings.showTableBorders !== false;
+    const borderStyle = showTableBorders ? 'border-r border-neutral-200' : '';
+    const clientPosition = settings.clientPosition || 'right';
     
     // Détermination du type de document
     let documentType = 'DOCUMENT';
@@ -161,7 +166,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                 </header>
 
                 {/* Client Info */}
-                <section className="mt-8 flex justify-end">
+                <section className={`mt-8 flex ${clientPosition === 'left' ? 'justify-start' : 'justify-end'}`}>
                     <div className="w-1/2 bg-neutral-50 p-4 rounded-lg border border-neutral-100">
                         <p className="text-xs uppercase font-bold text-neutral-500 mb-2">{t('client')} :</p>
                         <div className="font-medium text-base text-neutral-900">
@@ -187,7 +192,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                 <section className="mt-8 flex-1 overflow-hidden">
                     <table className="w-full text-left table-auto" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
                         <thead>
-                            <tr style={{ backgroundColor: primaryColor, color: 'white' }}>
+                            <tr style={{ backgroundColor: tableHeaderBgColor, color: headerTextColor }}>
                                 {showReference && <th className="py-3 px-4 align-middle font-semibold uppercase text-[10px] rounded-tl-lg rounded-bl-lg w-20 whitespace-nowrap">{t('refLabel')}</th>}
                                 <th className={`py-3 px-2 align-middle font-semibold uppercase text-[10px] ${!showReference ? 'rounded-tl-lg rounded-bl-lg' : ''} min-w-[320px] whitespace-nowrap`}>{t('description')}</th>
                                 <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-14 whitespace-nowrap">{t('unit')}</th>
@@ -223,36 +228,36 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                         <tbody className="divide-y divide-neutral-200">
                             {document.lineItems.map(item => (
                                 <tr key={item.id} className="text-neutral-700">
-                                    {showReference && <td className="py-3 px-4 align-middle text-[11px] text-neutral-500">{item.productCode || '-'}</td>}
-                                    <td className="py-3 px-4 align-middle">
+                                    {showReference && <td className={`py-3 px-4 align-middle text-[11px] text-neutral-500 ${borderStyle}`}>{item.productCode || '-'}</td>}
+                                    <td className={`py-3 px-4 align-middle ${borderStyle}`}>
                                         <div className="text-[10.5px] font-medium text-neutral-900 leading-tight" dangerouslySetInnerHTML={{ __html: item.name }} />
                                         {item.description && <div className="text-[9px] text-neutral-500 mt-1 leading-normal italic font-normal" dangerouslySetInnerHTML={{ __html: item.description }} />}
                                     </td>
-                                    <td className="py-3 px-2 text-center align-middle text-[10px] font-medium">{item.unit || '-'}</td>
-                                    <td className="py-3 px-2 text-center align-middle font-bold text-[11px]">{item.quantity}</td>
+                                    <td className={`py-3 px-2 text-center align-middle text-[10px] font-medium ${borderStyle}`}>{item.unit || '-'}</td>
+                                    <td className={`py-3 px-2 text-center align-middle font-bold text-[11px] ${(!isDeliveryNote || isM2 || isML || isKg) ? borderStyle : ''}`}>{item.quantity}</td>
                                     {isM2 && (
                                         <>
-                                            <td className="py-3 px-2 text-center align-middle text-[10px]">{item.length || 1}</td>
-                                            <td className="py-3 px-2 text-center align-middle text-[10px]">{item.height || 1}</td>
-                                            <td className="py-3 px-2 text-center align-middle text-[10px] font-medium">{(item.quantity * (item.length || 1) * (item.height || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
+                                            <td className={`py-3 px-2 text-center align-middle text-[10px] ${borderStyle}`}>{item.length || 1}</td>
+                                            <td className={`py-3 px-2 text-center align-middle text-[10px] ${borderStyle}`}>{item.height || 1}</td>
+                                            <td className={`py-3 px-2 text-center align-middle text-[10px] font-medium ${!isDeliveryNote ? borderStyle : ''}`}>{(item.quantity * (item.length || 1) * (item.height || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                     {isML && (
                                         <>
-                                            <td className="py-3 px-2 text-center align-middle text-[10px]">{item.length || 1}</td>
-                                            <td className="py-3 px-2 text-center align-middle text-[10px] font-medium">{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
+                                            <td className={`py-3 px-2 text-center align-middle text-[10px] ${borderStyle}`}>{item.length || 1}</td>
+                                            <td className={`py-3 px-2 text-center align-middle text-[10px] font-medium ${!isDeliveryNote ? borderStyle : ''}`}>{(item.quantity * (item.length || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                     {isKg && (
                                         <>
-                                            <td className="py-3 px-2 text-center align-middle text-[10px]">{item.weight || 1}</td>
-                                            <td className="py-3 px-2 text-center align-middle text-[10px] font-medium">{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
+                                            <td className={`py-3 px-2 text-center align-middle text-[10px] ${borderStyle}`}>{item.weight || 1}</td>
+                                            <td className={`py-3 px-2 text-center align-middle text-[10px] font-medium ${!isDeliveryNote ? borderStyle : ''}`}>{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
                                         </>
                                     )}
                                     {!isDeliveryNote && (
                                         <>
-                                            <td className="py-3 px-2 text-right align-middle text-[10px]">{item.unitPrice.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
-                                            <td className="py-3 px-2 text-center align-middle text-[9px] text-neutral-500">{item.vat}%</td>
+                                            <td className={`py-3 px-2 text-right align-middle text-[10px] ${borderStyle}`}>{item.unitPrice.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
+                                            <td className={`py-3 px-2 text-center align-middle text-[9px] text-neutral-500 ${borderStyle}`}>{item.vat}%</td>
                                             <td className="py-3 px-4 text-right align-middle font-bold text-neutral-900 text-[11px]">{(item.quantity * getLineMultiplier(item) * item.unitPrice).toLocaleString('fr-MA', { minimumFractionDigits: 2 })}</td>
                                         </>
                                     )}
