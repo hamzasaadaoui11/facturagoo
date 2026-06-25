@@ -37,6 +37,7 @@ interface PurchaseOrdersProps {
     onDeleteOrder?: (id: string) => void;
     onConvertToInvoice?: (order: PurchaseOrder) => void;
     companySettings?: CompanySettings | null;
+    generateDocumentId?: () => string;
 }
 
 const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({ 
@@ -48,7 +49,8 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
     onUpdateStatus,
     onDeleteOrder,
     onConvertToInvoice,
-    companySettings
+    companySettings,
+    generateDocumentId
 }) => {
     const { t, isRTL, language } = useLanguage();
     const navigate = useNavigate();
@@ -260,6 +262,7 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                 products={products}
                 orderToEdit={orderToEdit}
                 companySettings={companySettings}
+                generateDocumentId={generateDocumentId}
             />
 
             <ConfirmationModal 

@@ -555,7 +555,7 @@ const MainContent: React.FC = () => {
 
     const addQuote = async (quoteData: any) => {
         try {
-            const documentId = generateDocumentId('quote', quotes);
+            const documentId = quoteData.documentId || generateDocumentId('quote', quotes);
             const { totalAmount, ...cleanQuoteData } = quoteData;
             const newQuote: Quote = { 
                 id: generateUUID(), 
@@ -602,7 +602,7 @@ const MainContent: React.FC = () => {
     const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'amount' | 'amountPaid'> & { initialPayment?: any }) => {
         try {
             const { initialPayment, ...invoiceFields } = invoiceData;
-            const documentId = generateDocumentId('invoice', invoices);
+            const documentId = invoiceFields.documentId || generateDocumentId('invoice', invoices);
             const newInvoice: Invoice = { id: generateUUID(), documentId: documentId, amount: invoiceFields.subTotal + invoiceFields.vatAmount, amountPaid: initialPayment ? initialPayment.amount : 0, ...invoiceFields };
             
             // Update stock if not draft
@@ -868,7 +868,7 @@ const MainContent: React.FC = () => {
 
     const addCreditNote = async (creditNoteData: Omit<CreditNote, 'id'>) => {
         try {
-            const documentId = generateDocumentId('creditNote', creditNotes);
+            const documentId = creditNoteData.documentId || generateDocumentId('creditNote', creditNotes);
             const newCreditNote: CreditNote = { id: generateUUID(), documentId: documentId, ...creditNoteData };
             await dbService.creditNotes.add(newCreditNote);
             setCreditNotes(prev => [newCreditNote, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
@@ -921,7 +921,7 @@ const MainContent: React.FC = () => {
 
     const createDeliveryNote = async (noteData: Omit<DeliveryNote, 'id'>) => {
         try {
-            const documentId = generateDocumentId('deliveryNote', deliveryNotes);
+            const documentId = noteData.documentId || generateDocumentId('deliveryNote', deliveryNotes);
             const newNote: DeliveryNote = { id: generateUUID(), documentId: documentId, ...noteData };
             await dbService.deliveryNotes.add(newNote);
             setDeliveryNotes(prev => [newNote, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
@@ -1066,7 +1066,7 @@ const MainContent: React.FC = () => {
 
     const addPurchaseOrder = async (orderData: Omit<PurchaseOrder, 'id'>) => {
         try {
-            const documentId = generateDocumentId('purchaseOrder', purchaseOrders);
+            const documentId = orderData.documentId || generateDocumentId('purchaseOrder', purchaseOrders);
             const newOrder: PurchaseOrder = { id: generateUUID(), documentId: documentId, ...orderData };
             await dbService.purchaseOrders.add(newOrder);
             setPurchaseOrders(prev => [newOrder, ...prev].sort((a, b) => (b.documentId || b.id).localeCompare(a.documentId || a.id)));
@@ -1221,12 +1221,12 @@ const MainContent: React.FC = () => {
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
                             <Route path="/dashboard" element={<Dashboard invoices={invoices} clients={clients} products={products} companySettings={companySettings} creditNotes={creditNotes} expenses={expenses} stockMovements={stockMovements} />} />
                             <Route path="/statistics" element={<Statistics invoices={invoices} payments={payments} purchaseOrders={purchaseOrders} products={products} creditNotes={creditNotes} expenses={expenses} salaryPayments={salaryPayments} stockMovements={stockMovements} companySettings={companySettings} />} />
-                            <Route path="/sales/quotes" element={<Quotes quotes={quotes} onUpdateQuoteStatus={updateQuoteStatus} onCreateInvoice={createInvoiceFromQuote} onAddQuote={addQuote} onUpdateQuote={updateQuote} onDeleteQuote={deleteQuote} clients={clients} products={products} companySettings={companySettings} />} />
-                            <Route path="/sales/invoices" element={<InvoicesComponent invoices={invoices} onUpdateInvoiceStatus={updateInvoiceStatus} onAddPayment={addPayment} onCreateInvoice={addInvoice} onUpdateInvoice={updateInvoice} onDeleteInvoice={deleteInvoice} onCreateCreditNote={createCreditNoteFromInvoice} clients={clients} products={products} companySettings={companySettings} />} />
-                            <Route path="/sales/credit-notes" element={<CreditNotesComponent creditNotes={creditNotes} onUpdateCreditNoteStatus={updateCreditNoteStatus} onCreateCreditNote={addCreditNote} onUpdateCreditNote={updateCreditNote} onDeleteCreditNote={deleteCreditNote} clients={clients} products={products} companySettings={companySettings} />} />
+                            <Route path="/sales/quotes" element={<Quotes quotes={quotes} onUpdateQuoteStatus={updateQuoteStatus} onCreateInvoice={createInvoiceFromQuote} onAddQuote={addQuote} onUpdateQuote={updateQuote} onDeleteQuote={deleteQuote} clients={clients} products={products} companySettings={companySettings} generateDocumentId={() => generateDocumentId('quote', quotes)} />} />
+                            <Route path="/sales/invoices" element={<InvoicesComponent invoices={invoices} onUpdateInvoiceStatus={updateInvoiceStatus} onAddPayment={addPayment} onCreateInvoice={addInvoice} onUpdateInvoice={updateInvoice} onDeleteInvoice={deleteInvoice} onCreateCreditNote={createCreditNoteFromInvoice} clients={clients} products={products} companySettings={companySettings} generateDocumentId={() => generateDocumentId('invoice', invoices)} />} />
+                            <Route path="/sales/credit-notes" element={<CreditNotesComponent creditNotes={creditNotes} onUpdateCreditNoteStatus={updateCreditNoteStatus} onCreateCreditNote={addCreditNote} onUpdateCreditNote={updateCreditNote} onDeleteCreditNote={deleteCreditNote} clients={clients} products={products} companySettings={companySettings} generateDocumentId={() => generateDocumentId('creditNote', creditNotes)} />} />
                             <Route path="/sales/payments" element={<PaymentTracking invoices={invoices} payments={payments} onAddPayment={addPayment} clients={clients} />} />
-                            <Route path="/sales/delivery" element={<DeliveryNotesComponent deliveryNotes={deliveryNotes} invoices={invoices} onCreateDeliveryNote={createDeliveryNote} onUpdateDeliveryNote={updateDeliveryNote} onDeleteDeliveryNote={deleteDeliveryNote} onCreateInvoice={createInvoiceFromDeliveryNote} clients={clients} products={products} companySettings={companySettings} />} />
-                            <Route path="/purchases/orders" element={<PurchaseOrders orders={purchaseOrders} suppliers={suppliers} products={products} onAddOrder={addPurchaseOrder} onUpdateOrder={updatePurchaseOrder} onUpdateStatus={updatePurchaseOrderStatus} onDeleteOrder={deletePurchaseOrder} onConvertToInvoice={(order) => navigate('/sales/invoices', { state: { prefilledOrder: order } })} companySettings={companySettings} />} />
+                            <Route path="/sales/delivery" element={<DeliveryNotesComponent deliveryNotes={deliveryNotes} invoices={invoices} onCreateDeliveryNote={createDeliveryNote} onUpdateDeliveryNote={updateDeliveryNote} onDeleteDeliveryNote={deleteDeliveryNote} onCreateInvoice={createInvoiceFromDeliveryNote} clients={clients} products={products} companySettings={companySettings} generateDocumentId={() => generateDocumentId('deliveryNote', deliveryNotes)} />} />
+                            <Route path="/purchases/orders" element={<PurchaseOrders orders={purchaseOrders} suppliers={suppliers} products={products} onAddOrder={addPurchaseOrder} onUpdateOrder={updatePurchaseOrder} onUpdateStatus={updatePurchaseOrderStatus} onDeleteOrder={deletePurchaseOrder} onConvertToInvoice={(order) => navigate('/sales/invoices', { state: { prefilledOrder: order } })} companySettings={companySettings} generateDocumentId={() => generateDocumentId('purchaseOrder', purchaseOrders)} />} />
                             <Route path="/stock" element={<StockManagement products={products} movements={stockMovements} onAddMovement={addStockMovement} />} />
                             <Route path="/expenses" element={<Expenses expenses={expenses} onAddExpense={addExpense} onUpdateExpense={updateExpense} onDeleteExpense={deleteExpense} />} />
                             <Route path="/personnel" element={<PersonnelManagement companySettings={companySettings} onAddExpense={addExpense} initialEmployees={employees} initialAttendances={attendances} initialPayments={salaryPayments} />} />

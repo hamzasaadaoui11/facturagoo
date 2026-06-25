@@ -31,9 +31,10 @@ interface InvoicesProps {
     clients?: Client[];
     products?: Product[];
     companySettings?: CompanySettings | null;
+    generateDocumentId?: () => string;
 }
 
-const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, onAddPayment, onCreateInvoice, onUpdateInvoice, onDeleteInvoice, onCreateCreditNote, clients = [], products = [], companySettings }) => {
+const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, onAddPayment, onCreateInvoice, onUpdateInvoice, onDeleteInvoice, onCreateCreditNote, clients = [], products = [], companySettings, generateDocumentId }) => {
     const { t, isRTL, language } = useLanguage();
     const location = useLocation();
     const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
@@ -291,6 +292,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                 prefilledPO={prefilledPO}
                 prefilledOrder={prefilledOrder}
                 companySettings={companySettings}
+                generateDocumentId={generateDocumentId}
             />
 
             <ConfirmationModal 

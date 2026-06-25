@@ -9,14 +9,15 @@ import SearchableProductSelect from './SearchableProductSelect';
 interface CreateCreditNoteModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (creditNote: Omit<CreditNote, 'id'>, id?: string) => Promise<any> | void;
+    onSave: (creditNote: any, id?: string) => Promise<any> | void;
     clients: Client[];
     products: Product[];
     creditNoteToEdit?: CreditNote | null;
     companySettings?: CompanySettings | null;
+    generateDocumentId?: () => string;
 }
 
-const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, onClose, onSave, clients, products, creditNoteToEdit, companySettings }) => {
+const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, onClose, onSave, clients, products, creditNoteToEdit, companySettings, generateDocumentId }) => {
     const { t, isRTL, language } = useLanguage();
     const [isVisible, setIsVisible] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,6 +27,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
     const vatOptions = language === 'es' ? [21, 10, 4, 0] : [20, 14, 10, 7, 0];
 
     const [clientId, setClientId] = useState('');
+    const [documentId, setDocumentId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [reason, setReason] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
@@ -68,6 +70,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
             setError(null);
             if (creditNoteToEdit) {
                 setClientId(creditNoteToEdit.clientId);
+                setDocumentId(creditNoteToEdit.documentId || '');
                 setDate(creditNoteToEdit.date);
                 
                 const initialReason = creditNoteToEdit.subject || creditNoteToEdit.lineItems[0]?.subject || '';
@@ -96,6 +99,7 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
                 setDiscountValue(creditNoteToEdit.discountValue ? formatDecimalForInput(creditNoteToEdit.discountValue, language) : '');
             } else {
                 setClientId('');
+                setDocumentId(generateDocumentId ? generateDocumentId() : '');
                 setDate(new Date().toISOString().split('T')[0]);
                 setReason('');
                 setShowSubjectField(false);
@@ -256,7 +260,8 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
             };
         }
 
-        const creditNoteData: Omit<CreditNote, 'id'> = {
+        const creditNoteData: any = {
+            documentId: documentId || undefined,
             clientId, clientName: clientNameDisplay, date, 
             subject: showSubjectField ? reason : undefined, 
             paymentMethod: showPaymentMethodField ? paymentMethod : undefined, 
@@ -300,6 +305,17 @@ const CreateCreditNoteModal: React.FC<CreateCreditNoteModalProps> = ({ isOpen, o
 
                 <div className="px-3 md:px-6 py-5 overflow-y-auto custom-scrollbar flex-1 space-y-6 pb-24 md:pb-8">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{language === 'es' ? 'Nº de Avoir' : 'N° Avoir'} *</label>
+                            <input 
+                                type="text" 
+                                value={documentId} 
+                                onChange={(e) => setDocumentId(e.target.value)} 
+                                required
+                                placeholder="AV-YYYY/XXXXX"
+                                className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 font-mono"
+                            />
+                        </div>
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('client')} *</label>
                             <select value={clientId} onChange={(e) => setClientId(e.target.value)} disabled={!!creditNoteToEdit?.invoiceId} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 bg-white disabled:bg-gray-100">

@@ -9,14 +9,15 @@ import SearchableProductSelect from './SearchableProductSelect';
 interface CreatePurchaseOrderModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (order: Omit<PurchaseOrder, 'id'>, id?: string) => Promise<any> | void;
+    onSave: (order: any, id?: string) => Promise<any> | void;
     suppliers: Supplier[];
     products: Product[];
     orderToEdit?: PurchaseOrder | null;
     companySettings?: CompanySettings | null;
+    generateDocumentId?: () => string;
 }
 
-const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isOpen, onClose, onSave, suppliers, products, orderToEdit, companySettings }) => {
+const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isOpen, onClose, onSave, suppliers, products, orderToEdit, companySettings, generateDocumentId }) => {
     const { t, isRTL, language } = useLanguage();
     const [isVisible, setIsVisible] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,6 +26,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
     const vatOptions = language === 'es' ? [21, 10, 4, 0] : [20, 14, 10, 7, 0];
 
     const [supplierId, setSupplierId] = useState('');
+    const [documentId, setDocumentId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [expectedDate, setExpectedDate] = useState('');
     const [dueDate, setDueDate] = useState('');
@@ -71,6 +73,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
             setTimeout(() => setIsVisible(true), 10);
             if (orderToEdit) {
                 setSupplierId(orderToEdit.supplierId);
+                setDocumentId(orderToEdit.documentId || '');
                 setDate(orderToEdit.date);
                 
                 setDueDate(orderToEdit.dueDate || '');
@@ -106,6 +109,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setDiscountValue(orderToEdit.discountValue ? formatDecimalForInput(orderToEdit.discountValue, language) : '');
             } else {
                 setSupplierId('');
+                setDocumentId(generateDocumentId ? generateDocumentId() : '');
                 setDate(new Date().toISOString().split('T')[0]);
                 setExpectedDate('');
                 setDueDate('');
@@ -290,6 +294,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
         const supplierNameDisplay = supplier ? (supplier.company || supplier.name) : fallbackName;
         
         const orderData = {
+            documentId: documentId || undefined,
             supplierId, 
             supplierName: supplierNameDisplay, 
             date, 
@@ -337,7 +342,18 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 </div>
 
                 <div className="px-3 md:px-6 py-5 overflow-y-auto custom-scrollbar flex-1 space-y-6 pb-24 md:pb-8">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{language === 'es' ? 'Nº de Pedido' : 'N° BC'} *</label>
+                            <input 
+                                type="text" 
+                                value={documentId} 
+                                onChange={(e) => setDocumentId(e.target.value)} 
+                                required
+                                placeholder="BC-YYYY/XXXXX"
+                                className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 font-mono"
+                            />
+                        </div>
                         <div className="sm:col-span-1 space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('supplier')} *</label>
                             <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12">

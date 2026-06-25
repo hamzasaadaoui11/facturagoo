@@ -9,15 +9,16 @@ import SearchableProductSelect from './SearchableProductSelect';
 interface CreateDeliveryNoteModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (note: Omit<DeliveryNote, 'id'>, id?: string) => Promise<any> | void;
+    onSave: (note: any, id?: string) => Promise<any> | void;
     clients: Client[];
     products: Product[];
     invoices: Invoice[];
     noteToEdit?: DeliveryNote | null;
     companySettings?: CompanySettings | null;
+    generateDocumentId?: () => string;
 }
 
-const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpen, onClose, onSave, clients, products, invoices, noteToEdit, companySettings }) => {
+const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpen, onClose, onSave, clients, products, invoices, noteToEdit, companySettings, generateDocumentId }) => {
     const { t, isRTL, language } = useLanguage();
     const [isVisible, setIsVisible] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,6 +27,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     const vatOptions = language === 'es' ? [21, 10, 4, 0] : [20, 14, 10, 7, 0];
 
     const [clientId, setClientId] = useState('');
+    const [documentId, setDocumentId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [subject, setSubject] = useState('');
     const [purchaseOrderNumber, setPurchaseOrderNumber] = useState('');
@@ -69,6 +71,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
             setTimeout(() => setIsVisible(true), 10);
             if (noteToEdit) {
                 setClientId(noteToEdit.clientId);
+                setDocumentId(noteToEdit.documentId || '');
                 setDate(noteToEdit.date);
                 const initialSubject = noteToEdit.subject || noteToEdit.lineItems[0]?.subject || '';
                 setSubject(initialSubject);
@@ -98,6 +101,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setBankName(noteToEdit.bankName || '');
             } else {
                 setClientId('');
+                setDocumentId(generateDocumentId ? generateDocumentId() : '');
                 setDate(new Date().toISOString().split('T')[0]);
                 setSubject('');
                 setShowSubjectField(false);
@@ -336,6 +340,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         setIsSubmitting(true);
         try {
             await onSave({
+                documentId: documentId || undefined,
                 clientId, clientName: clientNameDisplay, date, 
                 subject: showSubjectField ? subject : undefined, 
                 purchaseOrderNumber: showPurchaseOrderField ? purchaseOrderNumber : undefined, 
@@ -370,6 +375,17 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
 
                 <div className="px-3 md:px-6 py-5 overflow-y-auto custom-scrollbar flex-1 space-y-6 pb-24 md:pb-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{language === 'es' ? 'Nº de BL' : 'N° BL'} *</label>
+                            <input 
+                                type="text" 
+                                value={documentId} 
+                                onChange={(e) => setDocumentId(e.target.value)} 
+                                required
+                                placeholder="BL-YYYY/XXXXX"
+                                className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 font-mono"
+                            />
+                        </div>
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('client')} *</label>
                             <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12">

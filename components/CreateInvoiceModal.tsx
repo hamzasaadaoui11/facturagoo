@@ -16,9 +16,10 @@ interface CreateInvoiceModalProps {
     prefilledPO?: string;
     prefilledOrder?: any;
     companySettings?: CompanySettings | null;
+    generateDocumentId?: () => string;
 }
 
-const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose, onSave, clients, products, invoiceToEdit, prefilledPO, prefilledOrder, companySettings }) => {
+const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose, onSave, clients, products, invoiceToEdit, prefilledPO, prefilledOrder, companySettings, generateDocumentId }) => {
     const { t, isRTL, language } = useLanguage();
     const [isVisible, setIsVisible] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,6 +28,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     const vatOptions = language === 'es' ? [21, 10, 4, 0] : [20, 14, 10, 7, 0];
 
     const [clientId, setClientId] = useState('');
+    const [documentId, setDocumentId] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [dueDate, setDueDate] = useState('');
     const [subject, setSubject] = useState('');
@@ -76,6 +78,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             setTimeout(() => setIsVisible(true), 10);
             if (invoiceToEdit) {
                 setClientId(invoiceToEdit.clientId);
+                setDocumentId(invoiceToEdit.documentId || '');
                 setDate(invoiceToEdit.date);
                 setDueDate(invoiceToEdit.dueDate || invoiceToEdit.lineItems[0]?.dueDate || new Date(new Date(invoiceToEdit.date).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
                 setSubject(invoiceToEdit.subject || invoiceToEdit.lineItems[0]?.subject || '');
@@ -106,6 +109,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setDiscountValue(invoiceToEdit.discountValue ? formatDecimalForInput(invoiceToEdit.discountValue, language) : '');
             } else {
                 setClientId('');
+                setDocumentId(generateDocumentId ? generateDocumentId() : '');
                 setDate(new Date().toISOString().split('T')[0]);
                 setDueDate('');
                 setSubject('');
@@ -432,6 +436,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
         }
 
         const invoiceData = {
+            documentId: documentId || undefined,
             clientId, clientName: clientNameDisplay, date, 
             dueDate: showDueDateField ? dueDate : undefined, 
             subject: showSubjectField ? subject : undefined, 
@@ -484,6 +489,17 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
 
                 <div className="px-3 md:px-6 py-5 overflow-y-auto custom-scrollbar flex-1 space-y-6 pb-24 md:pb-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="block text-sm font-bold text-slate-700 ml-1">{language === 'es' ? 'Nº de Facture' : 'N° Facture'} *</label>
+                            <input 
+                                type="text" 
+                                value={documentId} 
+                                onChange={(e) => setDocumentId(e.target.value)} 
+                                required
+                                placeholder="FAC-YYYY/XXXXX"
+                                className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12 font-mono"
+                            />
+                        </div>
                         <div className="space-y-1">
                             <label className="block text-sm font-bold text-slate-700 ml-1">{t('client')} *</label>
                             <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="block w-full rounded-xl border-slate-200 bg-slate-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm h-12">

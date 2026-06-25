@@ -23,6 +23,7 @@ interface DeliveryNotesProps {
     clients?: Client[];
     products?: Product[];
     companySettings?: CompanySettings | null;
+    generateDocumentId?: () => string;
 }
 
 const DeliveryNotes: React.FC<DeliveryNotesProps> = ({ 
@@ -34,7 +35,8 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
     onCreateInvoice, 
     clients = [], 
     products = [],
-    companySettings
+    companySettings,
+    generateDocumentId
 }) => {
     const navigate = useNavigate();
     const { t, isRTL, language } = useLanguage();
@@ -321,6 +323,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                 invoices={invoices}
                 noteToEdit={noteToEdit || undefined}
                 companySettings={companySettings}
+                generateDocumentId={generateDocumentId}
             />
             
             <ConfirmationModal 

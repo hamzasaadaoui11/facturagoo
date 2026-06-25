@@ -32,6 +32,7 @@ interface QuotesProps {
     clients?: Client[];
     products?: Product[];
     companySettings?: CompanySettings | null;
+    generateDocumentId?: () => string;
 }
 
 const Quotes: React.FC<QuotesProps> = ({ 
@@ -43,7 +44,8 @@ const Quotes: React.FC<QuotesProps> = ({
     onDeleteQuote,
     clients = [],
     products = [],
-    companySettings
+    companySettings,
+    generateDocumentId
 }) => {
     const navigate = useNavigate();
     const { t, isRTL } = useLanguage();
@@ -296,6 +298,7 @@ const Quotes: React.FC<QuotesProps> = ({
                 products={products}
                 quoteToEdit={quoteToEdit}
                 companySettings={companySettings}
+                generateDocumentId={generateDocumentId}
             />
 
             <ConfirmationModal 

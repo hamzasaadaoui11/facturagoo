@@ -26,6 +26,7 @@ interface CreditNotesProps {
     clients?: Client[];
     products?: Product[];
     companySettings?: CompanySettings | null;
+    generateDocumentId?: () => string;
 }
 
 const CreditNotes: React.FC<CreditNotesProps> = ({ 
@@ -36,7 +37,8 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
     onDeleteCreditNote, 
     clients = [], 
     products = [],
-    companySettings 
+    companySettings,
+    generateDocumentId
 }) => {
     const { t, isRTL } = useLanguage();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -249,6 +251,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                 products={products}
                 creditNoteToEdit={creditNoteToEdit}
                 companySettings={companySettings}
+                generateDocumentId={generateDocumentId}
             />
 
             <ConfirmationModal 
