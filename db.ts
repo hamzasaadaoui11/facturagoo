@@ -670,9 +670,13 @@ export const dbService = {
                 const settings = data as CompanySettings | null;
                 if (settings) {
                 try {
+                    const dbCustom = (settings.documentLabels as any)?._customSettings || {};
+
                     const localShowAmount = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS);
                     if (localShowAmount !== null) {
                         settings.showAmountInWords = localShowAmount === 'true';
+                    } else if (dbCustom.showAmountInWords !== undefined) {
+                        settings.showAmountInWords = dbCustom.showAmountInWords;
                     } else if (settings.showAmountInWords === undefined) {
                         settings.showAmountInWords = true;
                     }
@@ -680,6 +684,8 @@ export const dbService = {
                     const localInfoPos = localStorage.getItem(LOCAL_STORAGE_KEYS.DOCUMENT_INFO_POSITION);
                     if (localInfoPos !== null) {
                         settings.documentInfoPosition = localInfoPos as 'right' | 'left';
+                    } else if (dbCustom.documentInfoPosition !== undefined) {
+                        settings.documentInfoPosition = dbCustom.documentInfoPosition;
                     } else if (settings.documentInfoPosition === undefined) {
                         settings.documentInfoPosition = 'right';
                     }
@@ -687,6 +693,8 @@ export const dbService = {
                     const localShowExpiry = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_EXPIRY_DATE);
                     if (localShowExpiry !== null) {
                         settings.showExpiryDate = localShowExpiry === 'true';
+                    } else if (dbCustom.showExpiryDate !== undefined) {
+                        settings.showExpiryDate = dbCustom.showExpiryDate;
                     } else if (settings.showExpiryDate === undefined) {
                         settings.showExpiryDate = true;
                     }
@@ -694,6 +702,8 @@ export const dbService = {
                     const localLogoWidth = localStorage.getItem(LOCAL_STORAGE_KEYS.LOGO_WIDTH);
                     if (localLogoWidth !== null) {
                         settings.logoWidth = parseInt(localLogoWidth, 10);
+                    } else if (dbCustom.logoWidth !== undefined) {
+                        settings.logoWidth = dbCustom.logoWidth;
                     } else if (settings.logoWidth === undefined) {
                         settings.logoWidth = 200;
                     }
@@ -701,6 +711,8 @@ export const dbService = {
                     const localShowWatermark = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_LOGO_WATERMARK);
                     if (localShowWatermark !== null) {
                         settings.showLogoWatermark = localShowWatermark === 'true';
+                    } else if (dbCustom.showLogoWatermark !== undefined) {
+                        settings.showLogoWatermark = dbCustom.showLogoWatermark;
                     } else if (settings.showLogoWatermark === undefined) {
                         settings.showLogoWatermark = true;
                     }
@@ -708,6 +720,8 @@ export const dbService = {
                     const localWatermarkOpacity = localStorage.getItem(LOCAL_STORAGE_KEYS.LOGO_WATERMARK_OPACITY);
                     if (localWatermarkOpacity !== null) {
                         settings.logoWatermarkOpacity = parseFloat(localWatermarkOpacity);
+                    } else if (dbCustom.logoWatermarkOpacity !== undefined) {
+                        settings.logoWatermarkOpacity = dbCustom.logoWatermarkOpacity;
                     } else if (settings.logoWatermarkOpacity === undefined) {
                         settings.logoWatermarkOpacity = 0.07;
                     }
@@ -715,6 +729,8 @@ export const dbService = {
                     const localHeaderTextColor = localStorage.getItem(LOCAL_STORAGE_KEYS.HEADER_TEXT_COLOR);
                     if (localHeaderTextColor !== null) {
                         settings.headerTextColor = localHeaderTextColor;
+                    } else if (dbCustom.headerTextColor !== undefined) {
+                        settings.headerTextColor = dbCustom.headerTextColor;
                     } else if (settings.headerTextColor === undefined) {
                         settings.headerTextColor = '#ffffff';
                     }
@@ -722,6 +738,8 @@ export const dbService = {
                     const localTableHeaderBgColor = localStorage.getItem(LOCAL_STORAGE_KEYS.TABLE_HEADER_BG_COLOR);
                     if (localTableHeaderBgColor !== null) {
                         settings.tableHeaderBgColor = localTableHeaderBgColor;
+                    } else if (dbCustom.tableHeaderBgColor !== undefined) {
+                        settings.tableHeaderBgColor = dbCustom.tableHeaderBgColor;
                     } else if (settings.tableHeaderBgColor === undefined) {
                         settings.tableHeaderBgColor = settings.primaryColor || '#10b981';
                     }
@@ -729,6 +747,8 @@ export const dbService = {
                     const localShowTableBorders = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_TABLE_BORDERS);
                     if (localShowTableBorders !== null) {
                         settings.showTableBorders = localShowTableBorders === 'true';
+                    } else if (dbCustom.showTableBorders !== undefined) {
+                        settings.showTableBorders = dbCustom.showTableBorders;
                     } else if (settings.showTableBorders === undefined) {
                         settings.showTableBorders = true;
                     }
@@ -736,8 +756,25 @@ export const dbService = {
                     const localClientPosition = localStorage.getItem(LOCAL_STORAGE_KEYS.CLIENT_POSITION);
                     if (localClientPosition !== null) {
                         settings.clientPosition = localClientPosition as 'left' | 'right';
+                    } else if (dbCustom.clientPosition !== undefined) {
+                        settings.clientPosition = dbCustom.clientPosition;
                     } else if (settings.clientPosition === undefined) {
                         settings.clientPosition = 'right';
+                    }
+
+                    try {
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS, String(settings.showAmountInWords));
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.DOCUMENT_INFO_POSITION, settings.documentInfoPosition || 'right');
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_EXPIRY_DATE, String(settings.showExpiryDate));
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.LOGO_WIDTH, String(settings.logoWidth));
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_LOGO_WATERMARK, String(settings.showLogoWatermark));
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.LOGO_WATERMARK_OPACITY, String(settings.logoWatermarkOpacity));
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.HEADER_TEXT_COLOR, settings.headerTextColor || '#ffffff');
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.TABLE_HEADER_BG_COLOR, settings.tableHeaderBgColor || '#10b981');
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_TABLE_BORDERS, String(settings.showTableBorders));
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.CLIENT_POSITION, settings.clientPosition || 'right');
+                    } catch (storageErr) {
+                        console.error("Failed to write loaded settings to localStorage", storageErr);
                     }
                 } catch (e) {
                     console.error("Error accessing localStorage in db.ts:", e);
@@ -810,6 +847,23 @@ export const dbService = {
             } catch (e) {
                 console.error("Error saving to localStorage in db.ts:", e);
             }
+
+            // Save to documentLabels._customSettings to persist in database!
+            if (!settings.documentLabels) {
+                settings.documentLabels = {};
+            }
+            (settings.documentLabels as any)._customSettings = {
+                showAmountInWords: settings.showAmountInWords,
+                documentInfoPosition: settings.documentInfoPosition,
+                showExpiryDate: settings.showExpiryDate,
+                logoWidth: settings.logoWidth,
+                showLogoWatermark: settings.showLogoWatermark,
+                logoWatermarkOpacity: settings.logoWatermarkOpacity,
+                headerTextColor: settings.headerTextColor,
+                tableHeaderBgColor: settings.tableHeaderBgColor,
+                showTableBorders: settings.showTableBorders,
+                clientPosition: settings.clientPosition
+            };
             
             const { data: existingRow, error: fetchError } = await supabase
                 .from('settings')
