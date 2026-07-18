@@ -97,7 +97,12 @@ const Login: React.FC = () => {
             
             console.log("Login successful, relying on App's auth listener for navigation.");
         } catch (err: any) {
-            console.error("Login error:", err);
+            // Avoid logging expected user errors as console errors
+            if (err.message && err.message.toLowerCase().includes('invalid login credentials')) {
+                console.warn("Login failed: Invalid credentials");
+            } else {
+                console.error("Login error:", err);
+            }
             setError(err.message || 'Une erreur est survenue lors de la connexion.');
         } finally {
             setIsLoading(false);

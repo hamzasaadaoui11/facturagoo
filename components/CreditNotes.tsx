@@ -307,7 +307,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                                         <div className="text-xs text-neutral-500">{new Date(note.date).toLocaleDateString()}</div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-sm font-bold text-neutral-900">{note.amount.toLocaleString(undefined, { style: 'currency', currency: 'MAD' })}</div>
+                                        <div className="text-sm font-bold text-neutral-900">{note.amount.toLocaleString(undefined, { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' })}</div>
                                         <div className="text-xs text-neutral-500">{note.invoiceId || '-'}</div>
                                     </div>
                                 </div>
@@ -351,7 +351,7 @@ const CreditNotes: React.FC<CreditNotesProps> = ({
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-600 ${isRTL ? 'text-right' : 'text-left'}`}>{new Date(note.date).toLocaleDateString()}</td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-medium ${isRTL ? 'text-right' : 'text-left'}`}>{note.clientName}</td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{note.invoiceId || '-'}</td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-bold ${isRTL ? 'text-left' : 'text-right'}`}>{note.amount.toLocaleString(undefined, { style: 'currency', currency: 'MAD' })}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-bold ${isRTL ? 'text-left' : 'text-right'}`}>{note.amount.toLocaleString(undefined, { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' })}</td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[note.status]}`}>
                                                 {getStatusLabel(note.status)}

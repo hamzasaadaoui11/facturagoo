@@ -2,14 +2,15 @@
 import React, { useState } from 'react';
 import Header from './Header';
 import { CreditCard, Search } from 'lucide-react';
-import { Payment } from '../types';
+import { Payment, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface PaymentsProps {
+    companySettings?: CompanySettings | null;
     payments: Payment[];
 }
 
-const Payments: React.FC<PaymentsProps> = ({ payments }) => {
+const Payments: React.FC<PaymentsProps> = ({ payments, companySettings }) => {
     const { t, isRTL, language } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -43,7 +44,7 @@ const Payments: React.FC<PaymentsProps> = ({ payments }) => {
                         />
                     </div>
                     <div className={`text-xs sm:text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>
-                        {t('totalCollected')} : <span className="font-bold text-emerald-600">{totalCollected.toLocaleString(locale, { style: 'currency', currency: 'MAD' })}</span>
+                        {t('totalCollected')} : <span className="font-bold text-emerald-600">{totalCollected.toLocaleString(locale, { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' })}</span>
                     </div>
                 </div>
 
@@ -71,7 +72,7 @@ const Payments: React.FC<PaymentsProps> = ({ payments }) => {
                                                 <CreditCard size={14} /> {payment.method}
                                             </span>
                                         </td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm font-bold text-neutral-900 ${isRTL ? 'text-left' : 'text-right'}`}>{payment.amount.toLocaleString(locale, { style: 'currency', currency: 'MAD' })}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm font-bold text-neutral-900 ${isRTL ? 'text-left' : 'text-right'}`}>{payment.amount.toLocaleString(locale, { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' })}</td>
                                     </tr>
                                 ))
                             ) : (
@@ -104,7 +105,7 @@ const Payments: React.FC<PaymentsProps> = ({ payments }) => {
                                         </p>
                                     </div>
                                     <p className="text-sm font-bold text-neutral-900">
-                                        {payment.amount.toLocaleString(locale, { style: 'currency', currency: 'MAD' })}
+                                        {payment.amount.toLocaleString(locale, { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' })}
                                     </p>
                                 </div>
                                 <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>

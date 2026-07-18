@@ -11,7 +11,7 @@ import {
     ChevronRight,
     Receipt
 } from 'lucide-react';
-import { Expense } from '../types';
+import { Expense, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import AddExpenseModal from './AddExpenseModal';
@@ -19,6 +19,7 @@ import Header from './Header';
 import ConfirmationModal from './ConfirmationModal';
 
 interface ExpensesProps {
+    companySettings?: CompanySettings | null;
     expenses: Expense[];
     onAddExpense: (expense: Omit<Expense, 'id'>) => Promise<void>;
     onUpdateExpense: (expense: Expense) => Promise<void>;
@@ -26,6 +27,7 @@ interface ExpensesProps {
 }
 
 const Expenses: React.FC<ExpensesProps> = ({ 
+    companySettings,
     expenses, 
     onAddExpense, 
     onUpdateExpense, 
@@ -151,7 +153,7 @@ const Expenses: React.FC<ExpensesProps> = ({
                         <div>
                             <p className="text-sm font-medium text-slate-500">{t('totalMonthlyExpenses')}</p>
                             <p className="text-2xl font-bold text-slate-900">
-                                {totalMonthly.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })} <span className="text-sm font-normal text-slate-500">DH</span>
+                                {totalMonthly.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })} <span className="text-sm font-normal text-slate-500">{companySettings?.defaultCurrencyCode || 'MAD'}</span>
                             </p>
                         </div>
                     </motion.div>
@@ -240,7 +242,7 @@ const Expenses: React.FC<ExpensesProps> = ({
                                                     {expense.description}
                                                 </td>
                                                 <td className="whitespace-nowrap px-6 py-4 text-sm font-bold text-neutral-900 text-right">
-                                                    {expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} DH
+                                                    {expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {companySettings?.defaultCurrencyCode || 'MAD'}
                                                 </td>
                                                 <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                                                     <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">

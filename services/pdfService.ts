@@ -12,6 +12,7 @@ import {
 } from "../types";
 import { translations } from "../i18n/translations";
 import html2pdf from "html2pdf.js";
+import { getCurrencyByCode } from "./currencyService";
 
 export interface DocumentData {
   id: string;
@@ -118,8 +119,31 @@ const convertGroup = (n: number, isEnd: boolean): string => {
   return `${tenString}-${UNITS[unit]}`;
 };
 
-const numberToWordsFr = (amount: number): string => {
-  if (amount === 0) return "Zéro dirham";
+const numberToWordsFr = (amount: number, settings?: CompanySettings | null): string => {
+  const currencyCode = settings?.defaultCurrencyCode || 'MAD';
+  const currencyConfig = getCurrencyByCode(currencyCode);
+  
+  // Plural unit name from currency service or default
+  const pluralUnit = (currencyConfig?.pluralNameFr || 'dirhams').toLowerCase();
+  
+  // Singular unit name (e.g. "dirham", "euro", "dinar algérien")
+  let singularUnit = pluralUnit;
+  if (pluralUnit === "dinars algériens") {
+    singularUnit = "dinar algérien";
+  } else if (pluralUnit === "livres sterling") {
+    singularUnit = "livre sterling";
+  } else if (pluralUnit.endsWith("s")) {
+    singularUnit = pluralUnit.slice(0, -1);
+  }
+
+  // Subunit names (e.g. "centime", "centimes", "cents", "pence")
+  const pluralSubunit = (currencyConfig?.subUnitNameFr || 'centimes').toLowerCase();
+  let singularSubunit = pluralSubunit;
+  if (pluralSubunit.endsWith("s")) {
+    singularSubunit = pluralSubunit.slice(0, -1);
+  }
+
+  if (amount === 0) return `Zéro ${singularUnit}`;
 
   const absAmount = Math.abs(amount);
   const integerPart = Math.floor(absAmount);
@@ -186,15 +210,16 @@ const numberToWordsFr = (amount: number): string => {
 
   let result = "";
   if (integerPart === 0) {
-    result = "zéro dirham";
+    result = `zéro ${singularUnit}`;
   } else {
     result =
       convertInteger(integerPart) +
-      (integerPart === 1 ? " dirham" : " dirhams");
+      " " + (integerPart === 1 ? singularUnit : pluralUnit);
   }
 
   if (decimalPart > 0) {
-    result += ` et ${convertIntegerGroup(decimalPart, true)} centime${decimalPart > 1 ? "s" : ""}`;
+    const subWord = convertIntegerGroup(decimalPart, true);
+    result += ` et ${subWord} ${decimalPart > 1 ? pluralSubunit : singularSubunit}`;
   }
 
   return result.charAt(0).toUpperCase() + result.slice(1);
@@ -359,13 +384,13 @@ export const generateDocumentHTML = (
 
   let amountInLetters = "";
   if (lang === "fr") {
-    amountInLetters = numberToWordsFr(totalAmount);
+    amountInLetters = numberToWordsFr(totalAmount, settings);
   } else if (lang === "en") {
-    amountInLetters = numberToWordsEn(totalAmount);
+    amountInLetters = numberToWordsEn(totalAmount, settings);
   } else if (lang === "es") {
-    amountInLetters = numberToWordsEs(totalAmount);
+    amountInLetters = numberToWordsEs(totalAmount, settings);
   } else {
-    amountInLetters = `${totalAmount.toLocaleString("fr-MA", { minimumFractionDigits: 2 })} MAD`;
+    amountInLetters = `${totalAmount.toLocaleString("fr-MA", { minimumFractionDigits: 2 })} ${settings?.defaultCurrencyCode || 'MAD'}`;
   }
 
   const displayId = doc.documentId || doc.id;
@@ -852,8 +877,8 @@ export const generateDocumentHTML = (
     if (paid > 0) {
       paymentInfoHtml = `
                 <div style="margin-top: 10px; font-size: 12px; color: #059669;">
-                    ${lang === "es" ? "Ya pagado" : lang === "en" ? "Already paid" : "Déjà réglé"} : <b>${paid.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</b>
-                    ${remaining > 0.1 ? `<br/><span style="color: #d97706;">${lang === "es" ? "Importe pendiente" : lang === "en" ? "Balance due" : "Reste à payer"} : <b>${remaining.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</b></span>` : `<br/><span style="color: #059669; font-weight: bold;">${lang === "es" ? "Liquidado" : lang === "en" ? "Settled" : "Soldé"}</span>`}
+                    ${lang === "es" ? "Ya pagado" : lang === "en" ? "Already paid" : "Déjà réglé"} : <b>${paid.toLocaleString("fr-MA", { style: 'currency', currency: settings?.defaultCurrencyCode || 'MAD' })}</b>
+                    ${remaining > 0.1 ? `<br/><span style="color: #d97706;">${lang === "es" ? "Importe pendiente" : lang === "en" ? "Balance due" : "Reste à payer"} : <b>${remaining.toLocaleString("fr-MA", { style: 'currency', currency: settings?.defaultCurrencyCode || 'MAD' })}</b></span>` : `<br/><span style="color: #059669; font-weight: bold;">${lang === "es" ? "Liquidado" : lang === "en" ? "Settled" : "Soldé"}</span>`}
                 </div>
             `;
     }
@@ -983,25 +1008,25 @@ export const generateDocumentHTML = (
             <div style="width: 40%;">
                 <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb;">
                     <span>${txtTotalHt}</span>
-                    <span style="font-weight: 600;">${subTotal.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</span>
+                    <span style="font-weight: 600;">${subTotal.toLocaleString("fr-MA", { style: 'currency', currency: settings?.defaultCurrencyCode || 'MAD' })}</span>
                 </div>
                 ${
                   discountAmount > 0
                     ? `
                 <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb;">
                     <span>${dict.globalDiscount || "Remise exceptionnelle"} ${doc.discountType === "percentage" ? `(-${doc.discountValue}%)` : ""}</span>
-                    <span style="font-weight: 600; color: #dc2626;">- ${discountAmount.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</span>
+                    <span style="font-weight: 600; color: #dc2626;">- ${discountAmount.toLocaleString("fr-MA", { style: 'currency', currency: settings?.defaultCurrencyCode || 'MAD' })}</span>
                 </div>
                 `
                     : ""
                 }
                 <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e5e7eb;">
                     <span>${txtTotalTax}</span>
-                    <span>${vatAmount.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</span>
+                    <span>${vatAmount.toLocaleString("fr-MA", { style: 'currency', currency: settings?.defaultCurrencyCode || 'MAD' })}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; padding: 12px 0 4px 0; font-size: 16px; color: #000000; font-weight: bold; margin-top: 4px;">
                     <span>${txtTotalNet}</span>
-                    <span>${totalAmount.toLocaleString("fr-MA", { style: "currency", currency: "MAD" })}</span>
+                    <span>${totalAmount.toLocaleString("fr-MA", { style: 'currency', currency: settings?.defaultCurrencyCode || 'MAD' })}</span>
                 </div>
                 ${paymentInfoHtml}
             </div>
@@ -1584,7 +1609,7 @@ export const printDocument = (
 };
 
 // --- English Number to Words ---
-const numberToWordsEn = (amount: number): string => {
+const numberToWordsEn = (amount: number, settings?: CompanySettings | null): string => {
   const units = [
     "",
     "one",
@@ -1641,7 +1666,35 @@ const numberToWordsEn = (amount: number): string => {
     return res.trim();
   };
 
-  if (amount === 0) return "Zero dirhams";
+  const currencyCode = settings?.defaultCurrencyCode || 'MAD';
+  let mainUnitSingular = "dirham";
+  let mainUnitPlural = "dirhams";
+  let subUnitSingular = "centime";
+  let subUnitPlural = "centimes";
+
+  if (currencyCode === "DZD") {
+    mainUnitSingular = "Algerian dinar";
+    mainUnitPlural = "Algerian dinars";
+    subUnitSingular = "centime";
+    subUnitPlural = "centimes";
+  } else if (currencyCode === "EUR") {
+    mainUnitSingular = "euro";
+    mainUnitPlural = "euros";
+    subUnitSingular = "cent";
+    subUnitPlural = "cents";
+  } else if (currencyCode === "USD") {
+    mainUnitSingular = "dollar";
+    mainUnitPlural = "dollars";
+    subUnitSingular = "cent";
+    subUnitPlural = "cents";
+  } else if (currencyCode === "GBP") {
+    mainUnitSingular = "pound";
+    mainUnitPlural = "pounds";
+    subUnitSingular = "penny";
+    subUnitPlural = "pence";
+  }
+
+  if (amount === 0) return `Zero ${mainUnitPlural}`;
   const integerPart = Math.floor(Math.abs(amount));
   const decimalPart = Math.round((Math.abs(amount) - integerPart) * 100);
 
@@ -1661,16 +1714,16 @@ const numberToWordsEn = (amount: number): string => {
     scaleIdx++;
   }
 
-  let result = words.trim() + (integerPart === 1 ? " dirham" : " dirhams");
+  let result = words.trim() + " " + (integerPart === 1 ? mainUnitSingular : mainUnitPlural);
   if (decimalPart > 0) {
-    result += " and " + convertGroup(decimalPart) + " centimes";
+    result += " and " + convertGroup(decimalPart) + " " + (decimalPart === 1 ? subUnitSingular : subUnitPlural);
   }
 
   return result.charAt(0).toUpperCase() + result.slice(1);
 };
 
 // --- Spanish Number to Words ---
-const numberToWordsEs = (amount: number): string => {
+const numberToWordsEs = (amount: number, settings?: CompanySettings | null): string => {
   const units = [
     "",
     "un",
@@ -1736,7 +1789,35 @@ const numberToWordsEs = (amount: number): string => {
     return res.trim();
   };
 
-  if (amount === 0) return "Cero dirhams";
+  const currencyCode = settings?.defaultCurrencyCode || 'MAD';
+  let mainUnitSingular = "dirham";
+  let mainUnitPlural = "dirhams";
+  let subUnitSingular = "céntimo";
+  let subUnitPlural = "céntimos";
+
+  if (currencyCode === "DZD") {
+    mainUnitSingular = "dinar argelino";
+    mainUnitPlural = "dinares argelinos";
+    subUnitSingular = "céntimo";
+    subUnitPlural = "céntimos";
+  } else if (currencyCode === "EUR") {
+    mainUnitSingular = "euro";
+    mainUnitPlural = "euros";
+    subUnitSingular = "céntimo";
+    subUnitPlural = "céntimos";
+  } else if (currencyCode === "USD") {
+    mainUnitSingular = "dólar";
+    mainUnitPlural = "dólares";
+    subUnitSingular = "centavo";
+    subUnitPlural = "centavos";
+  } else if (currencyCode === "GBP") {
+    mainUnitSingular = "libra";
+    mainUnitPlural = "libras";
+    subUnitSingular = "penique";
+    subUnitPlural = "peniques";
+  }
+
+  if (amount === 0) return `Cero ${mainUnitPlural}`;
   const integerPart = Math.floor(Math.abs(amount));
   const decimalPart = Math.round((Math.abs(amount) - integerPart) * 100);
 
@@ -1753,9 +1834,9 @@ const numberToWordsEs = (amount: number): string => {
       convertGroup(remainder);
   }
 
-  let result = words.trim() + (integerPart === 1 ? " dirham" : " dirhams");
+  let result = words.trim() + " " + (integerPart === 1 ? mainUnitSingular : mainUnitPlural);
   if (decimalPart > 0) {
-    result += " con " + convertGroup(decimalPart) + " céntimos";
+    result += " con " + convertGroup(decimalPart) + " " + (decimalPart === 1 ? subUnitSingular : subUnitPlural);
   }
 
   return result.charAt(0).toUpperCase() + result.slice(1);

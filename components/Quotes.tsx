@@ -358,7 +358,7 @@ const Quotes: React.FC<QuotesProps> = ({
                                         <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base font-medium text-emerald-600 rtl:text-right">{quote.documentId || quote.id}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 rtl:text-right">{new Date(quote.date).toLocaleDateString('fr-FR')}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 rtl:text-right">{quote.clientName}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 rtl:text-right">{quote.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base text-neutral-500 rtl:text-right">{quote.amount.toLocaleString('fr-FR', { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' })}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm md:text-base rtl:text-right">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[quote.status]}`}>
                                                 {quote.status}
@@ -416,7 +416,7 @@ const Quotes: React.FC<QuotesProps> = ({
                                     </div>
                                     <div className="text-right">
                                         <p className="text-sm font-bold text-neutral-900">
-                                            {quote.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}
+                                            {quote.amount.toLocaleString('fr-FR', { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' })}
                                         </p>
                                     </div>
                                 </div>

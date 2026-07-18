@@ -423,7 +423,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                                             {displayReference}
                                         </td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm font-medium text-neutral-900 ${isRTL ? 'text-left' : 'text-right'}`}>
-                                            {note.totalAmount ? note.totalAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}
+                                            {note.totalAmount ? note.totalAmount.toLocaleString('fr-FR', { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' }) : '-'}
                                         </td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusInfo.color}`}>
@@ -492,7 +492,7 @@ const DeliveryNotes: React.FC<DeliveryNotesProps> = ({
                                             <StatusIcon size={12} className={`${isRTL ? 'ml-1' : 'mr-1'}`} /> {statusInfo.label}
                                         </span>
                                         <p className="text-sm font-bold text-neutral-900">
-                                            {note.totalAmount ? note.totalAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}
+                                            {note.totalAmount ? note.totalAmount.toLocaleString('fr-FR', { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' }) : '-'}
                                         </p>
                                     </div>
                                 </div>

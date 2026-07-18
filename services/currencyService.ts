@@ -48,6 +48,15 @@ export const CURRENCIES: CurrencyConfig[] = [
         pluralNameFr: 'livres sterling', 
         subUnitNameFr: 'pences' 
     },
+    {
+        code: 'DZD',
+        symbol: 'DA',
+        position: 'suffix',
+        decimalSeparator: ',',
+        thousandSeparator: ' ',
+        pluralNameFr: 'dinars algériens',
+        subUnitNameFr: 'centimes'
+    },
 ];
 
 export const getCurrencyByCode = (code: string = 'MAD'): CurrencyConfig => {

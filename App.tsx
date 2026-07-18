@@ -1224,14 +1224,14 @@ const MainContent: React.FC = () => {
                             <Route path="/sales/quotes" element={<Quotes quotes={quotes} onUpdateQuoteStatus={updateQuoteStatus} onCreateInvoice={createInvoiceFromQuote} onAddQuote={addQuote} onUpdateQuote={updateQuote} onDeleteQuote={deleteQuote} clients={clients} products={products} companySettings={companySettings} generateDocumentId={() => generateDocumentId('quote', quotes)} />} />
                             <Route path="/sales/invoices" element={<InvoicesComponent invoices={invoices} onUpdateInvoiceStatus={updateInvoiceStatus} onAddPayment={addPayment} onCreateInvoice={addInvoice} onUpdateInvoice={updateInvoice} onDeleteInvoice={deleteInvoice} onCreateCreditNote={createCreditNoteFromInvoice} clients={clients} products={products} companySettings={companySettings} generateDocumentId={() => generateDocumentId('invoice', invoices)} />} />
                             <Route path="/sales/credit-notes" element={<CreditNotesComponent creditNotes={creditNotes} onUpdateCreditNoteStatus={updateCreditNoteStatus} onCreateCreditNote={addCreditNote} onUpdateCreditNote={updateCreditNote} onDeleteCreditNote={deleteCreditNote} clients={clients} products={products} companySettings={companySettings} generateDocumentId={() => generateDocumentId('creditNote', creditNotes)} />} />
-                            <Route path="/sales/payments" element={<PaymentTracking invoices={invoices} payments={payments} onAddPayment={addPayment} clients={clients} />} />
+                            <Route path="/sales/payments" element={<PaymentTracking invoices={invoices} payments={payments} onAddPayment={addPayment} clients={clients} companySettings={companySettings} />} />
                             <Route path="/sales/delivery" element={<DeliveryNotesComponent deliveryNotes={deliveryNotes} invoices={invoices} onCreateDeliveryNote={createDeliveryNote} onUpdateDeliveryNote={updateDeliveryNote} onDeleteDeliveryNote={deleteDeliveryNote} onCreateInvoice={createInvoiceFromDeliveryNote} clients={clients} products={products} companySettings={companySettings} generateDocumentId={() => generateDocumentId('deliveryNote', deliveryNotes)} />} />
                             <Route path="/purchases/orders" element={<PurchaseOrders orders={purchaseOrders} suppliers={suppliers} products={products} onAddOrder={addPurchaseOrder} onUpdateOrder={updatePurchaseOrder} onUpdateStatus={updatePurchaseOrderStatus} onDeleteOrder={deletePurchaseOrder} onConvertToInvoice={(order) => navigate('/sales/invoices', { state: { prefilledOrder: order } })} companySettings={companySettings} generateDocumentId={() => generateDocumentId('purchaseOrder', purchaseOrders)} />} />
                             <Route path="/stock" element={<StockManagement products={products} movements={stockMovements} onAddMovement={addStockMovement} />} />
-                            <Route path="/expenses" element={<Expenses expenses={expenses} onAddExpense={addExpense} onUpdateExpense={updateExpense} onDeleteExpense={deleteExpense} />} />
+                            <Route path="/expenses" element={<Expenses expenses={expenses} onAddExpense={addExpense} onUpdateExpense={updateExpense} onDeleteExpense={deleteExpense} companySettings={companySettings} />} />
                             <Route path="/personnel" element={<PersonnelManagement companySettings={companySettings} onAddExpense={addExpense} initialEmployees={employees} initialAttendances={attendances} initialPayments={salaryPayments} />} />
                             <Route path="/clients" element={<ClientsComponent clients={clients} onAddClient={addClient} onUpdateClient={updateClient} onDeleteClient={deleteClient} onDeleteClients={deleteClient} />} />
-                            <Route path="/suppliers" element={<SuppliersComponent suppliers={suppliers} purchaseOrders={purchaseOrders} onUpdatePurchaseOrder={updatePurchaseOrder} onAddExpense={addExpense} onAddSupplier={addSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} onDeleteSuppliers={deleteSupplier} />} />
+                            <Route path="/suppliers" element={<SuppliersComponent suppliers={suppliers} purchaseOrders={purchaseOrders} onUpdatePurchaseOrder={updatePurchaseOrder} onAddExpense={addExpense} onAddSupplier={addSupplier} onUpdateSupplier={updateSupplier} onDeleteSupplier={deleteSupplier} onDeleteSuppliers={deleteSupplier} companySettings={companySettings} />} />
                             <Route path="/products" element={<ProductsComponent products={products} onAddProduct={addProduct} onAddProducts={addProducts} onUpdateProduct={updateProduct} onDeleteProduct={deleteProducts} onDeleteProducts={deleteProducts} companySettings={companySettings} />} />
                             <Route path="/products/new" element={<ProductsComponent products={products} onAddProduct={addProduct} onAddProducts={addProducts} onUpdateProduct={updateProduct} onDeleteProduct={deleteProducts} onDeleteProducts={deleteProducts} companySettings={companySettings} />} />
                             <Route path="/products/edit/:productId" element={<ProductsComponent products={products} onAddProduct={addProduct} onAddProducts={addProducts} onUpdateProduct={updateProduct} onDeleteProduct={deleteProducts} onDeleteProducts={deleteProducts} companySettings={companySettings} />} />
@@ -1264,7 +1264,15 @@ const App: React.FC = () => {
 
         const initSession = async () => {
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                const { data: { session }, error } = await supabase.auth.getSession();
+                if (error) {
+                    if (error.message && error.message.includes('Refresh Token Not Found')) {
+                        console.warn('Refresh token not found, clearing session.');
+                        await supabase.auth.signOut().catch(() => {});
+                    } else {
+                        console.error("Session error:", error.message);
+                    }
+                }
                 setSession(session);
             } catch (err) {
                 console.error("Auth initialization exception:", err);

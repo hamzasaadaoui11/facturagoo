@@ -2,18 +2,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Header from './Header';
-import { Invoice, Payment, InvoiceStatus, Client } from '../types';
+import { Invoice, Payment, InvoiceStatus, Client, CompanySettings } from '../types';
 import { Search, CreditCard, AlertCircle, CheckCircle, PieChart, DollarSign, Users, X, MoreVertical, ChevronDown } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface PaymentTrackingProps {
+    companySettings?: CompanySettings | null;
     invoices: Invoice[];
     payments: Payment[];
     onAddPayment: (payment: Omit<Payment, 'id'>) => void;
     clients: Client[];
 }
 
-const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, onAddPayment, clients }) => {
+const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, onAddPayment, clients, companySettings }) => {
     const { t, isRTL, language } = useLanguage();
     const [activeTab, setActiveTab] = useState<'outstanding' | 'partial' | 'paid'>('outstanding');
     const [searchTerm, setSearchTerm] = useState('');
@@ -203,7 +204,7 @@ const PaymentTracking: React.FC<PaymentTrackingProps> = ({ invoices, payments, o
         setBankName('');
     };
 
-    const currencyCode = 'MAD';
+    const currencyCode = companySettings?.defaultCurrencyCode || 'MAD';
     const locale = language === 'es' ? 'es-ES' : (language === 'ar' ? 'ar-MA' : 'fr-FR');
 
     return (

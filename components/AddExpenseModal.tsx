@@ -149,7 +149,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-1.5">{t('amount')} (DH)</label>
+                                <label className="block text-sm font-bold text-slate-700 mb-1.5">{t('amount')} </label>
                                 <input 
                                     required
                                     type="number"

@@ -63,7 +63,7 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
     };
 
     const currencyLocale = language === 'ar' ? 'ar-MA' : (language === 'es' ? 'es-ES' : 'fr-FR');
-    const formatMoney = (amount: number) => amount.toLocaleString(currencyLocale, { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 });
+    const formatMoney = (amount: number) => amount.toLocaleString(currencyLocale, { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD', maximumFractionDigits: 0 });
 
     const cleanHtml = (html: string) => {
         if (!html) return '';

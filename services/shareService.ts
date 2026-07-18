@@ -16,7 +16,7 @@ export const shareDocument = async (
     // We remove the global isSharing guard to avoid getting stuck
     const documentId = doc.documentId || doc.id;
     const amount = doc.amount || doc.totalAmount || 0;
-    const formattedAmount = amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' });
+    const formattedAmount = amount.toLocaleString('fr-FR', { style: 'currency', currency: settings?.defaultCurrencyCode || 'MAD' });
     
     let message = '';
     if (isRTL) {

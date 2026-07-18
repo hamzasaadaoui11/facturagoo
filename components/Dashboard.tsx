@@ -100,7 +100,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
     const stats = [
         { 
             name: t('totalRevenue'), 
-            stat: totalRevenue.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }), 
+            stat: totalRevenue.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD', maximumFractionDigits: 0 }), 
             icon: DollarSign, 
             color: 'bg-emerald-500',
             iconColor: 'text-emerald-600',
@@ -108,7 +108,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
         },
         { 
             name: t('expenses'), 
-            stat: monthlyExpenses.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }), 
+            stat: monthlyExpenses.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD', maximumFractionDigits: 0 }), 
             icon: Wallet, 
             color: 'bg-rose-500',
             iconColor: 'text-rose-600',
@@ -120,7 +120,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
             icon: AlertCircle, 
             color: 'bg-orange-500',
             iconColor: 'text-orange-600',
-            desc: `${t('remainingAmount')} : ${unpaidAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 })}`
+            desc: `${t('remainingAmount')} : ${unpaidAmount.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-MA', { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD', maximumFractionDigits: 0 })}`
         },
         { 
             name: t('activeClients'), 
@@ -382,7 +382,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                                     <YAxis tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} />
                                     <Tooltip 
                                         contentStyle={{ backgroundColor: 'white', border: 'none', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
-                                        formatter={(value: number) => [`${value.toLocaleString('fr-FR')} MAD`, 'Revenu']} 
+                                        formatter={(value: number) => [`${value.toLocaleString('fr-FR')} ${companySettings?.defaultCurrencyCode || 'MAD'}`, 'Revenu']} 
                                     />
                                     <Area type="monotone" dataKey="Revenu" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
                                 </AreaChart>
@@ -495,7 +495,7 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0 ml-2">
-                                    <p className="font-bold text-slate-900 text-xs md:text-sm">{invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</p>
+                                    <p className="font-bold text-slate-900 text-xs md:text-sm">{invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' })}</p>
                                     <span className={`text-[9px] md:text-[10px] px-2 py-0.5 md:py-1 rounded-lg font-medium inline-block mt-1 ${
                                         invoice.status === InvoiceStatus.Paid ? 'bg-emerald-50 text-emerald-700' : 
                                         invoice.status === InvoiceStatus.Pending ? 'bg-amber-50 text-amber-700' : 'bg-slate-50 text-slate-600'

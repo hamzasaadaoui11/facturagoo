@@ -281,22 +281,22 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                         <div className="w-full max-w-xs space-y-3">
                             <div className="flex justify-between text-neutral-600">
                                 <span>{t('totalHT')}</span>
-                                <span className="font-medium">{subTotal.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                                <span className="font-medium">{subTotal.toLocaleString('fr-MA', { style: 'currency', currency: settings?.defaultCurrencyCode || 'MAD' })}</span>
                             </div>
                             {discountAmount > 0 && (
                                 <div className="flex justify-between text-red-600">
                                     <span>{t('discount')} {doc.discountType === 'percentage' ? `(${doc.discountValue}%)` : ''}</span>
-                                    <span className="font-medium">- {discountAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                                    <span className="font-medium">- {discountAmount.toLocaleString('fr-MA', { style: 'currency', currency: settings?.defaultCurrencyCode || 'MAD' })}</span>
                                 </div>
                             )}
                             <div className="flex justify-between text-neutral-600">
                                 <span>{t('vat')}</span>
-                                <span className="font-medium">{vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                                <span className="font-medium">{vatAmount.toLocaleString('fr-MA', { style: 'currency', currency: settings?.defaultCurrencyCode || 'MAD' })}</span>
                             </div>
                             <div className="h-px bg-neutral-200 my-2"></div>
                             <div className="flex justify-between text-lg font-bold bg-neutral-50 p-2 rounded" style={{ color: '#000000' }}>
                                 <span>{t('totalTTC')}</span>
-                                <span>{totalTTC.toLocaleString('fr-MA', { style: 'currency', currency: 'MAD' })}</span>
+                                <span>{totalTTC.toLocaleString('fr-MA', { style: 'currency', currency: settings?.defaultCurrencyCode || 'MAD' })}</span>
                             </div>
                         </div>
                     )}

@@ -30,7 +30,8 @@ const LOCAL_STORAGE_KEYS = {
     HEADER_TEXT_COLOR: 'facturago_header_text_color',
     TABLE_HEADER_BG_COLOR: 'facturago_table_header_bg_color',
     SHOW_TABLE_BORDERS: 'facturago_show_table_borders',
-    CLIENT_POSITION: 'facturago_client_position'
+    CLIENT_POSITION: 'facturago_client_position',
+    DEFAULT_CURRENCY_CODE: 'settings_default_currency_code'
 };
 
 export const initDB = async (): Promise<any> => {
@@ -128,8 +129,12 @@ const handleAuthError = async (error: any) => {
         console.warn("JWT expired detected, attempting refresh...");
         const { data, error: refreshError } = await supabase.auth.refreshSession();
         if (refreshError) {
-            console.error("Session refresh failed, signing out:", refreshError);
-            await supabase.auth.signOut();
+            if (refreshError.message && refreshError.message.includes('Refresh Token Not Found')) {
+                console.warn('Refresh token not found, signing out.');
+            } else {
+                console.error("Session refresh failed, signing out:", refreshError);
+            }
+            await supabase.auth.signOut().catch(() => {});
             window.location.href = '/#/login';
             return false;
         }
@@ -762,6 +767,15 @@ export const dbService = {
                         settings.clientPosition = 'right';
                     }
 
+                    const localCurrency = localStorage.getItem(LOCAL_STORAGE_KEYS.DEFAULT_CURRENCY_CODE);
+                    if (localCurrency !== null) {
+                        settings.defaultCurrencyCode = localCurrency;
+                    } else if (dbCustom.defaultCurrencyCode !== undefined) {
+                        settings.defaultCurrencyCode = dbCustom.defaultCurrencyCode;
+                    } else if (settings.defaultCurrencyCode === undefined) {
+                        settings.defaultCurrencyCode = 'MAD';
+                    }
+
                     try {
                         localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS, String(settings.showAmountInWords));
                         localStorage.setItem(LOCAL_STORAGE_KEYS.DOCUMENT_INFO_POSITION, settings.documentInfoPosition || 'right');
@@ -773,6 +787,7 @@ export const dbService = {
                         localStorage.setItem(LOCAL_STORAGE_KEYS.TABLE_HEADER_BG_COLOR, settings.tableHeaderBgColor || '#10b981');
                         localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_TABLE_BORDERS, String(settings.showTableBorders));
                         localStorage.setItem(LOCAL_STORAGE_KEYS.CLIENT_POSITION, settings.clientPosition || 'right');
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.DEFAULT_CURRENCY_CODE, settings.defaultCurrencyCode || 'MAD');
                     } catch (storageErr) {
                         console.error("Failed to write loaded settings to localStorage", storageErr);
                     }
@@ -789,6 +804,7 @@ export const dbService = {
                     settings.tableHeaderBgColor = settings.tableHeaderBgColor ?? settings.primaryColor ?? '#10b981';
                     settings.showTableBorders = settings.showTableBorders ?? true;
                     settings.clientPosition = settings.clientPosition ?? 'right';
+                    settings.defaultCurrencyCode = settings.defaultCurrencyCode ?? 'MAD';
                 }
             }
             return settings;
@@ -844,6 +860,9 @@ export const dbService = {
                 if (settings.clientPosition !== undefined) {
                     localStorage.setItem(LOCAL_STORAGE_KEYS.CLIENT_POSITION, settings.clientPosition);
                 }
+                if (settings.defaultCurrencyCode !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.DEFAULT_CURRENCY_CODE, settings.defaultCurrencyCode);
+                }
             } catch (e) {
                 console.error("Error saving to localStorage in db.ts:", e);
             }
@@ -862,7 +881,8 @@ export const dbService = {
                 headerTextColor: settings.headerTextColor,
                 tableHeaderBgColor: settings.tableHeaderBgColor,
                 showTableBorders: settings.showTableBorders,
-                clientPosition: settings.clientPosition
+                clientPosition: settings.clientPosition,
+                defaultCurrencyCode: settings.defaultCurrencyCode
             };
             
             const { data: existingRow, error: fetchError } = await supabase
@@ -889,6 +909,7 @@ export const dbService = {
             delete (cleanData as any).tableHeaderBgColor; // Remove to avoid Supabase schema error
             delete (cleanData as any).showTableBorders; // Remove to avoid Supabase schema error
             delete (cleanData as any).clientPosition; // Remove to avoid Supabase schema error
+            delete (cleanData as any).defaultCurrencyCode; // Remove to avoid Supabase schema error
 
             let resultData, resultError;
 
@@ -928,7 +949,8 @@ export const dbService = {
                 headerTextColor: settings.headerTextColor,
                 tableHeaderBgColor: settings.tableHeaderBgColor,
                 showTableBorders: settings.showTableBorders,
-                clientPosition: settings.clientPosition
+                clientPosition: settings.clientPosition,
+                defaultCurrencyCode: settings.defaultCurrencyCode
             };
             return finalResult;
         }

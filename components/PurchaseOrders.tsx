@@ -311,7 +311,7 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{new Date(order.date).toLocaleDateString()}</td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{order.supplierName}</td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{order.expectedDate ? new Date(order.expectedDate).toLocaleDateString() : '-'}</td>
-                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{order.totalAmount.toLocaleString(undefined, { style: 'currency', currency: 'MAD' })}</td>
+                                        <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-left' : 'text-right'}`}>{order.totalAmount.toLocaleString(undefined, { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' })}</td>
                                         <td className={`whitespace-nowrap px-6 py-4 text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
                                             <div className="flex flex-col gap-1">
                                                 <span className={`inline-flex items-center w-fit rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${statusColors[order.status]}`}>
@@ -383,7 +383,7 @@ const PurchaseOrders: React.FC<PurchaseOrdersProps> = ({
                                         </span>
                                     </div>
                                     <p className="text-sm font-bold text-neutral-900">
-                                        {order.totalAmount.toLocaleString(undefined, { style: 'currency', currency: 'MAD' })}
+                                        {order.totalAmount.toLocaleString(undefined, { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' })}
                                     </p>
                                 </div>
                             </div>

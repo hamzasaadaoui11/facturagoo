@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Header from './Header';
 import { CompanySettings, DocumentColumn, NumberingConfig, DocumentLabels } from '../types';
+import { CURRENCIES } from '../services/currencyService';
 import { 
     Save, Upload, Building, Palette, FileText, CheckCircle, X, 
     ArrowUp, ArrowDown, LayoutTemplate, Briefcase, 
@@ -100,7 +101,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
         }
     }, [settings]);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setLocalSettings(prev => ({ ...prev, [name]: value }));
     };
@@ -325,6 +326,22 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                     <InputField icon={Phone} label={t('phone')} name="phone" value={localSettings.phone || ''} onChange={handleInputChange} placeholder="+212 6..." />
                                     <InputField icon={Mail} label={t('email')} name="email" type="email" value={localSettings.email || ''} onChange={handleInputChange} placeholder="contact@entreprise.com" />
                                     <InputField icon={Globe} label="Site Web" name="website" value={localSettings.website || ''} onChange={handleInputChange} className="md:col-span-2" placeholder="www.votre-site.com" />
+                                    <div className="md:col-span-2">
+                                        <label htmlFor="defaultCurrencyCode" className="block text-sm font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Moneda por defecto' : 'Devise par défaut'}</label>
+                                        <div className="relative group">
+                                            <select
+                                                id="defaultCurrencyCode"
+                                                name="defaultCurrencyCode"
+                                                value={localSettings.defaultCurrencyCode || 'MAD'}
+                                                onChange={handleInputChange}
+                                                className="block w-full rounded-xl border-neutral-200 bg-neutral-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2.5 pl-3 pr-10 transition-all"
+                                            >
+                                                {CURRENCIES.map(c => (
+                                                    <option key={c.code} value={c.code}>{c.code} - {c.pluralNameFr}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

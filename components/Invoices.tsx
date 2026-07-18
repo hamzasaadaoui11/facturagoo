@@ -332,7 +332,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                     onChange={e => setPaymentAmount(parseFloat(e.target.value))}
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">{t('remaining')} : {(selectedInvoiceForPayment.amount - (selectedInvoiceForPayment.amountPaid || 0)).toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</p>
+                                <p className="text-xs text-gray-500 mt-1">{t('remaining')} : {(selectedInvoiceForPayment.amount - (selectedInvoiceForPayment.amountPaid || 0)).toLocaleString('fr-FR', { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' })}</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">{t('paymentMethod')}</label>
@@ -422,8 +422,8 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-emerald-600 rtl:text-right">{invoice.documentId || invoice.id}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500 rtl:text-right">{new Date(invoice.date).toLocaleDateString('fr-FR')}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-600 max-w-[120px] truncate rtl:text-right">{invoice.clientName}</td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-medium rtl:text-right">{invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' })}</td>
-                                        <td className="hidden lg:table-cell whitespace-nowrap px-6 py-4 text-sm font-medium text-red-600 rtl:text-right">{remaining > 0 ? remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD' }) : '-'}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-900 font-medium rtl:text-right">{invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' })}</td>
+                                        <td className="hidden lg:table-cell whitespace-nowrap px-6 py-4 text-sm font-medium text-red-600 rtl:text-right">{remaining > 0 ? remaining.toLocaleString('fr-FR', { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD' }) : '-'}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm rtl:text-right">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[invoice.status]}`}>
                                                 {invoice.status}
@@ -482,14 +482,14 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                                         <div>
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{t('amount')}</p>
                                             <p className="text-sm font-black text-slate-900">
-                                                {invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 })}
+                                                {invoice.amount.toLocaleString('fr-FR', { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD', maximumFractionDigits: 0 })}
                                             </p>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{new Date(invoice.date).toLocaleDateString('fr-FR')}</p>
                                             {remaining > 0 && (
                                                 <p className="text-[11px] text-red-600 font-bold">
-                                                    {t('remaining')}: {remaining.toLocaleString('fr-FR', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 })}
+                                                    {t('remaining')}: {remaining.toLocaleString('fr-FR', { style: 'currency', currency: companySettings?.defaultCurrencyCode || 'MAD', maximumFractionDigits: 0 })}
                                                 </p>
                                             )}
                                         </div>

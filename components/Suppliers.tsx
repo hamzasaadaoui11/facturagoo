@@ -6,10 +6,11 @@ import AddSupplierModal from './AddSupplierModal';
 import ImportSuppliersModal from './ImportSuppliersModal';
 import ConfirmationModal from './ConfirmationModal';
 import { Plus, Pencil, Trash2, Building2, User, Search, ChevronLeft, ChevronRight, Upload, Landmark, AlertCircle, Clock, CheckCircle2, Wallet, ArrowUpRight } from 'lucide-react';
-import { Supplier, PurchaseOrder, PurchaseOrderStatus, Expense } from '../types';
+import { Supplier, PurchaseOrder, PurchaseOrderStatus, Expense, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface SuppliersProps {
+    companySettings?: CompanySettings | null;
     suppliers: Supplier[];
     purchaseOrders: PurchaseOrder[];
     onUpdatePurchaseOrder: (order: PurchaseOrder) => void;
@@ -20,7 +21,8 @@ interface SuppliersProps {
     onDeleteSuppliers: (supplierIds: string[]) => void;
 }
 
-const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpdatePurchaseOrder, onAddExpense, onAddSupplier, onUpdateSupplier, onDeleteSupplier, onDeleteSuppliers }) => {
+const Suppliers: React.FC<SuppliersProps> = ({ 
+    suppliers, purchaseOrders, onUpdatePurchaseOrder, onAddExpense, onAddSupplier, onUpdateSupplier, onDeleteSupplier, onDeleteSuppliers, companySettings }) => {
     const { t, isRTL, language } = useLanguage();
     const location = useLocation();
     const [activeTab, setActiveTab] = useState<'list' | 'credit'>('list');
@@ -275,7 +277,7 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpda
                     <div>
                         <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{language === 'fr' ? 'Dette Totale' : 'Total Debt'}</p>
                         <p className="text-xl font-black text-slate-900">
-                            {totalDebt.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })} <span className="text-sm font-bold text-slate-400">DH</span>
+                            {totalDebt.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })} <span className="text-sm font-bold text-slate-400">{companySettings?.defaultCurrencyCode || 'MAD'}</span>
                         </p>
                     </div>
                 </div>
@@ -286,7 +288,7 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpda
                     <div>
                         <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{language === 'fr' ? 'Dette en Retard' : 'Overdue Debt'}</p>
                         <p className="text-xl font-black text-red-600">
-                            {totalOverdue.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })} <span className="text-sm font-bold text-red-300">DH</span>
+                            {totalOverdue.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })} <span className="text-sm font-bold text-red-300">{companySettings?.defaultCurrencyCode || 'MAD'}</span>
                         </p>
                     </div>
                 </div>
@@ -422,7 +424,7 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpda
                                                     {supplierDebts[supplier.id]?.balance > 0 && (
                                                         <div className={`mt-0.5 inline-flex items-center gap-1 text-[10px] font-black px-1 py-0.5 rounded-md w-fit ${supplierDebts[supplier.id].status === 'partial' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
                                                             <Wallet size={10} />
-                                                            {supplierDebts[supplier.id].balance.toLocaleString(undefined, { minimumFractionDigits: 2 })} DH
+                                                            {supplierDebts[supplier.id].balance.toLocaleString(undefined, { minimumFractionDigits: 2 })} {companySettings?.defaultCurrencyCode || 'MAD'}
                                                         </div>
                                                     )}
                                                 </div>
@@ -537,7 +539,7 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpda
                                                         {supplierDebts[supplier.id]?.balance > 0 && (
                                                             <div className={`mt-0.5 inline-flex items-center gap-1 w-fit text-[10px] font-black px-1.5 py-0.5 rounded-md ${supplierDebts[supplier.id].status === 'partial' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
                                                                 <Wallet size={10} />
-                                                                {supplierDebts[supplier.id].balance.toLocaleString(undefined, { minimumFractionDigits: 2 })} DH 
+                                                                {supplierDebts[supplier.id].balance.toLocaleString(undefined, { minimumFractionDigits: 2 })} {companySettings?.defaultCurrencyCode || 'MAD'} 
                                                                 <span className="opacity-70 ml-1">({supplierDebts[supplier.id].status === 'partial' ? (language === 'fr' ? 'Avance' : 'Adv.') : (language === 'fr' ? 'Non payé' : 'Unpaid')})</span>
                                                             </div>
                                                         )}
@@ -735,7 +737,7 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpda
                                                     </span>
                                                 </div>
                                                 <p className="text-2xl font-black text-slate-900 leading-none">
-                                                    {debt.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-sm font-bold text-slate-400 uppercase tracking-tighter ml-1">DH</span>
+                                                    {debt.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-sm font-bold text-slate-400 uppercase tracking-tighter ml-1">{companySettings?.defaultCurrencyCode || 'MAD'}</span>
                                                 </p>
                                             </div>
                                             <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-tight">
@@ -844,7 +846,7 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpda
                                                                         <div className="text-right">
                                                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{language === 'fr' ? 'Rete à payer' : 'To Pay'}</p>
                                                                             <p className={`text-lg font-black ${isOverdue ? 'text-red-600' : 'text-slate-900'}`}>
-                                                                                {poBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-[10px]">DH</span>
+                                                                                {poBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-[10px]">{companySettings?.defaultCurrencyCode || 'MAD'}</span>
                                                                             </p>
                                                                         </div>
                                                                         <button 
@@ -875,18 +877,18 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpda
                                                     <p className="text-xs font-bold text-emerald-300 uppercase tracking-widest relative z-10">{language === 'fr' ? 'Dette Totale' : 'Total Balance'}</p>
                                                     <h3 className="text-4xl font-black mt-2 relative z-10 leading-none">
                                                         {debt.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                        <span className="text-lg font-bold text-emerald-400 ml-1">DH</span>
+                                                        <span className="text-lg font-bold text-emerald-400 ml-1">{companySettings?.defaultCurrencyCode || 'MAD'}</span>
                                                     </h3>
                                                     
                                                     <div className="mt-8 space-y-3 relative z-10">
                                                         <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-tight">
                                                             <span className="text-emerald-300">{language === 'fr' ? 'Total Commandé' : 'Total Ordered'}</span>
-                                                            <span className="text-white bg-white/10 px-2 py-0.5 rounded-lg">{debt.total.toLocaleString(undefined, { minimumFractionDigits: 2 })} DH</span>
+                                                            <span className="text-white bg-white/10 px-2 py-0.5 rounded-lg">{debt.total.toLocaleString(undefined, { minimumFractionDigits: 2 })} {companySettings?.defaultCurrencyCode || 'MAD'}</span>
                                                         </div>
                                                         <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-tight">
                                                             <span className="text-emerald-300">{language === 'fr' ? 'Reste à Régler' : 'To Settle'}</span>
                                                             <span className={`${debt.balance > 0.01 ? 'text-red-400' : 'text-emerald-400'} bg-white/10 px-2 py-0.5 rounded-lg`}>
-                                                                {debt.balance > 0.01 ? '-' : ''}{debt.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })} DH
+                                                                {debt.balance > 0.01 ? '-' : ''}{debt.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })} {companySettings?.defaultCurrencyCode || 'MAD'}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -932,7 +934,7 @@ const Suppliers: React.FC<SuppliersProps> = ({ suppliers, purchaseOrders, onUpda
                                         className={`w-full h-14 bg-slate-50 border border-slate-200 rounded-2xl text-2xl font-black focus:border-emerald-500 focus:ring-0 transition-all font-mono ${isRTL ? 'text-left pl-14 pr-4' : 'text-right pr-14 pl-4'}`}
                                     />
                                     <div className={`absolute inset-y-0 flex items-center pointer-events-none ${isRTL ? 'left-5' : 'right-5'}`}>
-                                        <span className="text-sm font-bold text-slate-400 uppercase">DH</span>
+                                        <span className="text-sm font-bold text-slate-400 uppercase">{companySettings?.defaultCurrencyCode || 'MAD'}</span>
                                     </div>
                                 </div>
                                 <p className="mt-2 text-[10px] font-medium text-slate-500">
