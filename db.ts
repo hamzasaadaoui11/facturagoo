@@ -51,12 +51,13 @@ export const resetDBCache = () => {
 export const getCurrentUserAndCompany = async () => {
     return retry(async () => {
         try {
-            let { data: { session } } = await supabase.auth.getSession();
+            const sessionResponse = await supabase.auth.getSession();
+            let session = sessionResponse?.data?.session || null;
             
             // If session is missing or expired, try to refresh it
             if (!session) {
-                const { data: refreshData } = await supabase.auth.refreshSession();
-                session = refreshData.session;
+                const refreshResponse = await supabase.auth.refreshSession();
+                session = refreshResponse?.data?.session || null;
             }
 
             const currentUserId = session?.user?.id || null;
@@ -668,7 +669,7 @@ export const dbService = {
                     if (await handleAuthError(error)) {
                         return dbService.settings.get();
                     }
-                    console.error("Error fetching settings:", error);
+                    console.error("Error fetching settings:", error?.message || error?.details || error);
                     return null;
                 }
 

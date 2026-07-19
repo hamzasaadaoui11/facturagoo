@@ -7,6 +7,7 @@ import { CreditCard, FileText, CheckCircle, Download, Plus, Loader2, Pencil, Pri
 import { Invoice, InvoiceStatus, Payment, Client, Product, CompanySettings, PurchaseOrder } from '../types';
 import CreateInvoiceModal from './CreateInvoiceModal';
 import ConfirmationModal from './ConfirmationModal';
+import InvoiceReportModal from './InvoiceReportModal';
 import { generatePDF, printDocument } from '../services/pdfService';
 import { useLanguage } from '../contexts/LanguageContext';
 import { shareDocument } from '../services/shareService';
@@ -48,6 +49,7 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
     const [prefilledOrder, setPrefilledOrder] = useState<PurchaseOrder | undefined>(undefined);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
     useEffect(() => {
         if (location.state && (location.state as any).prefilledOrder) {
@@ -271,15 +273,25 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
     return (
         <div>
             <Header title={t('invoices')}>
-                 <button
-                    type="button"
-                    onClick={handleCreateClick}
-                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
-                >
-                    <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
-                    <span className="hidden sm:inline">{t('newInvoice')}</span>
-                    <span className="sm:hidden">{t('add')}</span>
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setIsReportModalOpen(true)}
+                        className="inline-flex items-center gap-x-2 rounded-lg bg-white border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                    >
+                        <Printer className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
+                        <span>Rapport Global</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleCreateClick}
+                        className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                    >
+                        <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
+                        <span className="hidden sm:inline">{t('newInvoice')}</span>
+                        <span className="sm:hidden">{t('add')}</span>
+                    </button>
+                </div>
             </Header>
             
             <CreateInvoiceModal 
@@ -653,6 +665,13 @@ const Invoices: React.FC<InvoicesProps> = ({ invoices, onUpdateInvoiceStatus, on
                 </div>,
                 document.body
             )}
+            <InvoiceReportModal
+                isOpen={isReportModalOpen}
+                onClose={() => setIsReportModalOpen(false)}
+                invoices={invoices}
+                clients={clients}
+                companySettings={companySettings}
+            />
         </div>
     );
 };

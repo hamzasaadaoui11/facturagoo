@@ -80,3 +80,56 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+@media print {
+  /* Hide standard UI elements */
+  nav, sidebar, header, main, .bg-emerald-900, .sticky, button, select, input {
+    display: none !important;
+  }
+  
+  /* Override absolute/fixed layout wrappers to prevent clipping */
+  body, html, #root, .flex, .overflow-hidden {
+    overflow: visible !important;
+    height: auto !important;
+    background: white !important;
+  }
+  
+  /* Reset fixed container for modal */
+  .fixed {
+    position: static !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  /* Hide modal chrome (non-printable divs inside the report modal) */
+  .max-w-6xl {
+    max-width: none !important;
+    max-height: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+  }
+  
+  .max-w-6xl > div:not(#printable-report) {
+    display: none !important;
+  }
+
+  /* Show the printable report exclusively */
+  #printable-report {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 10px !important;
+    background: white !important;
+    color: black !important;
+  }
+  
+  #printable-report * {
+    visibility: visible !important;
+  }
+}
