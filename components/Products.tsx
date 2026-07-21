@@ -3,7 +3,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import Header from './Header';
 import ConfirmationModal from './ConfirmationModal';
-import { Plus, Pencil, Trash2, ArrowLeft, Package, AlertTriangle, Search, Upload, ChevronLeft, ChevronRight, X, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, Package, AlertTriangle, Search, Upload, ChevronLeft, ChevronRight, X, Layers, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Product, CompanySettings, ProductVariant } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatCurrency, parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
@@ -589,6 +590,73 @@ const ProductList = ({ products, onAddProduct, onAddProducts, onDeleteProduct, o
         return matchesSearch && matchesCategory && matchesStock;
     });
 
+    const handleExportExcel = () => {
+        const dataRows = filteredProducts.map((product) => {
+            const stock = Number(product.stockQuantity || 0);
+            const threshold = Number(product.minStockAlert !== undefined && product.minStockAlert !== null ? product.minStockAlert : 5);
+            let stockStatus = '';
+            if (product.productType === 'Service') {
+                stockStatus = language === 'fr' ? 'Service' : 'Service';
+            } else if (stock <= 0) {
+                stockStatus = language === 'fr' ? 'Rupture de stock' : 'Out of Stock';
+            } else if (stock <= threshold) {
+                stockStatus = language === 'fr' ? 'Stock Faible' : 'Low Stock';
+            } else {
+                stockStatus = language === 'fr' ? 'En Stock' : 'In Stock';
+            }
+
+            const vatRate = 1 + (product.vat / 100);
+            const salePriceTTC = round(product.salePrice * vatRate);
+            const purchasePrice = product.purchasePrice || 0;
+            const stockValHT = product.productType === 'Service' ? 0 : round(purchasePrice * stock);
+            const stockValTTC = product.productType === 'Service' ? 0 : round(salePriceTTC * stock);
+
+            return {
+                [language === 'fr' ? 'Référence' : 'Reference']: product.productCode || '',
+                [language === 'fr' ? 'Nom du produit/service' : 'Name']: product.name,
+                [language === 'fr' ? 'Catégorie' : 'Category']: product.category || '',
+                [language === 'fr' ? 'Type' : 'Type']: product.productType,
+                [language === 'fr' ? 'Unité' : 'Unit']: product.unitOfMeasure && product.unitOfMeasure !== 'Aucune' ? product.unitOfMeasure : '',
+                [language === 'fr' ? "Prix d'achat HT" : 'Purchase Price HT']: product.purchasePrice || 0,
+                [language === 'fr' ? 'Prix de vente HT' : 'Sale Price HT']: product.salePrice || 0,
+                [language === 'fr' ? 'TVA (%)' : 'VAT (%)']: product.vat,
+                [language === 'fr' ? 'Prix de vente TTC' : 'Sale Price TTC']: salePriceTTC,
+                [language === 'fr' ? 'Quantité en Stock' : 'Stock Quantity']: product.productType === 'Service' ? '-' : stock,
+                [language === 'fr' ? 'Alerte Stock Minimal' : 'Min Stock Alert']: product.productType === 'Service' ? '-' : threshold,
+                [language === 'fr' ? 'Statut du Stock' : 'Stock Status']: stockStatus,
+                [language === 'fr' ? 'Valeur Stock HT' : 'Stock Value HT']: product.productType === 'Service' ? 0 : stockValHT,
+                [language === 'fr' ? 'Valeur Stock TTC' : 'Stock Value TTC']: product.productType === 'Service' ? 0 : stockValTTC,
+                [language === 'fr' ? 'Variantes' : 'Variants']: product.hasVariants && product.variants && product.variants.length > 0 
+                    ? product.variants.map(v => `${v.attributeValue || v.name} (${v.stockQuantity})`).join(', ') 
+                    : ''
+            };
+        });
+
+        // Create worksheet and workbook
+        const worksheet = XLSX.utils.json_to_sheet(dataRows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, language === 'fr' ? 'Produits' : 'Products');
+
+        // Column widths auto-adjustment
+        if (dataRows.length > 0) {
+            const maxKeys = Object.keys(dataRows[0]);
+            const colWidths = maxKeys.map(key => {
+                let maxLen = key.length;
+                dataRows.forEach(row => {
+                    const val = (row as any)[key];
+                    if (val !== undefined && val !== null) {
+                        maxLen = Math.max(maxLen, String(val).length);
+                    }
+                });
+                return { wch: Math.min(Math.max(maxLen + 2, 10), 50) };
+            });
+            worksheet['!cols'] = colWidths;
+        }
+
+        const fileName = language === 'fr' ? 'exportation_produits.xlsx' : 'products_export.xlsx';
+        XLSX.writeFile(workbook, fileName);
+    };
+
     // Reset to first page when search changes
     useEffect(() => {
         setCurrentPage(1);
@@ -671,6 +739,15 @@ const ProductList = ({ products, onAddProduct, onAddProducts, onDeleteProduct, o
         <div className="pb-20 md:pb-0">
             <Header title={t('products')}>
                 <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={handleExportExcel}
+                        className="inline-flex items-center gap-x-2 rounded-lg bg-white px-3 py-2 md:px-3.5 md:py-2.5 text-sm font-semibold text-neutral-900 shadow-sm ring-1 ring-inset ring-neutral-300 hover:bg-neutral-50 transition-all duration-200 ease-in-out cursor-pointer"
+                        title={language === 'fr' ? 'Exporter en Excel' : 'Export to Excel'}
+                    >
+                        <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
+                        <span className="hidden sm:inline">{language === 'fr' ? 'Exporter' : 'Export'}</span>
+                    </button>
                     <button
                         type="button"
                         onClick={() => setIsImportOpen(true)}
