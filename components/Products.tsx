@@ -38,9 +38,10 @@ interface ProductFormProps {
     products: Product[];
     onAddProduct: (product: Omit<Product, 'id'>) => void;
     onUpdateProduct: (product: Product) => void;
+    companySettings?: CompanySettings | null;
 }
 
-const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormProps) => {
+const ProductForm = ({ products, onAddProduct, onUpdateProduct, companySettings }: ProductFormProps) => {
     const { t, language, isRTL } = useLanguage();
     const { productId } = useParams();
     const navigate = useNavigate();
@@ -57,7 +58,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
     const [category, setCategory] = useState('');
     const [productType, setProductType] = useState<'Produit' | 'Service'>('Produit');
     const [unitOfMeasure, setUnitOfMeasure] = useState('Aucune');
-    const [vat, setVat] = useState(20);
+    const [vat, setVat] = useState(companySettings?.defaultTva ?? 20);
 
     // Variants state
     const [hasVariants, setHasVariants] = useState(false);
@@ -108,7 +109,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct }: ProductFormPro
             setMinStockAlertStr(formatDecimalForInput(existingProduct.minStockAlert === undefined ? 5 : existingProduct.minStockAlert, language));
             setImageUrl(existingProduct.imageUrl || '');
         } else if (!isEditMode) {
-             setVat(language === 'es' ? 21 : 20);
+             setVat(companySettings?.defaultTva ?? (language === 'es' ? 21 : 20));
              setMinStockAlertStr('5');
         }
     }, [isEditMode, existingProduct, language]);

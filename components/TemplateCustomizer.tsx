@@ -87,6 +87,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
         if (!mergedSettings.tableHeaderBgColor) mergedSettings.tableHeaderBgColor = mergedSettings.primaryColor || '#10b981';
         if (mergedSettings.showTableBorders === undefined) mergedSettings.showTableBorders = true;
         if (!mergedSettings.clientPosition) mergedSettings.clientPosition = 'right';
+        if (mergedSettings.defaultTva === undefined) mergedSettings.defaultTva = 20;
 
         setLocalSettings(mergedSettings); 
         
@@ -340,6 +341,24 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                                     <option key={c.code} value={c.code}>{c.code} - {c.pluralNameFr}</option>
                                                 ))}
                                             </select>
+                                        </div>
+                                    </div>
+                                    <div className="bg-neutral-50/50 p-5 rounded-xl border border-neutral-100 shadow-sm transition-all hover:shadow-md hover:border-emerald-200">
+                                        <label htmlFor="defaultTva" className="block text-sm font-semibold text-neutral-700 mb-2">
+                                            {language === 'es' ? 'TVA por defecto (%)' : 'TVA par défaut (%)'}
+                                        </label>
+                                        <div className="relative group">
+                                            <input
+                                                type="number"
+                                                id="defaultTva"
+                                                name="defaultTva"
+                                                value={localSettings.defaultTva ?? 20}
+                                                onChange={(e) => setLocalSettings(prev => ({ ...prev, defaultTva: parseInt(e.target.value) || 0 }))}
+                                                className="block w-full rounded-xl border-neutral-200 bg-neutral-50/50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm py-2.5 pl-3 pr-10 transition-all"
+                                                min="0"
+                                                max="100"
+                                                step="1"
+                                            />
                                         </div>
                                     </div>
                                 </div>

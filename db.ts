@@ -31,7 +31,8 @@ const LOCAL_STORAGE_KEYS = {
     TABLE_HEADER_BG_COLOR: 'facturago_table_header_bg_color',
     SHOW_TABLE_BORDERS: 'facturago_show_table_borders',
     CLIENT_POSITION: 'facturago_client_position',
-    DEFAULT_CURRENCY_CODE: 'settings_default_currency_code'
+    DEFAULT_CURRENCY_CODE: 'settings_default_currency_code',
+    DEFAULT_TVA: 'settings_default_tva'
 };
 
 export const initDB = async (): Promise<any> => {
@@ -777,6 +778,15 @@ export const dbService = {
                         settings.defaultCurrencyCode = 'MAD';
                     }
 
+                    const localTva = localStorage.getItem(LOCAL_STORAGE_KEYS.DEFAULT_TVA);
+                    if (localTva !== null) {
+                        settings.defaultTva = parseFloat(localTva);
+                    } else if (dbCustom.defaultTva !== undefined) {
+                        settings.defaultTva = dbCustom.defaultTva;
+                    } else if (settings.defaultTva === undefined) {
+                        settings.defaultTva = 20; // Default TVA is 20%
+                    }
+
                     try {
                         localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_AMOUNT_IN_WORDS, String(settings.showAmountInWords));
                         localStorage.setItem(LOCAL_STORAGE_KEYS.DOCUMENT_INFO_POSITION, settings.documentInfoPosition || 'right');
@@ -789,6 +799,7 @@ export const dbService = {
                         localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_TABLE_BORDERS, String(settings.showTableBorders));
                         localStorage.setItem(LOCAL_STORAGE_KEYS.CLIENT_POSITION, settings.clientPosition || 'right');
                         localStorage.setItem(LOCAL_STORAGE_KEYS.DEFAULT_CURRENCY_CODE, settings.defaultCurrencyCode || 'MAD');
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.DEFAULT_TVA, String(settings.defaultTva ?? 20));
                     } catch (storageErr) {
                         console.error("Failed to write loaded settings to localStorage", storageErr);
                     }
@@ -806,6 +817,7 @@ export const dbService = {
                     settings.showTableBorders = settings.showTableBorders ?? true;
                     settings.clientPosition = settings.clientPosition ?? 'right';
                     settings.defaultCurrencyCode = settings.defaultCurrencyCode ?? 'MAD';
+                    settings.defaultTva = settings.defaultTva ?? 20;
                 }
             }
             return settings;
@@ -864,6 +876,9 @@ export const dbService = {
                 if (settings.defaultCurrencyCode !== undefined) {
                     localStorage.setItem(LOCAL_STORAGE_KEYS.DEFAULT_CURRENCY_CODE, settings.defaultCurrencyCode);
                 }
+                if (settings.defaultTva !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.DEFAULT_TVA, String(settings.defaultTva));
+                }
             } catch (e) {
                 console.error("Error saving to localStorage in db.ts:", e);
             }
@@ -883,7 +898,8 @@ export const dbService = {
                 tableHeaderBgColor: settings.tableHeaderBgColor,
                 showTableBorders: settings.showTableBorders,
                 clientPosition: settings.clientPosition,
-                defaultCurrencyCode: settings.defaultCurrencyCode
+                defaultCurrencyCode: settings.defaultCurrencyCode,
+                defaultTva: settings.defaultTva
             };
             
             const { data: existingRow, error: fetchError } = await supabase
@@ -911,6 +927,7 @@ export const dbService = {
             delete (cleanData as any).showTableBorders; // Remove to avoid Supabase schema error
             delete (cleanData as any).clientPosition; // Remove to avoid Supabase schema error
             delete (cleanData as any).defaultCurrencyCode; // Remove to avoid Supabase schema error
+            delete (cleanData as any).defaultTva; // Remove to avoid Supabase schema error
 
             let resultData, resultError;
 
@@ -951,7 +968,8 @@ export const dbService = {
                 tableHeaderBgColor: settings.tableHeaderBgColor,
                 showTableBorders: settings.showTableBorders,
                 clientPosition: settings.clientPosition,
-                defaultCurrencyCode: settings.defaultCurrencyCode
+                defaultCurrencyCode: settings.defaultCurrencyCode,
+                defaultTva: settings.defaultTva
             };
             return finalResult;
         }

@@ -44,7 +44,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     const [tempName, setTempName] = useState('');
     const [tempDesc, setTempDesc] = useState('');
     const [tempPrice, setTempPrice] = useState<string>('0');
-    const [tempVat, setTempVat] = useState(20);
+    const [tempVat, setTempVat] = useState(companySettings?.defaultTva ?? 20);
     const [itemQuantity, setItemQuantity] = useState<string>('1');
     const [tempUnit, setTempUnit] = useState<string>('');
     const [tempDays, setTempDays] = useState<string>('1');
@@ -110,7 +110,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 setNotes('');
                 setLineItems([]);
                 setPaymentAmount(0);
-                setTempVat(language === 'es' ? 21 : 20);
+                setTempVat(companySettings?.defaultTva ?? (language === 'es' ? 21 : 20));
                 setPaymentMethod(language === 'es' ? 'Efectivo' : 'Espèces');
                 setShowPaymentMethodField(false);
                 setCheckNumber('');
@@ -128,7 +128,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
         setTempName('');
         setTempDesc('');
         setTempPrice('0');
-        setTempVat(language === 'es' ? 21 : 20);
+        setTempVat(companySettings?.defaultTva ?? (language === 'es' ? 21 : 20));
         setItemQuantity('1');
         setTempUnit('');
         setTempDays('1');
@@ -276,7 +276,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
                 }
             }
             const inputPrice = parseDecimalInput(tempPrice);
-            const vatValue = typeof tempVat === 'number' ? tempVat : 20;
+            const vatValue = typeof tempVat === 'number' ? tempVat : (companySettings?.defaultTva ?? 20);
             const price = isModeTTC ? (inputPrice / (1 + vatValue / 100)) : inputPrice;
             const length = showLengthColumn ? parseDecimalInput(tempLength) : 1;
             const height = showHeightColumn ? parseDecimalInput(tempHeight) : 1;

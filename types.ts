@@ -337,6 +337,7 @@ export interface CompanySettings {
     documentInfoPosition?: 'right' | 'left';
     showExpiryDate?: boolean;
     showUnitInPDF?: boolean;
+    defaultTva?: number;
 }
 
 export interface Employee {

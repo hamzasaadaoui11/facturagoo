@@ -52,7 +52,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
     const [tempName, setTempName] = useState('');
     const [tempDesc, setTempDesc] = useState('');
     const [tempPrice, setTempPrice] = useState<string>('0'); 
-    const [tempVat, setTempVat] = useState(20);
+    const [tempVat, setTempVat] = useState(companySettings?.defaultTva ?? 20);
     const [itemQuantity, setItemQuantity] = useState<string>('1');
     const [tempUnit, setTempUnit] = useState<string>('');
     const [tempDays, setTempDays] = useState<string>('1');
@@ -125,7 +125,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
                 setLineItems([]);
                 setExistingAmountPaid(0);
                 setNewPaymentAmount(0);
-                setTempVat(language === 'es' ? 21 : 20);
+                setTempVat(companySettings?.defaultTva ?? (language === 'es' ? 21 : 20));
                 setIsDiscountEnabled(false);
                 setDiscountType('percentage');
                 setDiscountValue('0');
@@ -159,7 +159,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
         setTempName('');
         setTempDesc('');
         setTempPrice('0');
-        setTempVat(language === 'es' ? 21 : 20);
+        setTempVat(companySettings?.defaultTva ?? (language === 'es' ? 21 : 20));
         setItemQuantity('1');
         setTempUnit('');
         setTempDays('1');
@@ -273,7 +273,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({ isOpen, onClose
             }
 
             const inputPrice = parseDecimalInput(tempPrice);
-            const vatValue = typeof tempVat === 'number' ? tempVat : 20;
+            const vatValue = typeof tempVat === 'number' ? tempVat : (companySettings?.defaultTva ?? 20);
             const price = isModeTTC ? (inputPrice / (1 + vatValue / 100)) : inputPrice;
             const length = showLengthColumn ? parseDecimalInput(tempLength) : 1;
             const height = showHeightColumn ? parseDecimalInput(tempHeight) : 1;
