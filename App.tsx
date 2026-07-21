@@ -131,9 +131,13 @@ const MainContent: React.FC = () => {
                 // Handle JWT expiration specifically
                 if (!isRetry && (err?.message?.includes('JWT') || err?.message?.includes('expired'))) {
                     console.warn("JWT expired in loadData, attempting refresh...");
-                    const { data, error: refreshError } = await supabase.auth.refreshSession();
-                    if (!refreshError && data.session) {
-                        return loadData(true, silent); // Retry once
+                    try {
+                        const { data, error: refreshError } = await supabase.auth.refreshSession();
+                        if (!refreshError && data.session) {
+                            return loadData(true, silent); // Retry once
+                        }
+                    } catch (refreshException) {
+                        console.error("Refresh session exception:", refreshException);
                     }
                 }
                 
@@ -607,18 +611,26 @@ const MainContent: React.FC = () => {
             
             // Update stock if not draft
             if (newInvoice.status !== InvoiceStatus.Draft) {
+                const stockChanges: Map<string, { qty: number, productId: string, variantId?: string, name: string }> = new Map();
                 for (const item of newInvoice.lineItems) {
                     if (item.productId) {
-                        await addStockMovement({
-                            productId: item.productId,
-                            variantId: item.variantId,
-                            productName: item.name,
-                            date: newInvoice.date,
-                            quantity: -item.quantity,
-                            type: 'Vente',
-                            reference: `Facture ${newInvoice.documentId || newInvoice.id}`
-                        });
+                        const key = `${item.productId}-${item.variantId || 'base'}`;
+                        const current = stockChanges.get(key) || { qty: 0, productId: item.productId, variantId: item.variantId, name: item.name };
+                        current.qty += item.quantity;
+                        stockChanges.set(key, current);
                     }
+                }
+                const changes = Array.from(stockChanges.values());
+                for (const change of changes) {
+                    await addStockMovement({
+                        productId: change.productId,
+                        variantId: change.variantId,
+                        productName: change.name,
+                        date: newInvoice.date,
+                        quantity: -change.qty,
+                        type: 'Vente',
+                        reference: `Facture ${newInvoice.documentId || newInvoice.id}`
+                    });
                 }
             }
 
@@ -843,18 +855,26 @@ const MainContent: React.FC = () => {
             
             // Deduct stock if not draft
             if (newInvoiceData.status !== InvoiceStatus.Draft) {
+                const stockChanges: Map<string, { qty: number, productId: string, variantId?: string, name: string }> = new Map();
                 for (const item of newInvoiceData.lineItems) {
                     if (item.productId) {
-                        await addStockMovement({
-                            productId: item.productId,
-                            variantId: item.variantId,
-                            productName: item.name,
-                            date: newInvoiceData.date,
-                            quantity: -item.quantity,
-                            type: 'Vente',
-                            reference: `Facture ${newInvoiceData.documentId || newInvoiceData.id} (depuis Devis)`
-                        });
+                        const key = `${item.productId}-${item.variantId || 'base'}`;
+                        const current = stockChanges.get(key) || { qty: 0, productId: item.productId, variantId: item.variantId, name: item.name };
+                        current.qty += item.quantity;
+                        stockChanges.set(key, current);
                     }
+                }
+                const changes = Array.from(stockChanges.values());
+                for (const change of changes) {
+                    await addStockMovement({
+                        productId: change.productId,
+                        variantId: change.variantId,
+                        productName: change.name,
+                        date: newInvoiceData.date,
+                        quantity: -change.qty,
+                        type: 'Vente',
+                        reference: `Facture ${newInvoiceData.documentId || newInvoiceData.id} (depuis Devis)`
+                    });
                 }
             }
 
@@ -930,18 +950,27 @@ const MainContent: React.FC = () => {
             const stockAlreadyDeducted = sourceInvoice && sourceInvoice.status !== InvoiceStatus.Draft;
 
             if (!stockAlreadyDeducted) {
+                const stockChanges: Map<string, { qty: number, productId: string, variantId?: string, name: string }> = new Map();
                 for (const item of noteData.lineItems) {
                     if (item.productId) {
-                        await addStockMovement({ 
-                            productId: item.productId, 
-                            variantId: item.variantId,
-                            productName: item.name, 
-                            date: noteData.date, 
-                            quantity: -item.quantity, 
-                            type: 'Vente', 
-                            reference: `${documentId} ${noteData.invoiceId ? '(Facture ' + noteData.invoiceId + ')' : '(Manuel)'}` 
-                        });
+                        const key = `${item.productId}-${item.variantId || 'base'}`;
+                        const current = stockChanges.get(key) || { qty: 0, productId: item.productId, variantId: item.variantId, name: item.name };
+                        current.qty += item.quantity;
+                        stockChanges.set(key, current);
                     }
+                }
+
+                const changes = Array.from(stockChanges.values());
+                for (const change of changes) {
+                    await addStockMovement({ 
+                        productId: change.productId, 
+                        variantId: change.variantId,
+                        productName: change.name, 
+                        date: noteData.date, 
+                        quantity: -change.qty, 
+                        type: 'Vente', 
+                        reference: `${documentId} ${noteData.invoiceId ? '(Facture ' + noteData.invoiceId + ')' : '(Manuel)'}` 
+                    });
                 }
             }
         } catch (e: any) {
@@ -952,6 +981,47 @@ const MainContent: React.FC = () => {
     };
     const updateDeliveryNote = async (updatedNote: DeliveryNote) => {
         try {
+            const existingNote = deliveryNotes.find(n => n.id === updatedNote.id);
+            if (existingNote) {
+                const stockChanges: Map<string, { qty: number, productId: string, variantId?: string, name: string }> = new Map();
+                
+                // 1. Calculate restoration of old quantities
+                existingNote.lineItems.forEach(item => {
+                    if (item.productId) {
+                        const key = `${item.productId}-${item.variantId || 'base'}`;
+                        const current = stockChanges.get(key) || { qty: 0, productId: item.productId, variantId: item.variantId, name: item.name };
+                        current.qty += item.quantity;
+                        stockChanges.set(key, current);
+                    }
+                });
+
+                // 2. Calculate deduction of new quantities
+                updatedNote.lineItems.forEach(item => {
+                    if (item.productId) {
+                        const key = `${item.productId}-${item.variantId || 'base'}`;
+                        const current = stockChanges.get(key) || { qty: 0, productId: item.productId, variantId: item.variantId, name: item.name };
+                        current.qty -= item.quantity;
+                        stockChanges.set(key, current);
+                    }
+                });
+
+                // 3. Apply net changes sequentially
+                const changes = Array.from(stockChanges.values());
+                for (const change of changes) {
+                    if (Math.abs(change.qty) > 0.000001) {
+                        await addStockMovement({
+                            productId: change.productId,
+                            variantId: change.variantId,
+                            productName: change.name,
+                            date: new Date().toISOString().split('T')[0],
+                            quantity: change.qty, // Note: if qty > 0, it means we restored more than we deducted -> net addition to stock (Retour). If qty < 0, net deduction (Vente).
+                            type: change.qty > 0 ? 'Retour' : 'Vente',
+                            reference: `Modification BL ${updatedNote.documentId || updatedNote.id}`
+                        });
+                    }
+                }
+            }
+
             const savedNote = await dbService.deliveryNotes.update(updatedNote); 
             setDeliveryNotes(prev => prev.map(n => n.id === updatedNote.id ? savedNote : n));
         } catch (e: any) {
@@ -963,25 +1033,37 @@ const MainContent: React.FC = () => {
         try {
             const note = deliveryNotes.find(n => n.id === noteId);
             if (note) {
-                // Restore stock ONLY if this BL was the one that deducted it
-                const sourceInvoice = note.invoiceId ? invoices.find(inv => inv.documentId === note.invoiceId || inv.id === note.invoiceId) : null;
-                const stockWasDeductedByInvoice = sourceInvoice && sourceInvoice.status !== InvoiceStatus.Draft;
+                const docId = note.documentId || note.id;
+                // 1. Revert any stock movements explicitly associated with this BL
+                const blMovements = stockMovements.filter(m => m.reference && m.reference.includes(docId));
                 
-                if (!stockWasDeductedByInvoice) {
-                    // Restore stock
-                    for (const item of note.lineItems) {
-                        if (item.productId) {
-                            await addStockMovement({ 
-                                productId: item.productId, 
-                                variantId: item.variantId,
-                                productName: item.name, 
-                                date: new Date().toISOString().split('T')[0], 
-                                quantity: item.quantity, 
-                                type: 'Retour', 
-                                reference: `Suppr BL ${note.documentId || note.id}` 
-                            });
+                for (const m of blMovements) {
+                    await updateProductStock(m.productId, -m.quantity, m.variantId);
+                    await dbService.stockMovements.delete(m.id);
+                }
+                
+                // 2. If this BL was created from an invoice, and that invoice no longer exists,
+                // we must revert the original Invoice's stock movements because the Invoice delegated it to this BL.
+                if (note.invoiceId) {
+                    const sourceInvoice = invoices.find(inv => inv.documentId === note.invoiceId || inv.id === note.invoiceId);
+                    if (!sourceInvoice || sourceInvoice.status === InvoiceStatus.Draft) {
+                        const invMovements = stockMovements.filter(m => m.reference && m.reference.includes(`Facture ${note.invoiceId}`));
+                        for (const m of invMovements) {
+                            if (!blMovements.some(bm => bm.id === m.id)) {
+                                await updateProductStock(m.productId, -m.quantity, m.variantId);
+                                await dbService.stockMovements.delete(m.id);
+                            }
                         }
+                        // Update local state for both types of movements
+                        setStockMovements(prev => prev.filter(m => 
+                            !blMovements.some(bm => bm.id === m.id) && 
+                            !invMovements.some(im => im.id === m.id)
+                        ));
+                    } else {
+                        setStockMovements(prev => prev.filter(m => !blMovements.some(bm => bm.id === m.id)));
                     }
+                } else {
+                    setStockMovements(prev => prev.filter(m => !blMovements.some(bm => bm.id === m.id)));
                 }
             }
             await dbService.deliveryNotes.delete(noteId);

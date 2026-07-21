@@ -129,18 +129,25 @@ async function retry<T>(fn: () => Promise<T>, maxRetries = 3, baseDelay = 1000):
 const handleAuthError = async (error: any) => {
     if (error?.message?.includes('JWT') || error?.message?.includes('expired') || error?.code === 'PGRST301') {
         console.warn("JWT expired detected, attempting refresh...");
-        const { data, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError) {
-            if (refreshError.message && refreshError.message.includes('Refresh Token Not Found')) {
-                console.warn('Refresh token not found, signing out.');
-            } else {
-                console.error("Session refresh failed, signing out:", refreshError);
+        try {
+            const { data, error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError) {
+                if (refreshError.message && refreshError.message.includes('Refresh Token Not Found')) {
+                    console.warn('Refresh token not found, signing out.');
+                } else {
+                    console.error("Session refresh failed, signing out:", refreshError);
+                }
+                await supabase.auth.signOut().catch(() => {});
+                window.location.href = '/#/login';
+                return false;
             }
+            return true;
+        } catch (e) {
+            console.error("Exception during session refresh:", e);
             await supabase.auth.signOut().catch(() => {});
             window.location.href = '/#/login';
             return false;
         }
-        return true;
     }
     return false;
 };
