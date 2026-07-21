@@ -574,6 +574,9 @@ export const generateDocumentHTML = (
 
   let extraDateLabel = "";
   let extraDateValue = "";
+  let secondDateLabel = "";
+  let secondDateValue = "";
+
   if (
     docType === "Bon de Commande" &&
     (doc.expectedDate || doc.lineItems[0]?.expectedDate)
@@ -613,6 +616,24 @@ export const generateDocumentHTML = (
       lang === "es" ? "es-ES" : lang === "en" ? "en-US" : "fr-FR",
     );
   }
+
+  // Handle due date for Bon de Commande
+  if (
+    docType === "Bon de Commande" &&
+    (doc.dueDate || doc.lineItems[0]?.dueDate)
+  ) {
+    const dateVal = doc.dueDate || doc.lineItems[0]?.dueDate;
+    secondDateLabel =
+      lang === "es" ? "Vencimiento" : lang === "en" ? "Due date" : "Échéance";
+    secondDateValue = new Date(dateVal).toLocaleDateString(
+      lang === "es" ? "es-ES" : lang === "en" ? "en-US" : "fr-FR",
+    );
+  }
+
+  const docSubject = doc.subject || doc.lineItems[0]?.subject || "";
+  const docPaymentMethod = doc.paymentMethod || doc.lineItems[0]?.paymentMethod || "";
+  const docCheckNumber = doc.checkNumber || doc.lineItems[0]?.checkNumber || "";
+  const docBankName = doc.bankName || doc.lineItems[0]?.bankName || "";
 
   const logoHtml = settings.logo
     ? `<img src="${settings.logo}" style="max-height: 120px; max-width: ${settings.logoWidth || 200}px; object-fit: contain;" />`
@@ -892,6 +913,7 @@ export const generateDocumentHTML = (
         <div style="margin-top: 10px; font-size: 12px;">
             <div>${dict.date || "Date"} : <b>${dateStr}</b></div>
             ${extraDateLabel ? `<div>${extraDateLabel} : <b>${extraDateValue}</b></div>` : ""}
+            ${secondDateLabel ? `<div>${secondDateLabel} : <b>${secondDateValue}</b></div>` : ""}
             ${doc.purchaseOrderNumber ? `<div>${dict.purchaseOrderNumber || "N° BC"} : <b>${doc.purchaseOrderNumber}</b></div>` : ""}
             ${doc.reference ? `<div>${dict.reference || "Réf"} : <b>${doc.reference}</b></div>` : ""}
             ${doc.invoiceId ? `<div>${lang === "es" ? "Ref. Factura" : lang === "en" ? "Invoice Ref" : "Réf. Facture"} : <b>${doc.invoiceId}</b></div>` : ""}
@@ -1236,8 +1258,8 @@ export const generateDocumentHTML = (
                 ${topHeaderHtml}
                 ${clientInfoHtml}
                 <div style="display: flex; gap: 40px; margin-bottom: 15px; flex-wrap: wrap;">
-                    ${doc.subject ? `<div style="font-weight: 600;">Objet : <span style="font-weight: normal;">${doc.subject}</span></div>` : ""}
-                    ${doc.paymentMethod ? `<div style="font-weight: 600;">Mode de paiement : <span style="font-weight: normal;">${doc.paymentMethod} ${doc.paymentMethod === 'Chèque' && doc.checkNumber ? `(N° ${doc.checkNumber}${doc.bankName ? ` - ${doc.bankName}` : ''})` : ''}</span></div>` : ""}
+                    ${docSubject ? `<div style="font-weight: 600;">Objet : <span style="font-weight: normal;">${docSubject}</span></div>` : ""}
+                    ${docPaymentMethod ? `<div style="font-weight: 600;">Mode de paiement : <span style="font-weight: normal;">${docPaymentMethod} ${docPaymentMethod === 'Chèque' && docCheckNumber ? `(N° ${docCheckNumber}${docBankName ? ` - ${docBankName}` : ''})` : ''}</span></div>` : ""}
                 </div>
             </div>
             <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px;">
@@ -1377,8 +1399,8 @@ export const generateDocumentHTML = (
                     ${topHeaderHtml}
                     ${clientInfoHtml}
                     <div style="display: flex; gap: 40px; margin-bottom: 15px; flex-wrap: wrap;">
-                        ${doc.subject ? `<div style="font-weight: 600;">${dict.pdfSubject || "Objet"} : <span style="font-weight: normal;">${doc.subject}</span></div>` : ""}
-                        ${doc.paymentMethod ? `<div style="font-weight: 600;">${dict.paymentMethod || "Mode de paiement"} : <span style="font-weight: normal;">${doc.paymentMethod} ${doc.paymentMethod === 'Chèque' && doc.checkNumber ? `(N° ${doc.checkNumber}${doc.bankName ? ` - ${doc.bankName}` : ''})` : ''}</span></div>` : ""}
+                        ${docSubject ? `<div style="font-weight: 600;">${dict.pdfSubject || "Objet"} : <span style="font-weight: normal;">${docSubject}</span></div>` : ""}
+                        ${docPaymentMethod ? `<div style="font-weight: 600;">${dict.paymentMethod || "Mode de paiement"} : <span style="font-weight: normal;">${docPaymentMethod} ${docPaymentMethod === 'Chèque' && docCheckNumber ? `(N° ${docCheckNumber}${docBankName ? ` - ${docBankName}` : ''})` : ''}</span></div>` : ""}
                     </div>
                 </div>
 

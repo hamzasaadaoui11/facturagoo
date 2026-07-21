@@ -79,7 +79,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setDueDate(orderToEdit.dueDate || '');
                 setAmountPaid(orderToEdit.amountPaid ? formatDecimalForInput(orderToEdit.amountPaid, language) : '0');
 
-                const initialExpectedDate = orderToEdit.expectedDate || '';
+                const initialExpectedDate = orderToEdit.expectedDate || orderToEdit.lineItems[0]?.expectedDate || '';
                 setExpectedDate(initialExpectedDate);
                 setShowExpectedDateField(!!initialExpectedDate);
 
@@ -90,10 +90,10 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 const initialPaymentMethod = orderToEdit.paymentMethod || orderToEdit.lineItems[0]?.paymentMethod || '';
                 setPaymentMethod(initialPaymentMethod);
                 setShowPaymentMethodField(!!initialPaymentMethod);
-                setCheckNumber(orderToEdit.checkNumber || '');
-                setBankName(orderToEdit.bankName || '');
+                setCheckNumber(orderToEdit.checkNumber || orderToEdit.lineItems[0]?.checkNumber || '');
+                setBankName(orderToEdit.bankName || orderToEdit.lineItems[0]?.bankName || '');
 
-                setNotes(orderToEdit.notes || '');
+                setNotes(orderToEdit.notes || orderToEdit.lineItems[0]?.notes || '');
                 // Read calculationMode from first line item
                 setCalculationMode(orderToEdit.lineItems[0]?.calculationMode || 'piece');
                 
@@ -293,6 +293,21 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
         const fallbackName = language === 'es' ? 'Proveedor desconocido' : 'Fournisseur inconnu';
         const supplierNameDisplay = supplier ? (supplier.company || supplier.name) : fallbackName;
         
+        // Store metadata in the first line item to avoid schema changes
+        const updatedLineItems = [...lineItems];
+        if (updatedLineItems.length > 0) {
+            updatedLineItems[0] = { 
+                ...updatedLineItems[0], 
+                calculationMode,
+                expectedDate: showExpectedDateField ? expectedDate : undefined,
+                subject: showSubjectField ? subject : undefined,
+                paymentMethod: showPaymentMethodField ? paymentMethod : undefined,
+                checkNumber: (showPaymentMethodField && paymentMethod === 'Chèque') ? checkNumber : undefined,
+                bankName: (showPaymentMethodField && paymentMethod === 'Chèque') ? bankName : undefined,
+                notes
+            };
+        }
+
         const orderData = {
             documentId: documentId || undefined,
             supplierId, 
@@ -306,7 +321,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
             checkNumber: (showPaymentMethodField && paymentMethod === 'Chèque') ? checkNumber : undefined,
             bankName: (showPaymentMethodField && paymentMethod === 'Chèque') ? bankName : undefined,
             notes, 
-            lineItems: lineItems,
+            lineItems: updatedLineItems,
             status: orderToEdit ? orderToEdit.status : PurchaseOrderStatus.Draft,
             subTotal: totals.subTotal, 
             vatAmount: totals.vatAmount, 

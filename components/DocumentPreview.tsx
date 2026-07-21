@@ -42,6 +42,11 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
         isDeliveryNote = true;
     }
 
+    const docSubject = document.subject || document.lineItems[0]?.subject || "";
+    const docPaymentMethod = document.paymentMethod || document.lineItems[0]?.paymentMethod || "";
+    const docCheckNumber = document.checkNumber || document.lineItems[0]?.checkNumber || "";
+    const docBankName = document.bankName || document.lineItems[0]?.bankName || "";
+
     const calculationMode = document.lineItems[0]?.calculationMode || 'piece';
     const legacyShowDimensions = (document as any).showDimensions || document.lineItems[0]?.showDimensions;
     
@@ -182,9 +187,10 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                     </div>
                 </section>
 
-                 {document.subject && (
-                     <section className="mt-6 mb-4">
-                        <p className="text-sm"><span className="font-bold text-neutral-700">{t('subject')} :</span> {document.subject}</p>
+                 {(docSubject || docPaymentMethod) && (
+                     <section className="mt-6 mb-4 flex gap-10 flex-wrap">
+                        {docSubject && <p className="text-sm"><span className="font-bold text-neutral-700">{t('subject')} :</span> {docSubject}</p>}
+                        {docPaymentMethod && <p className="text-sm"><span className="font-bold text-neutral-700">{t('paymentMethod') || 'Mode de paiement'} :</span> {docPaymentMethod} {docPaymentMethod === 'Chèque' && docCheckNumber ? `(N° ${docCheckNumber}${docBankName ? ` - ${docBankName}` : ''})` : ''}</p>}
                     </section>
                 )}
 
