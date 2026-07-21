@@ -1063,7 +1063,7 @@ export const generateDocumentHTML = (
     totalsHtml =
       financialsHtml + (settings?.showSignatureRecipient ? signaturesHtml : "");
   } else {
-    totalsHtml = financialsHtml;
+    totalsHtml = financialsHtml + (settings?.showSignatureRecipient ? signaturesHtml : "");
   }
 
   const footerHtml = `
