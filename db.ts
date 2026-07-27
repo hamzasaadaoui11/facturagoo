@@ -25,6 +25,7 @@ const LOCAL_STORAGE_KEYS = {
     DOCUMENT_INFO_POSITION: 'facturago_document_info_position',
     SHOW_EXPIRY_DATE: 'facturago_show_expiry_date',
     LOGO_WIDTH: 'facturago_logo_width',
+    STAMP_WIDTH: 'facturago_stamp_width',
     SHOW_LOGO_WATERMARK: 'facturago_show_logo_watermark',
     LOGO_WATERMARK_OPACITY: 'facturago_logo_watermark_opacity',
     HEADER_TEXT_COLOR: 'facturago_header_text_color',
@@ -722,6 +723,15 @@ export const dbService = {
                         settings.logoWidth = 200;
                     }
 
+                    const localStampWidth = localStorage.getItem(LOCAL_STORAGE_KEYS.STAMP_WIDTH);
+                    if (localStampWidth !== null) {
+                        settings.stampWidth = parseInt(localStampWidth, 10);
+                    } else if (dbCustom.stampWidth !== undefined) {
+                        settings.stampWidth = dbCustom.stampWidth;
+                    } else if (settings.stampWidth === undefined) {
+                        settings.stampWidth = 220;
+                    }
+
                     const localShowWatermark = localStorage.getItem(LOCAL_STORAGE_KEYS.SHOW_LOGO_WATERMARK);
                     if (localShowWatermark !== null) {
                         settings.showLogoWatermark = localShowWatermark === 'true';
@@ -799,6 +809,7 @@ export const dbService = {
                         localStorage.setItem(LOCAL_STORAGE_KEYS.DOCUMENT_INFO_POSITION, settings.documentInfoPosition || 'right');
                         localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_EXPIRY_DATE, String(settings.showExpiryDate));
                         localStorage.setItem(LOCAL_STORAGE_KEYS.LOGO_WIDTH, String(settings.logoWidth));
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.STAMP_WIDTH, String(settings.stampWidth));
                         localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_LOGO_WATERMARK, String(settings.showLogoWatermark));
                         localStorage.setItem(LOCAL_STORAGE_KEYS.LOGO_WATERMARK_OPACITY, String(settings.logoWatermarkOpacity));
                         localStorage.setItem(LOCAL_STORAGE_KEYS.HEADER_TEXT_COLOR, settings.headerTextColor || '#ffffff');
@@ -857,6 +868,10 @@ export const dbService = {
                     localStorage.setItem(LOCAL_STORAGE_KEYS.LOGO_WIDTH, String(settings.logoWidth));
                  }
 
+                if (settings.stampWidth !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.STAMP_WIDTH, String(settings.stampWidth));
+                 }
+
                 if (settings.showLogoWatermark !== undefined) {
                     localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_LOGO_WATERMARK, String(settings.showLogoWatermark));
                 }
@@ -899,6 +914,7 @@ export const dbService = {
                 documentInfoPosition: settings.documentInfoPosition,
                 showExpiryDate: settings.showExpiryDate,
                 logoWidth: settings.logoWidth,
+                stampWidth: settings.stampWidth,
                 showLogoWatermark: settings.showLogoWatermark,
                 logoWatermarkOpacity: settings.logoWatermarkOpacity,
                 headerTextColor: settings.headerTextColor,
@@ -927,6 +943,7 @@ export const dbService = {
             delete (cleanData as any).documentInfoPosition; // Remove to avoid Supabase schema error
             delete (cleanData as any).showExpiryDate; // Remove to avoid Supabase schema error
             delete (cleanData as any).logoWidth; // Remove to avoid Supabase schema error
+            delete (cleanData as any).stampWidth; // Remove to avoid Supabase schema error
             delete (cleanData as any).showLogoWatermark; // Remove to avoid Supabase schema error
             delete (cleanData as any).logoWatermarkOpacity; // Remove to avoid Supabase schema error
             delete (cleanData as any).headerTextColor; // Remove to avoid Supabase schema error
@@ -969,6 +986,7 @@ export const dbService = {
                 documentInfoPosition: settings.documentInfoPosition,
                 showExpiryDate: settings.showExpiryDate,
                 logoWidth: settings.logoWidth,
+                stampWidth: settings.stampWidth,
                 showLogoWatermark: settings.showLogoWatermark,
                 logoWatermarkOpacity: settings.logoWatermarkOpacity,
                 headerTextColor: settings.headerTextColor,

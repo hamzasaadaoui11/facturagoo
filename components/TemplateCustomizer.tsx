@@ -83,6 +83,7 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
         if (!mergedSettings.documentInfoPosition) mergedSettings.documentInfoPosition = 'right';
         if (mergedSettings.showExpiryDate === undefined) mergedSettings.showExpiryDate = true;
         if (!mergedSettings.logoWidth) mergedSettings.logoWidth = 200;
+        if (!mergedSettings.stampWidth) mergedSettings.stampWidth = 220;
         if (!mergedSettings.headerTextColor) mergedSettings.headerTextColor = '#ffffff';
         if (!mergedSettings.tableHeaderBgColor) mergedSettings.tableHeaderBgColor = mergedSettings.primaryColor || '#10b981';
         if (mergedSettings.showTableBorders === undefined) mergedSettings.showTableBorders = true;
@@ -395,15 +396,15 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                     <div>
                                         <label className="block text-sm font-semibold text-neutral-700 mb-3">{language === 'es' ? 'Logo de la empresa' : "Logo de l'entreprise"}</label>
-                                        <div className="group relative w-full h-48 border-2 border-dashed border-neutral-300 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden">
+                                        <div className="group relative w-full border-2 border-dashed border-neutral-300 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden min-h-[12rem] py-4">
                                             <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/png, image/jpeg, image/svg+xml" onChange={handleLogoChange} />
                                             {localSettings.logo ? (
-                                                <div className="relative w-full h-full p-4 flex items-center justify-center overflow-hidden">
+                                                <div className="relative w-full p-4 flex items-center justify-center overflow-hidden min-h-[12rem] py-4">
                                                     <img 
                                                         src={localSettings.logo} 
                                                         alt="Logo" 
                                                         className="object-contain transition-all duration-150" 
-                                                        style={{ width: `${localSettings.logoWidth || 200}px`, maxWidth: '100%', maxHeight: '100%' }}
+                                                        style={{ width: `${localSettings.logoWidth || 200}px`, maxWidth: '100%' }}
                                                     />
                                                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <span className="text-white font-medium flex items-center gap-2"><Upload size={18}/> {language === 'es' ? 'Cambiar' : 'Changer'}</span>
@@ -502,11 +503,16 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-neutral-700 mb-3">Cachet de l'entreprise</label>
-                                        <div className="group relative w-full h-48 border-2 border-dashed border-neutral-300 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden">
+                                        <div className="group relative w-full border-2 border-dashed border-neutral-300 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden min-h-[12rem] py-4">
                                             <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/png, image/jpeg, image/svg+xml" onChange={handleStampChange} />
                                             {localSettings.stamp ? (
-                                                <div className="relative w-full h-full p-4 flex items-center justify-center">
-                                                    <img src={localSettings.stamp} alt="Cachet" className="max-w-full max-h-full object-contain" />
+                                                <div className="relative w-full p-4 flex items-center justify-center overflow-hidden min-h-[12rem] py-4">
+                                                    <img 
+                                                        src={localSettings.stamp} 
+                                                        alt="Cachet" 
+                                                        className="object-contain transition-all duration-150" 
+                                                        style={{ width: `${localSettings.stampWidth || 220}px`, maxWidth: '100%' }}
+                                                    />
                                                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <span className="text-white font-medium flex items-center gap-2"><Upload size={18}/> {language === 'es' ? 'Cambiar' : 'Changer'}</span>
                                                     </div>
@@ -529,6 +535,31 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                                 </div>
                                             )}
                                         </div>
+                                        {localSettings.stamp && (
+                                            <div className="mt-4 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+                                                        {language === 'es' ? 'Tamaño del sello' : 'Taille du cachet'}
+                                                    </label>
+                                                    <span className="text-xs font-mono font-bold text-emerald-600 bg-white px-2 py-1 rounded border border-neutral-200">
+                                                        {localSettings.stampWidth || 220}px
+                                                    </span>
+                                                </div>
+                                                <input 
+                                                    type="range" 
+                                                    min="50" 
+                                                    max="500" 
+                                                    step="10"
+                                                    value={localSettings.stampWidth || 220} 
+                                                    onChange={(e) => setLocalSettings(prev => ({ ...prev, stampWidth: parseInt(e.target.value) }))}
+                                                    className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                                                />
+                                                <div className="flex justify-between mt-1 mb-4">
+                                                    <span className="text-[10px] text-neutral-400">Min</span>
+                                                    <span className="text-[10px] text-neutral-400">Max</span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <div>
                                         <label htmlFor="primaryColor" className="block text-sm font-semibold text-neutral-700 mb-3">{language === 'es' ? 'Color principal' : 'Couleur principale'}</label>

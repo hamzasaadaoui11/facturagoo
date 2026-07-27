@@ -315,6 +315,7 @@ export interface CompanySettings {
     showLogoWatermark?: boolean;
     logoWatermarkOpacity?: number;
     stamp?: string;
+    stampWidth?: number;
     primaryColor?: string;
     headerTextColor?: string;
     tableHeaderBgColor?: string;

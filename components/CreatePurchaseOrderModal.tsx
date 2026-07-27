@@ -76,7 +76,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
                 setDocumentId(orderToEdit.documentId || '');
                 setDate(orderToEdit.date);
                 
-                setDueDate(orderToEdit.dueDate || '');
+                setDueDate(orderToEdit.dueDate || orderToEdit.lineItems[0]?.dueDate || '');
                 setAmountPaid(orderToEdit.amountPaid ? formatDecimalForInput(orderToEdit.amountPaid, language) : '0');
 
                 const initialExpectedDate = orderToEdit.expectedDate || orderToEdit.lineItems[0]?.expectedDate || '';
@@ -299,6 +299,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
             updatedLineItems[0] = { 
                 ...updatedLineItems[0], 
                 calculationMode,
+                dueDate: dueDate || undefined,
                 expectedDate: showExpectedDateField ? expectedDate : undefined,
                 subject: showSubjectField ? subject : undefined,
                 paymentMethod: showPaymentMethodField ? paymentMethod : undefined,

@@ -46,6 +46,8 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
     const docPaymentMethod = document.paymentMethod || document.lineItems[0]?.paymentMethod || "";
     const docCheckNumber = document.checkNumber || document.lineItems[0]?.checkNumber || "";
     const docBankName = document.bankName || document.lineItems[0]?.bankName || "";
+    const docDueDate = (document as any).dueDate || (document.lineItems[0] as any)?.dueDate || "";
+    const docExpectedDate = (document as any).expectedDate || document.lineItems[0]?.expectedDate || "";
 
     const calculationMode = document.lineItems[0]?.calculationMode || 'piece';
     const legacyShowDimensions = (document as any).showDimensions || document.lineItems[0]?.showDimensions;
@@ -153,14 +155,14 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                         <p className="font-semibold mt-2 text-lg text-neutral-700">#{document.documentId || document.id}</p>
                             <div className="text-xs mt-4 text-neutral-600 space-y-1">
                                 <p>{t('date')} : <span className="font-medium text-neutral-900">{new Date(document.date).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
-                                {'dueDate' in document && document.dueDate && (
-                                    <p>{t('dueDate')} : <span className="font-medium text-neutral-900">{new Date(document.dueDate).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
+                                {docDueDate && (
+                                    <p>{t('dueDate')} : <span className="font-medium text-neutral-900">{new Date(docDueDate).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
                                 )}
                                 {'expiryDate' in document && document.expiryDate && (
                                     <p>{t('expiryDate')} : <span className="font-medium text-neutral-900">{new Date(document.expiryDate).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
                                 )}
-                                {'expectedDate' in document && document.expectedDate && (
-                                    <p>{t('expectedDelivery')} : <span className="font-medium text-neutral-900">{new Date(document.expectedDate).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
+                                {docExpectedDate && (
+                                    <p>{t('expectedDelivery')} : <span className="font-medium text-neutral-900">{new Date(docExpectedDate).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR')}</span></p>
                                 )}
                                 {('purchaseOrderNumber' in document && document.purchaseOrderNumber) && (
                                 <p>{t('purchaseOrderNumber')} : <span className="font-medium text-neutral-900">{document.purchaseOrderNumber}</span></p>
