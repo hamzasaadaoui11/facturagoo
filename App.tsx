@@ -1346,11 +1346,18 @@ const App: React.FC = () => {
 
         const initSession = async () => {
             try {
-                const { data: { session }, error } = await supabase.auth.getSession();
+                const { data: { session }, error } = await supabase.auth.getSession().catch(err => ({ data: { session: null }, error: err }));
                 if (error) {
-                    if (error.message && error.message.includes('Refresh Token Not Found')) {
-                        console.warn('Refresh token not found, clearing session.');
+                    const msg = error.message || '';
+                    if (msg.includes('Refresh Token') || msg.includes('JWT') || msg.includes('Invalid') || msg.includes('Auth session')) {
+                        console.warn('Invalid auth token in initSession, clearing session.');
                         await supabase.auth.signOut().catch(() => {});
+                        for (let i = localStorage.length - 1; i >= 0; i--) {
+                            const key = localStorage.key(i);
+                            if (key && (key.includes('supabase.auth') || key.includes('sb-'))) {
+                                localStorage.removeItem(key);
+                            }
+                        }
                     } else {
                         console.error("Session error:", error.message);
                     }

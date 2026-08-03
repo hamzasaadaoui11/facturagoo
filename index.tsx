@@ -5,13 +5,27 @@ import App from './App';
 import ErrorBoundary from './src/components/ErrorBoundary';
 
 window.addEventListener('unhandledrejection', (event) => {
-  const msg = event.reason?.message || '';
-  if (msg.includes('Refresh Token Not Found') || msg.includes('Auth session missing') || msg.includes('JWT')) {
+  const msg = event.reason?.message || (typeof event.reason === 'string' ? event.reason : '') || '';
+  if (
+    msg.includes('Refresh Token') ||
+    msg.includes('Auth session missing') ||
+    msg.includes('JWT') ||
+    msg.includes('invalid_grant')
+  ) {
     console.warn("Caught unhandled auth error:", msg);
     event.preventDefault();
-    localStorage.removeItem('supabase.auth.token');
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('supabase.auth') || key.includes('sb-'))) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (e) {
+      console.error("Error clearing auth keys:", e);
+    }
     if (!window.location.hash.includes('/login')) {
-       window.location.hash = '/login';
+       window.location.hash = '#/login';
     }
   }
 });

@@ -503,7 +503,6 @@ export const generateDocumentHTML = (
           visible: true,
           order: 2.1,
         },
-        { id: "totalWeight", label: "Total (kg)", visible: true, order: 2.2 },
       );
     }
   } else if (isDays) {
@@ -531,15 +530,7 @@ export const generateDocumentHTML = (
         if (col.id === "unitPrice" || col.id === "vat" || col.id === "total")
           return null;
       }
-
-      if (col.id === "quantity" && isKg) {
-        label =
-          lang === "es"
-            ? "Peso (kg)"
-            : lang === "en"
-              ? "Weight (kg)"
-              : "Poids (kg)";
-      } else if (col.id === "unit") {
+      if (col.id === "unit") {
         label = dict.unit || "Unité";
       } else if (lang === "es") {
         if (col.id === "unitPrice")

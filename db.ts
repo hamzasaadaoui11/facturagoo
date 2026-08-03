@@ -53,13 +53,44 @@ export const resetDBCache = () => {
 export const getCurrentUserAndCompany = async () => {
     return retry(async () => {
         try {
-            const sessionResponse = await supabase.auth.getSession();
+            const sessionResponse = await supabase.auth.getSession().catch(err => ({ data: { session: null }, error: err }));
             let session = sessionResponse?.data?.session || null;
-            
-            // If session is missing or expired, try to refresh it
-            if (!session) {
-                const refreshResponse = await supabase.auth.refreshSession();
-                session = refreshResponse?.data?.session || null;
+            const authError = sessionResponse?.error;
+
+            if (authError) {
+                const errMsg = authError.message || '';
+                if (errMsg.includes('Refresh Token') || errMsg.includes('JWT') || errMsg.includes('Invalid') || errMsg.includes('Auth session')) {
+                    console.warn("Auth session error in getCurrentUserAndCompany, clearing session:", errMsg);
+                    await supabase.auth.signOut().catch(() => {});
+                    for (let i = localStorage.length - 1; i >= 0; i--) {
+                        const key = localStorage.key(i);
+                        if (key && (key.includes('supabase.auth') || key.includes('sb-'))) {
+                            localStorage.removeItem(key);
+                        }
+                    }
+                    return { userId: null, companyId: null };
+                }
+            }
+
+            // Only attempt refresh if session exists and is expiring within 60s
+            if (session?.expires_at) {
+                const expiresAt = session.expires_at * 1000;
+                const now = Date.now();
+                if (expiresAt - now < 60000) {
+                    try {
+                        const refreshResponse = await supabase.auth.refreshSession();
+                        if (refreshResponse?.data?.session) {
+                            session = refreshResponse.data.session;
+                        } else if (refreshResponse?.error) {
+                            console.warn("Session refresh failed:", refreshResponse.error.message);
+                            await supabase.auth.signOut().catch(() => {});
+                            return { userId: null, companyId: null };
+                        }
+                    } catch (rErr) {
+                        console.warn("Exception during session refresh:", rErr);
+                        return { userId: null, companyId: null };
+                    }
+                }
             }
 
             const currentUserId = session?.user?.id || null;
@@ -128,25 +159,32 @@ async function retry<T>(fn: () => Promise<T>, maxRetries = 3, baseDelay = 1000):
 }
 
 const handleAuthError = async (error: any) => {
-    if (error?.message?.includes('JWT') || error?.message?.includes('expired') || error?.code === 'PGRST301') {
-        console.warn("JWT expired detected, attempting refresh...");
+    const msg = error?.message || (typeof error === 'string' ? error : '') || '';
+    if (
+        msg.includes('JWT') ||
+        msg.includes('expired') ||
+        msg.includes('Refresh Token') ||
+        msg.includes('Invalid Refresh') ||
+        msg.includes('Auth session missing') ||
+        error?.code === 'PGRST301' ||
+        error?.status === 401 ||
+        error?.status === 400
+    ) {
+        console.warn("Auth error detected, cleaning up auth session:", msg);
         try {
-            const { data, error: refreshError } = await supabase.auth.refreshSession();
-            if (refreshError) {
-                if (refreshError.message && refreshError.message.includes('Refresh Token Not Found')) {
-                    console.warn('Refresh token not found, signing out.');
-                } else {
-                    console.error("Session refresh failed, signing out:", refreshError);
-                }
-                await supabase.auth.signOut().catch(() => {});
-                window.location.href = '/#/login';
-                return false;
-            }
-            return true;
-        } catch (e) {
-            console.error("Exception during session refresh:", e);
             await supabase.auth.signOut().catch(() => {});
-            window.location.href = '/#/login';
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('supabase.auth') || key.includes('sb-'))) {
+                    localStorage.removeItem(key);
+                }
+            }
+            if (!window.location.hash.includes('/login')) {
+                window.location.hash = '#/login';
+            }
+            return false;
+        } catch (e) {
+            console.error("Exception during auth error cleanup:", e);
             return false;
         }
     }

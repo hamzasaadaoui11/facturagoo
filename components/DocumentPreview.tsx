@@ -56,6 +56,11 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
     const isML = calculationMode === 'ml';
     const isKg = calculationMode === 'kg';
 
+    const getColLabel = (id: string, defaultLabel: string) => {
+        const customCol = settings?.documentColumns?.find(c => c.id === id);
+        return customCol?.label || defaultLabel;
+    };
+
     const getLineMultiplier = (item: any) => {
         if (isM2) return (item.length || 1) * (item.height || 1);
         if (isML) return (item.length || 1);
@@ -201,10 +206,10 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                     <table className="w-full text-left table-auto" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
                         <thead>
                             <tr style={{ backgroundColor: tableHeaderBgColor, color: headerTextColor }}>
-                                {showReference && <th className="py-3 px-4 align-middle font-semibold uppercase text-[10px] rounded-tl-lg rounded-bl-lg w-20 whitespace-nowrap">{t('refLabel')}</th>}
-                                <th className={`py-3 px-2 align-middle font-semibold uppercase text-[10px] ${!showReference ? 'rounded-tl-lg rounded-bl-lg' : ''} min-w-[320px] whitespace-nowrap`}>{t('description')}</th>
-                                <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-14 whitespace-nowrap">{t('unit')}</th>
-                                <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-10 whitespace-nowrap">{t('quantity')}</th>
+                                {showReference && <th className="py-3 px-4 align-middle font-semibold uppercase text-[10px] rounded-tl-lg rounded-bl-lg w-20 whitespace-nowrap">{getColLabel('reference', t('refLabel'))}</th>}
+                                <th className={`py-3 px-2 align-middle font-semibold uppercase text-[10px] ${!showReference ? 'rounded-tl-lg rounded-bl-lg' : ''} min-w-[320px] whitespace-nowrap`}>{getColLabel('name', t('description'))}</th>
+                                <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-14 whitespace-nowrap">{getColLabel('unit', t('unit'))}</th>
+                                <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-10 whitespace-nowrap">{getColLabel('quantity', t('quantity'))}</th>
                                 {isM2 && (
                                     <>
                                         <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-10 whitespace-nowrap">Larg.</th>
@@ -219,16 +224,13 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                     </>
                                 )}
                                 {isKg && (
-                                    <>
-                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-14 whitespace-nowrap">Poids</th>
-                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-14 whitespace-nowrap">Total kg</th>
-                                    </>
+                                    <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-14 whitespace-nowrap">Poids (kg)</th>
                                 )}
                                 {!isDeliveryNote && (
                                     <>
-                                        <th className="py-3 px-2 align-middle text-right font-semibold uppercase text-[10px] w-20 whitespace-nowrap">{t('unitPrice')}</th>
-                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-10 whitespace-nowrap">{t('vat')}</th>
-                                        <th className="py-3 px-4 align-middle text-right font-semibold uppercase text-[10px] w-24 rounded-tr-lg rounded-br-lg whitespace-nowrap">{t('totalHT')}</th>
+                                        <th className="py-3 px-2 align-middle text-right font-semibold uppercase text-[10px] w-20 whitespace-nowrap">{getColLabel('unitPrice', t('unitPrice'))}</th>
+                                        <th className="py-3 px-1 align-middle text-center font-semibold uppercase text-[10px] w-10 whitespace-nowrap">{getColLabel('vat', t('vat'))}</th>
+                                        <th className="py-3 px-4 align-middle text-right font-semibold uppercase text-[10px] w-24 rounded-tr-lg rounded-br-lg whitespace-nowrap">{getColLabel('total', t('totalHT'))}</th>
                                     </>
                                 )}
                             </tr>
@@ -257,10 +259,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
                                         </>
                                     )}
                                     {isKg && (
-                                        <>
-                                            <td className={`py-3 px-2 text-center align-middle text-[10px] ${borderStyle}`}>{item.weight || 1}</td>
-                                            <td className={`py-3 px-2 text-center align-middle text-[10px] font-medium ${!isDeliveryNote ? borderStyle : ''}`}>{(item.quantity * (item.weight || 1)).toLocaleString('fr-MA', { maximumFractionDigits: 2 })}</td>
-                                        </>
+                                        <td className={`py-3 px-2 text-center align-middle text-[10px] ${borderStyle}`}>{item.weight || 1}</td>
                                     )}
                                     {!isDeliveryNote && (
                                         <>
