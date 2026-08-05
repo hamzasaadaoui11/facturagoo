@@ -89,7 +89,14 @@ const Dashboard: React.FC<DashboardProps> = ({ invoices, clients, products, comp
 
         const monthlyExpenses = expenses
             .filter(exp => {
-                const expDate = new Date(exp.date);
+                if (!exp.date) return false;
+                let expDate: Date;
+                if (typeof exp.date === 'string' && exp.date.length === 10 && exp.date.includes('-')) {
+                    const [year, month, day] = exp.date.split('-').map(Number);
+                    expDate = new Date(year, month - 1, day, 12, 0, 0, 0);
+                } else {
+                    expDate = new Date(exp.date);
+                }
                 return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear && !exp.purchaseOrderId;
             })
             .reduce((sum, exp) => sum + exp.amount, 0);

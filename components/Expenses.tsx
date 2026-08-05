@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { 
     Plus, 
@@ -9,7 +8,17 @@ import {
     Calendar,
     ChevronLeft,
     ChevronRight,
-    Receipt
+    Receipt,
+    ShoppingBag,
+    Droplets,
+    Zap,
+    Wifi,
+    Building2,
+    Tag,
+    X,
+    Filter,
+    ArrowUpRight,
+    PieChart
 } from 'lucide-react';
 import { Expense, CompanySettings } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -47,27 +56,84 @@ const Expenses: React.FC<ExpensesProps> = ({
     const [selectedYear, setSelectedYear] = useState(today.getFullYear());
 
     const categories = [
-        { id: 'Achats', label: language === 'fr' ? 'Achats' : 'Purchases', color: 'bg-emerald-100 text-emerald-700' },
-        { id: 'Water', label: t('expWater'), color: 'bg-blue-100 text-blue-700' },
-        { id: 'Electricity', label: t('expElectricity'), color: 'bg-yellow-100 text-yellow-700' },
-        { id: 'Internet', label: t('expInternet'), color: 'bg-indigo-100 text-indigo-700' },
-        { id: 'Rent', label: t('expRent'), color: 'bg-purple-100 text-purple-700' },
-        { id: 'Other', label: t('expOther'), color: 'bg-gray-100 text-gray-700' }
+        { 
+            id: 'Achats', 
+            label: language === 'fr' ? 'Achats' : language === 'ar' ? 'مشتريات' : 'Purchases', 
+            bg: 'bg-emerald-500/10',
+            text: 'text-emerald-700 dark:text-emerald-400',
+            border: 'border-emerald-200',
+            badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+            icon: ShoppingBag 
+        },
+        { 
+            id: 'Water', 
+            label: t('expWater'), 
+            bg: 'bg-sky-500/10',
+            text: 'text-sky-700 dark:text-sky-400',
+            border: 'border-sky-200',
+            badgeBg: 'bg-sky-50 text-sky-700 border-sky-200',
+            icon: Droplets 
+        },
+        { 
+            id: 'Electricity', 
+            label: t('expElectricity'), 
+            bg: 'bg-amber-500/10',
+            text: 'text-amber-700 dark:text-amber-400',
+            border: 'border-amber-200',
+            badgeBg: 'bg-amber-50 text-amber-700 border-amber-200',
+            icon: Zap 
+        },
+        { 
+            id: 'Internet', 
+            label: t('expInternet'), 
+            bg: 'bg-indigo-500/10',
+            text: 'text-indigo-700 dark:text-indigo-400',
+            border: 'border-indigo-200',
+            badgeBg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+            icon: Wifi 
+        },
+        { 
+            id: 'Rent', 
+            label: t('expRent'), 
+            bg: 'bg-purple-500/10',
+            text: 'text-purple-700 dark:text-purple-400',
+            border: 'border-purple-200',
+            badgeBg: 'bg-purple-50 text-purple-700 border-purple-200',
+            icon: Building2 
+        },
+        { 
+            id: 'Other', 
+            label: t('expOther'), 
+            bg: 'bg-slate-500/10',
+            text: 'text-slate-700 dark:text-slate-400',
+            border: 'border-slate-200',
+            badgeBg: 'bg-slate-100 text-slate-700 border-slate-200',
+            icon: Tag 
+        }
     ];
 
-    const getCategoryLabel = (catId: string) => {
-        const cat = categories.find(c => c.id === catId);
-        return cat ? cat.label : catId;
-    };
-
-    const getCategoryColor = (catId: string) => {
-        const cat = categories.find(c => c.id === catId);
-        return cat ? cat.color : 'bg-gray-100 text-gray-700';
+    const getCategoryConfig = (catId: string) => {
+        return categories.find(c => c.id === catId) || {
+            id: catId,
+            label: catId,
+            bg: 'bg-slate-500/10',
+            text: 'text-slate-700',
+            border: 'border-slate-200',
+            badgeBg: 'bg-slate-100 text-slate-700 border-slate-200',
+            icon: Tag
+        };
     };
 
     const filteredExpenses = useMemo(() => {
         return expenses.filter(expense => {
-            const expenseDate = new Date(expense.date);
+            if (!expense.date) return false;
+            let expenseDate: Date;
+            if (typeof expense.date === 'string' && expense.date.length === 10 && expense.date.includes('-')) {
+                const [year, month, day] = expense.date.split('-').map(Number);
+                expenseDate = new Date(year, month - 1, day, 12, 0, 0, 0);
+            } else {
+                expenseDate = new Date(expense.date);
+            }
             const matchesDate = expenseDate.getMonth() === selectedMonth && expenseDate.getFullYear() === selectedYear;
             
             const searchStr = `${expense.description} ${expense.category}`.toLowerCase();
@@ -123,132 +189,264 @@ const Expenses: React.FC<ExpensesProps> = ({
     ];
 
     const currentMonthLabel = `${t(monthNames[selectedMonth].toLowerCase() as any)} ${selectedYear}`;
+    const currency = companySettings?.defaultCurrencyCode || 'MAD';
 
     return (
-        <div>
+        <div className="space-y-6">
             <Header title={t('expenses')}>
-                 <button
+                <button
                     type="button"
                     onClick={() => setIsAddModalOpen(true)}
-                    className="inline-flex items-center gap-x-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-all duration-200 ease-in-out hover:scale-[1.02] active:scale-[0.97]"
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm shadow-emerald-600/20 hover:bg-emerald-700 transition-all duration-200 active:scale-[0.98]"
                 >
-                    <Plus className="-ml-0.5 h-5 w-5 rtl:ml-0.5 rtl:-mr-0.5" />
-                    <span className="hidden sm:inline">{t('addExpense')}</span>
-                    <span className="sm:hidden">{t('add')}</span>
+                    <Plus className="h-4 w-4" />
+                    <span>{t('addExpense')}</span>
                 </button>
             </Header>
 
-            <div className="space-y-6">
+            {/* Top Overview Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 
-                {/* Monthly Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4"
-                    >
-                        <div className="h-12 w-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
-                            <Wallet className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-slate-500">{t('totalMonthlyExpenses')}</p>
-                            <p className="text-2xl font-bold text-slate-900">
-                                {totalMonthly.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2 })} <span className="text-sm font-normal text-slate-500">{companySettings?.defaultCurrencyCode || 'MAD'}</span>
-                            </p>
-                        </div>
-                    </motion.div>
+                {/* Total Expense Hero Card */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="lg:col-span-2 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-slate-900/10 border border-slate-700/50 relative overflow-hidden flex flex-col justify-between"
+                >
+                    <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center col-span-1 md:col-span-2">
+                    <div className="flex flex-wrap items-center justify-between gap-4 relative z-10">
                         <div className="flex items-center gap-3">
-                            <Calendar className="w-5 h-5 text-slate-400" />
-                            <div className="flex items-center gap-2">
-                                <button onClick={handlePrevMonth} className="p-1 hover:bg-slate-100 rounded-md transition-colors">
-                                    <ChevronLeft className="w-5 h-5" />
-                                </button>
-                                <span className="text-lg font-semibold text-slate-800 min-w-[140px] text-center">
+                            <div className="h-12 w-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-inner">
+                                <Wallet className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                    {t('totalMonthlyExpenses')}
+                                </span>
+                                <div className="flex items-baseline gap-2 mt-0.5">
+                                    <h2 className="text-3xl font-extrabold tracking-tight text-white">
+                                        {totalMonthly.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </h2>
+                                    <span className="text-sm font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                        {currency}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-slate-800/80 backdrop-blur-md p-1.5 rounded-2xl border border-slate-700/70 shadow-inner">
+                            <button 
+                                onClick={handlePrevMonth} 
+                                className="p-2 hover:bg-slate-700/80 text-slate-300 hover:text-white rounded-xl transition-all"
+                                title="Mois précédent"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <div className="flex items-center gap-2 px-3 py-1">
+                                <Calendar className="w-4 h-4 text-emerald-400" />
+                                <span className="text-sm font-bold text-slate-100 min-w-[130px] text-center">
                                     {currentMonthLabel}
                                 </span>
-                                <button onClick={handleNextMonth} className="p-1 hover:bg-slate-100 rounded-md transition-colors">
-                                    <ChevronRight className="w-5 h-5" />
-                                </button>
                             </div>
+                            <button 
+                                onClick={handleNextMonth} 
+                                className="p-2 hover:bg-slate-700/80 text-slate-300 hover:text-white rounded-xl transition-all"
+                                title="Mois suivant"
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
                         </div>
                     </div>
-                </div>
 
-                {/* Desktop View Cards - Category Breakdowns */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                    {categories.map(cat => (
-                        <div key={cat.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 text-center">
-                            <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold mb-2 ${cat.color}`}>
-                                {cat.label}
-                            </span>
-                            <p className="font-bold text-slate-800">
-                                {(categorySummary[cat.id] || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    <div className="mt-6 pt-4 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-400 relative z-10">
+                        <div className="flex items-center gap-2">
+                            <PieChart className="w-4 h-4 text-emerald-400" />
+                            <span>{filteredExpenses.length} {filteredExpenses.length > 1 ? 'dépenses enregistrées' : 'dépense enregistrée'} ce mois</span>
+                        </div>
+                        <span className="text-slate-400 font-medium">{currentMonthLabel}</span>
+                    </div>
+                </motion.div>
+
+                {/* Quick Info / Quick Action Box */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between"
+                >
+                    <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Aperçu rapide
+                        </span>
+                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+                            {selectedYear}
+                        </span>
+                    </div>
+                    <p className="text-sm text-slate-600 leading-relaxed mb-4">
+                        Suivez et catégarisez toutes vos charges opérationnelles pour optimiser la rentabilité de votre entreprise.
+                    </p>
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="w-full py-3 px-4 bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 font-bold text-sm rounded-2xl border border-slate-200 hover:border-emerald-200 transition-all flex items-center justify-center gap-2 group"
+                    >
+                        <Plus className="w-4 h-4 text-slate-500 group-hover:text-emerald-600 transition-colors" />
+                        <span>Saisir une nouvelle dépense</span>
+                    </button>
+                </motion.div>
+            </div>
+
+            {/* Category Breakdown Cards */}
+            <div>
+                <div className="flex items-center justify-between mb-3 px-1">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Répartition par catégorie
+                    </h3>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+                    {categories.map((cat, idx) => {
+                        const Icon = cat.icon;
+                        const catAmount = categorySummary[cat.id] || 0;
+                        const percentage = totalMonthly > 0 ? Math.round((catAmount / totalMonthly) * 100) : 0;
+
+                        return (
+                            <motion.div 
+                                key={cat.id} 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.05 * idx }}
+                                className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm hover:border-slate-300 hover:shadow-md transition-all group"
+                            >
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className={`p-2 rounded-xl ${cat.bg} ${cat.text}`}>
+                                        <Icon className="w-4 h-4" />
+                                    </div>
+                                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">
+                                        {percentage}%
+                                    </span>
+                                </div>
+                                <span className="text-xs font-bold text-slate-600 block truncate mb-1">
+                                    {cat.label}
+                                </span>
+                                <p className="text-base font-extrabold text-slate-900 tracking-tight">
+                                    {catAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[10px] font-semibold text-slate-400">{currency}</span>
+                                </p>
+                            </motion.div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Main Table Section */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+                
+                {/* Search & Filter Header */}
+                <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-xl bg-slate-100 text-slate-600">
+                            <Receipt className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 className="text-base font-bold text-slate-900">
+                                Liste des dépenses
+                            </h3>
+                            <p className="text-xs text-slate-500">
+                                {filteredExpenses.length} résultat{filteredExpenses.length !== 1 ? 's' : ''} trouvé{filteredExpenses.length !== 1 ? 's' : ''}
                             </p>
                         </div>
-                    ))}
-                </div>
-
-                {/* Main Table Section */}
-                <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-neutral-200">
-                    <div className="p-4 border-b border-neutral-200">
-                         <div className="relative">
-                            <div className="pointer-events-none absolute inset-y-0 flex items-center pl-3 rtl:right-0 rtl:pr-3">
-                               <Search className="h-5 w-5 text-neutral-400" aria-hidden="true" />
-                            </div>
-                            <input
-                               type="search"
-                               placeholder={t('search')}
-                               value={searchTerm}
-                               onChange={(e) => setSearchTerm(e.target.value)}
-                               className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
-                            />
-                        </div>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-neutral-200">
-                            <thead className="bg-neutral-50">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('date')}</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('category')}</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 rtl:text-right">{t('description')}</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 text-right">{t('amount')}</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-neutral-500 text-right">{t('actions')}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-200 bg-white">
-                                <AnimatePresence mode="popLayout">
-                                    {paginatedExpenses.length > 0 ? (
-                                        paginatedExpenses.map((expense) => (
+                    <div className="relative w-full sm:w-72">
+                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none rtl:right-0 rtl:pr-3.5 rtl:left-auto">
+                            <Search className="h-4 w-4 text-slate-400" />
+                        </div>
+                        <input
+                            type="search"
+                            placeholder={t('search')}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className={`w-full bg-slate-50 border border-slate-200/80 rounded-xl py-2 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none ${isRTL ? 'pr-10' : 'pl-10'}`}
+                        />
+                        {searchTerm && (
+                            <button 
+                                onClick={() => setSearchTerm('')}
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Table */}
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-100">
+                        <thead className="bg-slate-50/70">
+                            <tr>
+                                <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 rtl:text-right">
+                                    {t('date')}
+                                </th>
+                                <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 rtl:text-right">
+                                    {t('category')}
+                                </th>
+                                <th scope="col" className="px-6 py-3.5 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 rtl:text-right">
+                                    {t('description')}
+                                </th>
+                                <th scope="col" className="px-6 py-3.5 text-right text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                    {t('amount')}
+                                </th>
+                                <th scope="col" className="px-6 py-3.5 text-right text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                                    {t('actions')}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                            <AnimatePresence mode="popLayout">
+                                {paginatedExpenses.length > 0 ? (
+                                    paginatedExpenses.map((expense) => {
+                                        const catConfig = getCategoryConfig(expense.category);
+                                        const CatIcon = catConfig.icon;
+
+                                        return (
                                             <motion.tr 
                                                 key={expense.id}
                                                 layout
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 exit={{ opacity: 0 }}
-                                                className="hover:bg-neutral-50 transition-colors group"
+                                                className="hover:bg-slate-50/80 transition-colors group"
                                             >
-                                                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-neutral-900">
-                                                    {new Date(expense.date).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR', { day: '2-digit', month: 'short' })}
+                                                <td className="whitespace-nowrap px-6 py-4 text-sm font-bold text-slate-800">
+                                                    <div className="flex items-center gap-2">
+                                                        <Calendar className="w-4 h-4 text-slate-400" />
+                                                        <span>
+                                                            {new Date(expense.date).toLocaleDateString(language === 'ar' ? 'ar-MA' : 'fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                        </span>
+                                                    </div>
                                                 </td>
-                                                <td className="whitespace-nowrap px-6 py-4 text-sm text-neutral-500">
-                                                    <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${getCategoryColor(expense.category)}`}>
-                                                        {getCategoryLabel(expense.category)}
+                                                <td className="whitespace-nowrap px-6 py-4 text-sm">
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${catConfig.badgeBg}`}>
+                                                        <CatIcon className="w-3.5 h-3.5" />
+                                                        <span>{catConfig.label}</span>
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-neutral-500">
+                                                <td className="px-6 py-4 text-sm text-slate-700 font-medium max-w-xs truncate">
                                                     {expense.description}
+                                                    {expense.reference && (
+                                                        <span className="block text-xs font-normal text-slate-400 mt-0.5">
+                                                            Réf: {expense.reference}
+                                                        </span>
+                                                    )}
                                                 </td>
-                                                <td className="whitespace-nowrap px-6 py-4 text-sm font-bold text-neutral-900 text-right">
-                                                    {expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {companySettings?.defaultCurrencyCode || 'MAD'}
+                                                <td className="whitespace-nowrap px-6 py-4 text-sm font-extrabold text-slate-900 text-right">
+                                                    {expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} <span className="text-xs font-semibold text-slate-400">{currency}</span>
                                                 </td>
                                                 <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                                    <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex items-center justify-end gap-1">
                                                         <button 
                                                             onClick={() => setEditingExpense(expense)}
-                                                            className="text-emerald-600 hover:text-emerald-900 transition-colors"
+                                                            className="p-2 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all"
                                                             title={t('edit')}
                                                         >
                                                             <Edit className="h-4 w-4" />
@@ -258,7 +456,7 @@ const Expenses: React.FC<ExpensesProps> = ({
                                                                 setExpenseToDelete(expense.id);
                                                                 setIsConfirmOpen(true);
                                                             }}
-                                                            className="text-red-600 hover:text-red-900 transition-colors"
+                                                            className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
                                                             title={t('delete')}
                                                         >
                                                             <Trash2 className="h-4 w-4" />
@@ -266,53 +464,64 @@ const Expenses: React.FC<ExpensesProps> = ({
                                                     </div>
                                                 </td>
                                             </motion.tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={6} className="px-6 py-12 text-center text-sm font-medium text-neutral-500">
-                                                <div className="flex flex-col items-center justify-center">
-                                                    <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mb-4">
-                                                        <Receipt className="w-8 h-8 text-neutral-400" />
-                                                    </div>
-                                                    <p className="text-neutral-900 font-semibold">{t('noExpensesFound')}</p>
-                                                    <p className="mt-1">{t('firstExpensePrompt')}</p>
+                                        );
+                                    })
+                                ) : (
+                                    <tr>
+                                        <td colSpan={5} className="px-6 py-16 text-center">
+                                            <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
+                                                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mb-4 text-slate-400">
+                                                    <Receipt className="w-8 h-8" />
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </AnimatePresence>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-between px-5 md:px-6 py-4 border-t border-slate-100 bg-white">
-                            <p className="text-xs text-slate-500">
-                                Affichage <span className="font-bold">{(validCurrentPage - 1) * itemsPerPage + 1}</span> à <span className="font-bold">{Math.min(validCurrentPage * itemsPerPage, filteredExpenses.length)}</span> sur <span className="font-bold">{filteredExpenses.length}</span>
-                            </p>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={validCurrentPage === 1}
-                                    className="p-1 rounded bg-slate-50 text-slate-400 hover:text-slate-600 disabled:opacity-50 transition-colors"
-                                >
-                                    <ChevronLeft className="w-5 h-5" />
-                                </button>
-                                <span className="text-xs font-bold text-slate-700 bg-slate-50 px-3 py-1 rounded">
-                                    {validCurrentPage} / {totalPages}
-                                </span>
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={validCurrentPage === totalPages}
-                                    className="p-1 rounded bg-slate-50 text-slate-400 hover:text-slate-600 disabled:opacity-50 transition-colors"
-                                >
-                                    <ChevronRight className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                                                <h4 className="text-base font-bold text-slate-800 mb-1">
+                                                    {t('noExpensesFound')}
+                                                </h4>
+                                                <p className="text-xs text-slate-500 mb-6">
+                                                    {t('firstExpensePrompt')}
+                                                </p>
+                                                <button
+                                                    onClick={() => setIsAddModalOpen(true)}
+                                                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all"
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                    <span>{t('addExpense')}</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </AnimatePresence>
+                        </tbody>
+                    </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+                        <p className="text-xs text-slate-500">
+                            Affichage <span className="font-bold text-slate-700">{(validCurrentPage - 1) * itemsPerPage + 1}</span> à <span className="font-bold text-slate-700">{Math.min(validCurrentPage * itemsPerPage, filteredExpenses.length)}</span> sur <span className="font-bold text-slate-700">{filteredExpenses.length}</span>
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={validCurrentPage === 1}
+                                className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-all shadow-sm"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <span className="text-xs font-bold text-slate-700 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm">
+                                {validCurrentPage} / {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={validCurrentPage === totalPages}
+                                className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-white transition-all shadow-sm"
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Modals */}

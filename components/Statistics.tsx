@@ -89,8 +89,15 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
         const prevStart = new Date(prevEnd.getTime() - duration);
 
         const isInRange = (dateStr: string, s: Date, e: Date) => {
-            const d = new Date(dateStr);
-            return d >= s && d <= e;
+            if (!dateStr) return false;
+            let d: Date;
+            if (typeof dateStr === 'string' && dateStr.length === 10 && dateStr.includes('-')) {
+                const [year, month, day] = dateStr.split('-').map(Number);
+                d = new Date(year, month - 1, day, 12, 0, 0, 0);
+            } else {
+                d = new Date(dateStr);
+            }
+            return d.getTime() >= s.getTime() && d.getTime() <= e.getTime();
         };
 
         const clientsMap = new Map<string, string>();
@@ -160,12 +167,8 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
             const periodExpenses = expenses.filter(exp => isInRange(exp.date, s, e));
             const periodSalaryPayments = salaryPayments.filter(sp => sp.status === 'Paid' && isInRange(sp.paymentDate, s, e));
             
-            // Operational expenses are all expenses EXCEPT those manually categorized as "Achats" or linked to POs
-            const otherExpenses = periodExpenses.filter(exp => 
-                exp.category !== 'Purchases' && 
-                exp.category !== 'Achats' && 
-                !exp.purchaseOrderId
-            );
+            // Operational expenses include all expenses created in the Expenses module except those linked to purchase orders
+            const otherExpenses = periodExpenses.filter(exp => !exp.purchaseOrderId);
             
             const totalOperationalExpenses = otherExpenses.reduce((sum, exp) => sum + exp.amount, 0) + periodSalaryPayments.reduce((sum, sp) => sum + Number(sp.amount), 0);
 
@@ -335,7 +338,14 @@ const Statistics: React.FC<StatisticsProps> = ({ invoices, payments, purchaseOrd
     const categoryProfitability = useMemo(() => {
         const { start, end } = getDatesFromRange(rangeType, startDate, endDate);
         const isInRange = (dateStr: string, s: Date, e: Date) => {
-            const d = new Date(dateStr);
+            if (!dateStr) return false;
+            let d: Date;
+            if (typeof dateStr === 'string' && dateStr.length === 10 && dateStr.includes('-')) {
+                const [year, month, day] = dateStr.split('-').map(Number);
+                d = new Date(year, month - 1, day, 12, 0, 0, 0);
+            } else {
+                d = new Date(dateStr);
+            }
             const time = d.getTime();
             return time >= Math.min(s.getTime(), e.getTime()) && time <= Math.max(s.getTime(), e.getTime());
         };
