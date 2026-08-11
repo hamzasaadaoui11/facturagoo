@@ -1,6 +1,68 @@
+import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from '@zxing/library';
+
 /**
- * Barcode utility functions: SVG rendering, barcode generation, audio beep.
+ * Barcode utility functions: SVG rendering, barcode generation, audio beep, image decoding.
  */
+
+/**
+ * Scan barcode from an uploaded image File using ZXing MultiFormatReader + Native BarcodeDetector
+ */
+export async function scanBarcodeFromFile(file: File): Promise<string | null> {
+  // 1. Try ZXing BrowserMultiFormatReader
+  try {
+    const hints = new Map();
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.UPC_A,
+      BarcodeFormat.UPC_E,
+      BarcodeFormat.ITF,
+      BarcodeFormat.QR_CODE,
+    ]);
+    hints.set(DecodeHintType.TRY_HARDER, true);
+
+    const reader = new BrowserMultiFormatReader(hints);
+    const objectUrl = URL.createObjectURL(file);
+
+    try {
+      const img = new Image();
+      img.src = objectUrl;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      const result = await reader.decodeFromImageElement(img);
+      URL.revokeObjectURL(objectUrl);
+      if (result && result.getText()) {
+        return result.getText();
+      }
+    } catch (zxingErr) {
+      URL.revokeObjectURL(objectUrl);
+    }
+  } catch (e) {
+    // ZXing fallback
+  }
+
+  // 2. Fallback to native BarcodeDetector API if available
+  if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+    try {
+      const detector = new (window as any).BarcodeDetector();
+      const bitmap = await createImageBitmap(file);
+      const barcodes = await detector.detect(bitmap);
+      if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+        return barcodes[0].rawValue;
+      }
+    } catch (detectorErr) {
+      // ignore
+    }
+  }
+
+  return null;
+}
+
 
 // Generate EAN-13 / 12-digit random numeric barcode
 export function generateBarcodeNumber(prefix: string = '611'): string {
