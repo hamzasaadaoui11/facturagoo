@@ -3,12 +3,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import Header from './Header';
 import ConfirmationModal from './ConfirmationModal';
-import { Plus, Pencil, Trash2, ArrowLeft, Package, AlertTriangle, Search, Upload, ChevronLeft, ChevronRight, X, Layers, FileSpreadsheet } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, Package, AlertTriangle, Search, Upload, ChevronLeft, ChevronRight, X, Layers, FileSpreadsheet, Barcode, Camera, Sparkles, Printer } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Product, CompanySettings, ProductVariant } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatCurrency, parseDecimalInput, formatDecimalForInput } from '../services/currencyService';
 import ImportProductsModal from './ImportProductsModal';
+import BarcodeScannerModal from './BarcodeScannerModal';
+import BarcodePrintModal from './BarcodePrintModal';
+import { generateBarcodeNumber, renderBarcodeSvgDataUri } from '../utils/barcode';
     // --- Helper Functions and Components ---
 
 const Toggle = ({ enabled, setEnabled, htLabel, ttcLabel }: { enabled: boolean, setEnabled: (enabled: boolean) => void, htLabel: string, ttcLabel: string }) => (
@@ -54,6 +57,8 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct, companySettings 
 
     const [name, setName] = useState('');
     const [productCode, setProductCode] = useState('');
+    const [barcode, setBarcode] = useState('');
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');
     const [productType, setProductType] = useState<'Produit' | 'Service'>('Produit');
@@ -89,6 +94,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct, companySettings 
         if (isEditMode && existingProduct) {
             setName(existingProduct.name);
             setProductCode(existingProduct.productCode);
+            setBarcode(existingProduct.barcode || '');
             setDescription(existingProduct.description || '');
             setCategory(existingProduct.category || '');
             setProductType(existingProduct.productType === 'Service' ? 'Service' : 'Produit');
@@ -227,7 +233,7 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct, companySettings 
         e.preventDefault();
         const isService = productType === 'Service';
         const productData = {
-            name, productCode, description, category, productType, unitOfMeasure, vat,
+            name, productCode, barcode, description, category, productType, unitOfMeasure, vat,
             salePrice: parseDecimalInput(salePriceHTStr),
             purchasePrice: parseDecimalInput(purchasePriceHTStr),
             stockQuantity: isService ? 0 : parseDecimalInput(stockQuantityStr),
@@ -267,6 +273,40 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct, companySettings 
                         <div>
                             <label htmlFor="productCode" className="block text-sm font-medium text-neutral-700">{t('reference')}</label>
                             <input type="text" id="productCode" value={productCode} onChange={e => setProductCode(e.target.value)} placeholder={t('refPlaceholder')} className="mt-1 block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm"/>
+                        </div>
+                        <div>
+                            <label htmlFor="productBarcode" className="block text-sm font-medium text-neutral-700 flex items-center gap-1.5">
+                                <Barcode size={16} className="text-emerald-600" />
+                                <span>Code-Barres / Douchette</span>
+                            </label>
+                            <div className="mt-1 flex gap-2">
+                                <input 
+                                    type="text" 
+                                    id="productBarcode" 
+                                    value={barcode} 
+                                    onChange={e => setBarcode(e.target.value)} 
+                                    placeholder="Ex: 6111234567890" 
+                                    className="block w-full rounded-lg border-neutral-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm font-mono"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setIsScannerOpen(true)}
+                                    title="Scanner avec la caméra"
+                                    className="px-3 py-2 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-600 text-slate-700 rounded-lg border border-slate-200 transition-all flex items-center gap-1 font-bold text-xs"
+                                >
+                                    <Camera size={16} />
+                                    <span className="hidden sm:inline">Scan</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setBarcode(generateBarcodeNumber())}
+                                    title="Générer un code-barres"
+                                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 transition-all flex items-center gap-1 font-bold text-xs"
+                                >
+                                    <Sparkles size={14} className="text-amber-500" />
+                                    <span className="hidden sm:inline">Générer</span>
+                                </button>
+                            </div>
                         </div>
                         <div>
                             <label htmlFor="category" className="block text-sm font-medium text-neutral-700">Catégorie (Optionnel)</label>
@@ -512,6 +552,12 @@ const ProductForm = ({ products, onAddProduct, onUpdateProduct, companySettings 
                 </div>
             </form>
 
+            <BarcodeScannerModal
+                isOpen={isScannerOpen}
+                onClose={() => setIsScannerOpen(false)}
+                onScan={(code) => setBarcode(code)}
+                title="Scanner Code-Barres Produit"
+            />
         </div>
     );
 };
@@ -537,6 +583,8 @@ const ProductList = ({ products, onAddProduct, onAddProducts, onDeleteProduct, o
     const [productIdToDelete, setProductIdToDelete] = useState<string | null>(null);
     const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [printingProduct, setPrintingProduct] = useState<Product | null>(null);
+    const [isGlobalScannerOpen, setIsGlobalScannerOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [stockFilter, setStockFilter] = useState<'all' | 'out' | 'low' | 'ok'>('all');
     const [hoveredImage, setHoveredImage] = useState<string | null>(null);
@@ -559,6 +607,7 @@ const ProductList = ({ products, onAddProduct, onAddProducts, onDeleteProduct, o
         const matchesSearch = (
             product.name.toLowerCase().includes(term) ||
             product.productCode.toLowerCase().includes(term) ||
+            (product.barcode && product.barcode.toLowerCase().includes(term)) ||
             (product.category && product.category.toLowerCase().includes(term))
         );
         
@@ -904,10 +953,19 @@ const ProductList = ({ products, onAddProduct, onAddProducts, onDeleteProduct, o
                                 type="search"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder={language === 'fr' ? 'Rechercher par nom, référence ou catégorie...' : 'Search by name, reference or category...'}
+                                placeholder={language === 'fr' ? 'Rechercher par nom, réf, code-barres...' : 'Search by name, ref, barcode...'}
                                 className={`block w-full rounded-lg border-neutral-300 py-2 text-neutral-900 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-base sm:text-sm ${isRTL ? 'pr-10' : 'pl-10'}`}
                             />
                         </div>
+                        <button
+                            type="button"
+                            onClick={() => setIsGlobalScannerOpen(true)}
+                            title={language === 'fr' ? 'Rechercher par Code-Barres / Douchette' : 'Search by Barcode'}
+                            className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs rounded-lg border border-emerald-200 transition-all flex items-center gap-1.5 shrink-0"
+                        >
+                            <Camera size={18} />
+                            <span className="hidden sm:inline">{language === 'fr' ? 'Scanner' : 'Scan'}</span>
+                        </button>
                     </div>
 
                     <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
@@ -1029,6 +1087,14 @@ const ProductList = ({ products, onAddProduct, onAddProducts, onDeleteProduct, o
                                                 <td className={`whitespace-nowrap px-6 py-4 text-sm text-neutral-500 ${isRTL ? 'text-right' : 'text-left'}`}>{product.vat}%</td>
                                                 <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                                                     <div className={`flex items-center justify-end space-x-2 ${isRTL ? 'space-x-reverse' : ''}`}>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setPrintingProduct(product)} 
+                                                            className="p-1.5 text-slate-600 hover:text-emerald-700 hover:bg-slate-100 rounded-md transition-colors"
+                                                            title={language === 'fr' ? 'Imprimer étiquette code-barres' : 'Print barcode label'}
+                                                        >
+                                                            <Barcode size={18} />
+                                                        </button>
                                                         <button 
                                                             onClick={() => navigate(`/products/edit/${product.id}`)} 
                                                             className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-md transition-colors"
@@ -1155,6 +1221,14 @@ const ProductList = ({ products, onAddProduct, onAddProducts, onDeleteProduct, o
                                     
                                     <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
                                         <button 
+                                            type="button"
+                                            onClick={() => setPrintingProduct(product)} 
+                                            className="p-2 text-slate-600 bg-slate-100 rounded-lg active:bg-slate-200 transition-colors"
+                                            title="Imprimer Code-Barres"
+                                        >
+                                            <Barcode size={20} />
+                                        </button>
+                                        <button 
                                             onClick={() => navigate(`/products/edit/${product.id}`)} 
                                             className="p-2 text-emerald-600 bg-emerald-50 rounded-lg active:bg-emerald-100 transition-colors"
                                         >
@@ -1259,6 +1333,19 @@ const ProductList = ({ products, onAddProduct, onAddProducts, onDeleteProduct, o
                     />
                 </div>
             )}
+
+            <BarcodePrintModal
+                isOpen={!!printingProduct}
+                onClose={() => setPrintingProduct(null)}
+                product={printingProduct}
+            />
+
+            <BarcodeScannerModal
+                isOpen={isGlobalScannerOpen}
+                onClose={() => setIsGlobalScannerOpen(false)}
+                onScan={(code) => setSearchTerm(code)}
+                title="Recherche par Code-Barres"
+            />
         </div>
     );
 };

@@ -44,6 +44,7 @@ export interface ProductVariant {
     name: string; // e.g., "T-shirt - XL - Bleu"
     attributeValue: string; // e.g., "XL"
     stockQuantity: number;
+    barcode?: string;
     salePrice?: number; // Optional: if variant has different price
     purchasePrice?: number; // Optional: if variant has different cost
 }
@@ -51,6 +52,7 @@ export interface ProductVariant {
 export interface Product {
     id: string;
     productCode: string;
+    barcode?: string;
     name: string;
     description: string;
     productType: 'Produit' | 'Service';
@@ -89,6 +91,7 @@ export interface LineItem {
   productId: string | null;
   variantId?: string; // Link to specific product variant
   productCode?: string; // Reference/SKU display
+  barcode?: string;
   name: string;
   description: string;
   quantity: number;

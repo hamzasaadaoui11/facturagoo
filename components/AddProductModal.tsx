@@ -1,8 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Product, ProductVariant } from '../types';
-import { X, Plus, Trash2, Layers } from 'lucide-react';
+import { X, Plus, Trash2, Layers, Barcode, Camera, Sparkles } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { generateBarcodeNumber } from '../utils/barcode';
+import BarcodeScannerModal from './BarcodeScannerModal';
 
 interface AddProductModalProps {
     isOpen: boolean;
@@ -16,6 +18,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
     const { t, language } = useLanguage();
     const [name, setName] = useState('');
     const [productCode, setProductCode] = useState('');
+    const [barcode, setBarcode] = useState('');
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [salePrice, setSalePrice] = useState(0);
     const [salePriceTTC, setSalePriceTTC] = useState(0);
     const [purchasePrice, setPurchasePrice] = useState(0);
@@ -39,6 +43,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
             if (isEditMode) {
                 setName(productToEdit.name);
                 setProductCode(productToEdit.productCode || '');
+                setBarcode(productToEdit.barcode || '');
                 setSalePrice(productToEdit.salePrice);
                 setSalePriceTTC(productToEdit.salePrice * (1 + productToEdit.vat / 100));
                 setPurchasePrice(productToEdit.purchasePrice);
@@ -55,6 +60,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
             } else {
                 setName('');
                 setProductCode('');
+                setBarcode('');
                 setSalePrice(0);
                 setSalePriceTTC(0);
                 setPurchasePrice(0);
@@ -136,6 +142,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
         onSave({ 
             name,
             productCode,
+            barcode,
             category,
             description,
             productType,
@@ -203,6 +210,42 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                                         placeholder="Ex: REF-001"
                                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all font-medium"
                                     />
+                                </div>
+                            </div>
+
+                            {/* Code Barres field */}
+                            <div>
+                                <label htmlFor="modalBarcode" className="block text-[11px] font-bold text-slate-500 uppercase mb-1 ml-1 flex items-center gap-1.5">
+                                    <Barcode size={14} className="text-emerald-600" />
+                                    <span>Code-Barres / Douchette</span>
+                                </label>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="text" 
+                                        id="modalBarcode" 
+                                        value={barcode} 
+                                        onChange={(e) => setBarcode(e.target.value)} 
+                                        placeholder="Ex: 6111234567890"
+                                        className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-emerald-500 transition-all font-mono text-sm"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsScannerOpen(true)}
+                                        title="Scanner avec la caméra"
+                                        className="px-3 py-2 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-600 text-slate-600 rounded-xl border border-slate-200 transition-all flex items-center gap-1 font-bold text-xs"
+                                    >
+                                        <Camera size={16} />
+                                        <span className="hidden sm:inline">Scan</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setBarcode(generateBarcodeNumber())}
+                                        title="Générer un code-barres"
+                                        className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200 transition-all flex items-center gap-1 font-bold text-xs"
+                                    >
+                                        <Sparkles size={14} className="text-amber-500" />
+                                        <span className="hidden sm:inline">Générer</span>
+                                    </button>
                                 </div>
                             </div>
                             <div>
@@ -384,6 +427,13 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSa
                     </button>
                 </div>
             </div>
+
+            <BarcodeScannerModal
+                isOpen={isScannerOpen}
+                onClose={() => setIsScannerOpen(false)}
+                onScan={(code) => setBarcode(code)}
+                title="Scanner Code-Barres Produit"
+            />
         </div>
     );
 };

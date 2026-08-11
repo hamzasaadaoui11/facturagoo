@@ -1,8 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, ChevronDown, Package, AlertTriangle, XCircle } from 'lucide-react';
+import { Search, ChevronDown, Package, AlertTriangle, XCircle, Camera, Barcode } from 'lucide-react';
 import { Product } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import BarcodeScannerModal from './BarcodeScannerModal';
 
 interface SearchableProductSelectProps {
     products: Product[];
@@ -20,6 +21,7 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
     const { t, isRTL, language } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
     const selectedProduct = products.find(p => p.id === selectedProductId);
@@ -59,6 +61,7 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
         return product.name.toLowerCase().includes(term) ||
             (product.description && product.description.toLowerCase().includes(term)) ||
             (product.productCode && product.productCode.toLowerCase().includes(term)) ||
+            (product.barcode && product.barcode.toLowerCase().includes(term)) ||
             (product.category && product.category.toLowerCase().includes(term));
     });
 
@@ -68,17 +71,45 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
         setIsOpen(false);
     };
 
+    const handleBarcodeScan = (scannedCode: string) => {
+        const clean = scannedCode.trim().toLowerCase();
+        // Find exact barcode or productCode match
+        const match = products.find(p => 
+            (p.barcode && p.barcode.trim().toLowerCase() === clean) ||
+            (p.productCode && p.productCode.trim().toLowerCase() === clean)
+        ) || products.find(p =>
+            p.name.toLowerCase().includes(clean)
+        );
+
+        if (match) {
+            handleSelect(match);
+        } else {
+            setSearchTerm(scannedCode);
+            setIsOpen(true);
+        }
+    };
+
     return (
         <div className="relative" ref={wrapperRef}>
-            <div className="relative">
+            <div className="relative flex items-center">
                 <input
                     type="text"
-                    className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 bg-white pr-10"
-                    placeholder={placeholder || (language === 'fr' ? 'Rechercher par nom ou référence...' : 'Search by name or reference...')}
+                    className="block w-full rounded-lg border-slate-200 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-xs h-11 bg-white pr-20"
+                    placeholder={placeholder || (language === 'fr' ? 'Rechercher par nom, réf, code-barres...' : 'Search by name, ref, barcode...')}
                     value={searchTerm}
                     onChange={(e) => {
-                        setSearchTerm(e.target.value);
+                        const val = e.target.value;
+                        setSearchTerm(val);
                         setIsOpen(true);
+                        
+                        // Check if typed/scanned input matches exact barcode
+                        const clean = val.trim().toLowerCase();
+                        if (clean.length >= 3) {
+                            const exactMatch = products.find(p => p.barcode && p.barcode.trim().toLowerCase() === clean);
+                            if (exactMatch) {
+                                handleSelect(exactMatch);
+                            }
+                        }
                     }}
                     onFocus={(e) => {
                         setIsOpen(true);
@@ -91,8 +122,22 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
                         }
                     }}
                 />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-                    <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                
+                <div className="absolute right-2 flex items-center gap-1">
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsScannerOpen(true);
+                        }}
+                        title="Scanner par caméra"
+                        className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+                    >
+                        <Camera size={16} />
+                    </button>
+                    <div className="text-slate-400 pointer-events-none p-1">
+                        <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    </div>
                 </div>
             </div>
 
@@ -145,9 +190,13 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
                                                             {product.category}
                                                         </span>
                                                     )}
-                                                    {product.productCode && (
+                                                    {product.barcode ? (
+                                                        <span className="text-[9px] text-emerald-600 bg-emerald-50 px-1 rounded font-mono font-bold flex items-center gap-0.5">
+                                                            <Barcode size={10} /> {product.barcode}
+                                                        </span>
+                                                    ) : product.productCode ? (
                                                         <span className="text-[9px] text-slate-400 font-mono">{product.productCode}</span>
-                                                    )}
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         </div>
@@ -162,6 +211,13 @@ const SearchableProductSelect: React.FC<SearchableProductSelectProps> = ({
                     )}
                 </div>
             )}
+
+            <BarcodeScannerModal
+                isOpen={isScannerOpen}
+                onClose={() => setIsScannerOpen(false)}
+                onScan={handleBarcodeScan}
+                title="Scan pour sélection produit"
+            />
         </div>
     );
 };
