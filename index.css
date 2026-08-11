@@ -133,3 +133,34 @@
     visibility: visible !important;
   }
 }
+
+/* Barcode Scanner & Laser Styling */
+@keyframes scanLaser {
+  0% { top: 10%; opacity: 0.8; }
+  50% { top: 90%; opacity: 1; }
+  100% { top: 10%; opacity: 0.8; }
+}
+
+.animate-laser-scan {
+  animation: scanLaser 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+#barcode-camera-reader {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  border: none !important;
+  background: #020617 !important;
+}
+
+#barcode-camera-reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 1rem !important;
+}
+
+#barcode-camera-reader canvas {
+  display: none !important;
+}
+
