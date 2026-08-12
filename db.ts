@@ -53,18 +53,27 @@ export const resetDBCache = () => {
 export const getCurrentUserAndCompany = async () => {
     return retry(async () => {
         try {
-            const sessionResponse = await supabase.auth.getSession().catch(err => ({ data: { session: null }, error: err }));
+            const sessionResponse = await supabase.auth.getSession().catch(err => {
+                console.warn("getSession error caught:", err);
+                return { data: { session: null }, error: err };
+            });
             let session = sessionResponse?.data?.session || null;
             const authError = sessionResponse?.error;
 
             if (authError) {
-                const errMsg = authError.message || '';
-                if (errMsg.includes('Refresh Token') || errMsg.includes('JWT') || errMsg.includes('Invalid') || errMsg.includes('Auth session')) {
+                const errMsg = authError.message || (typeof authError === 'string' ? authError : '') || '';
+                if (
+                    errMsg.includes('Refresh Token') || 
+                    errMsg.includes('JWT') || 
+                    errMsg.includes('Invalid') || 
+                    errMsg.includes('Auth session') ||
+                    errMsg.includes('not_found')
+                ) {
                     console.warn("Auth session error in getCurrentUserAndCompany, clearing session:", errMsg);
                     await supabase.auth.signOut().catch(() => {});
                     for (let i = localStorage.length - 1; i >= 0; i--) {
                         const key = localStorage.key(i);
-                        if (key && (key.includes('supabase.auth') || key.includes('sb-'))) {
+                        if (key && (key.includes('supabase.auth') || key.includes('sb-') || key.includes('token'))) {
                             localStorage.removeItem(key);
                         }
                     }
@@ -78,12 +87,21 @@ export const getCurrentUserAndCompany = async () => {
                 const now = Date.now();
                 if (expiresAt - now < 60000) {
                     try {
-                        const refreshResponse = await supabase.auth.refreshSession();
+                        const refreshResponse = await supabase.auth.refreshSession().catch(err => {
+                            console.warn("refreshSession error caught:", err);
+                            return { data: { session: null }, error: err };
+                        });
                         if (refreshResponse?.data?.session) {
                             session = refreshResponse.data.session;
                         } else if (refreshResponse?.error) {
-                            console.warn("Session refresh failed:", refreshResponse.error.message);
+                            console.warn("Session refresh failed, clearing stale auth:", refreshResponse.error.message);
                             await supabase.auth.signOut().catch(() => {});
+                            for (let i = localStorage.length - 1; i >= 0; i--) {
+                                const key = localStorage.key(i);
+                                if (key && (key.includes('supabase.auth') || key.includes('sb-') || key.includes('token'))) {
+                                    localStorage.removeItem(key);
+                                }
+                            }
                             return { userId: null, companyId: null };
                         }
                     } catch (rErr) {
@@ -116,6 +134,17 @@ export const getCurrentUserAndCompany = async () => {
             return pendingCompanyPromise;
         } catch (e: any) {
             console.error("Error in getCurrentUserAndCompany:", e);
+            const errMsg = e?.message || '';
+            if (errMsg.includes('Refresh Token') || errMsg.includes('Invalid') || errMsg.includes('not_found')) {
+                await supabase.auth.signOut().catch(() => {});
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && (key.includes('supabase.auth') || key.includes('sb-') || key.includes('token'))) {
+                        localStorage.removeItem(key);
+                    }
+                }
+                return { userId: null, companyId: null };
+            }
             if (e?.message?.includes('Failed to fetch') || e?.name === 'TypeError') {
                 throw e; // Let retry handle it
             }
@@ -159,13 +188,14 @@ async function retry<T>(fn: () => Promise<T>, maxRetries = 3, baseDelay = 1000):
 }
 
 const handleAuthError = async (error: any) => {
-    const msg = error?.message || (typeof error === 'string' ? error : '') || '';
+    const msg = (error?.message || (typeof error === 'string' ? error : '') || '').toLowerCase();
     if (
-        msg.includes('JWT') ||
+        msg.includes('jwt') ||
         msg.includes('expired') ||
-        msg.includes('Refresh Token') ||
-        msg.includes('Invalid Refresh') ||
-        msg.includes('Auth session missing') ||
+        msg.includes('refresh token') ||
+        msg.includes('invalid refresh') ||
+        msg.includes('auth session missing') ||
+        msg.includes('not_found') ||
         error?.code === 'PGRST301' ||
         error?.status === 401 ||
         error?.status === 400
@@ -175,7 +205,7 @@ const handleAuthError = async (error: any) => {
             await supabase.auth.signOut().catch(() => {});
             for (let i = localStorage.length - 1; i >= 0; i--) {
                 const key = localStorage.key(i);
-                if (key && (key.includes('supabase.auth') || key.includes('sb-'))) {
+                if (key && (key.includes('supabase.auth') || key.includes('sb-') || key.includes('token'))) {
                     localStorage.removeItem(key);
                 }
             }
@@ -189,6 +219,34 @@ const handleAuthError = async (error: any) => {
         }
     }
     return false;
+};
+
+const isSchemaError = (error: any): boolean => {
+    if (!error) return false;
+    const code = error.code || '';
+    const msg = ((error.message || '') + ' ' + (error.details || '') + ' ' + (error.hint || '')).toLowerCase();
+    return (
+        code === 'PGRST204' ||
+        code === 'PGRST205' ||
+        code === '42P01' ||
+        code === '42703' ||
+        msg.includes('column') ||
+        msg.includes('does not exist') ||
+        msg.includes('not found') ||
+        msg.includes('schema cache')
+    );
+};
+
+const extractMissingColumn = (error: any): string | null => {
+    if (!error) return null;
+    const msg = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
+    const match1 = msg.match(/column "?([a-zA-Z0-9_]+)"? of/i);
+    if (match1 && match1[1]) return match1[1];
+    const match2 = msg.match(/column "?([a-zA-Z0-9_]+)"? does not exist/i);
+    if (match2 && match2[1]) return match2[1];
+    const match3 = msg.match(/find the '([a-zA-Z0-9_]+)' column/i);
+    if (match3 && match3[1]) return match3[1];
+    return null;
 };
 
 const getAll = async <T>(storeName: string): Promise<T[]> => {
@@ -275,30 +333,44 @@ const getAll = async <T>(storeName: string): Promise<T[]> => {
 
             // Restore metadata fields from first line item if missing
             if (['quotes', 'invoices', 'purchase_orders', 'credit_notes', 'delivery_notes'].includes(tableName)) {
-                return allData.map(item => {
-                const lineItems = item.lineItems || item.line_items;
-                const firstItem = lineItems?.[0];
-                if (firstItem) {
-                    return {
-                        ...item,
-                        subject: firstItem.subject || item.subject,
-                        paymentMethod: firstItem.paymentMethod || item.paymentMethod,
-                        checkNumber: firstItem.checkNumber || item.checkNumber,
-                        bankName: firstItem.bankName || item.bankName,
-                        notes: firstItem.notes || item.notes,
-                        purchaseOrderNumber: firstItem.purchaseOrderNumber || item.purchaseOrderNumber,
-                        dueDate: firstItem.dueDate || item.dueDate,
-                        expiryDate: firstItem.expiryDate || item.expiryDate,
-                        expectedDate: firstItem.expectedDate || item.expectedDate,
-                        calculationMode: firstItem.calculationMode || item.calculationMode,
-                        showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : item.showDimensions
-                    };
-                }
-                return item;
-            }) as T[];
-        }
+                allData = allData.map(item => {
+                    const lineItems = item.lineItems || item.line_items;
+                    const firstItem = lineItems?.[0];
+                    if (firstItem) {
+                        return {
+                            ...item,
+                            subject: firstItem.subject || item.subject,
+                            paymentMethod: firstItem.paymentMethod || item.paymentMethod,
+                            checkNumber: firstItem.checkNumber || item.checkNumber,
+                            bankName: firstItem.bankName || item.bankName,
+                            notes: firstItem.notes || item.notes,
+                            purchaseOrderNumber: firstItem.purchaseOrderNumber || item.purchaseOrderNumber,
+                            dueDate: firstItem.dueDate || item.dueDate,
+                            expiryDate: firstItem.expiryDate || item.expiryDate,
+                            expectedDate: firstItem.expectedDate || item.expectedDate,
+                            calculationMode: firstItem.calculationMode || item.calculationMode,
+                            showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : item.showDimensions
+                        };
+                    }
+                    return item;
+                });
+            }
 
-        return allData as T[];
+            if (tableName === 'products') {
+                allData = allData.map(item => ({
+                    ...item,
+                    createdAt: item.createdAt || item.created_at || new Date().toISOString().split('T')[0]
+                }));
+            }
+
+            if (tableName === 'expenses') {
+                allData = allData.map(item => ({
+                    ...item,
+                    purchaseOrderId: item.purchaseOrderId || item.purchase_order_id || undefined
+                }));
+            }
+
+            return allData as T[];
         } catch (e: any) {
             if (e?.message?.includes('Failed to fetch') || e?.name === 'TypeError') {
                 throw e; // Let retry handle it
@@ -319,38 +391,61 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
         const { userId, companyId } = await getCurrentUserAndCompany();
         if (!userId || !companyId) throw new Error("User not authenticated");
 
-        const { paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, userId: _, ...itemToSave } = item as any;
+        const originalItem = { ...item } as any;
+        const { paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, userId: _, ...itemToSave } = originalItem;
         
-        // Re-add fields if they are in the database schema for specific tables
         if (tableName === 'purchase_orders') {
             if (dueDate) itemToSave.dueDate = dueDate;
         }
 
-        // Strip fields that might be missing in Supabase schema to avoid errors
-        // These are stored in lineItems[0] by the UI components
         if (['quotes', 'invoices'].includes(tableName)) {
             delete itemToSave.totalAmount;
         }
-        const itemWithUser = { ...itemToSave, user_id: userId, company_id: companyId };
 
-        const insertPromise = supabase
-            .from(tableName)
-            .insert(itemWithUser)
-            .select()
-            .single();
+        let payload = { ...itemToSave, user_id: userId, company_id: companyId };
 
-        const result: any = await withTimeout(insertPromise as any);
+        let result: any = await withTimeout(supabase.from(tableName).insert(payload).select().single() as any);
+
+        if (result?.error && isSchemaError(result.error)) {
+            console.warn(`Schema error detected when adding to ${storeName}:`, result.error.message);
+            const missingCol = extractMissingColumn(result.error);
+            if (missingCol && missingCol in payload) {
+                console.warn(`Removing missing column '${missingCol}' from payload and retrying insert...`);
+                delete payload[missingCol];
+            } else {
+                console.warn(`Stripping potential missing columns (createdAt, purchaseOrderId, etc.) and retrying insert...`);
+                delete payload.createdAt;
+                delete payload.purchaseOrderId;
+                delete payload.showDimensions;
+                delete payload.calculationMode;
+            }
+
+            result = await withTimeout(supabase.from(tableName).insert(payload).select().single() as any);
+        }
+
         const { data, error } = result;
 
         if (error) {
-            if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
-                console.error("Missing DB columns/table. Run SQL in /supabase_schema_update.sql");
-                throw new Error("Erreur de base de données. Veuillez exécuter le script SQL dans supabase_schema_update.sql pour créer ou mettre à jour les tables.");
+            if (isSchemaError(error)) {
+                console.warn(`Second schema retry for ${storeName}...`);
+                delete payload.createdAt;
+                delete payload.purchaseOrderId;
+                delete payload.showDimensions;
+                delete payload.calculationMode;
+                delete payload.expectedDate;
+                delete payload.expiryDate;
+                delete payload.dueDate;
+                
+                const finalTry: any = await withTimeout(supabase.from(tableName).insert(payload).select().single() as any);
+                if (finalTry.data) {
+                    return { ...originalItem, ...finalTry.data };
+                }
             }
+
             const recovered = await handleAuthError(error);
             if (recovered) {
-                const retryResult: any = await withTimeout(supabase.from(tableName).insert(itemWithUser).select().single() as any);
-                if (retryResult.data) return retryResult.data;
+                const retryResult: any = await withTimeout(supabase.from(tableName).insert(payload).select().single() as any);
+                if (retryResult.data) return { ...originalItem, ...retryResult.data };
             }
             console.error(`Error adding to ${storeName}:`, error);
             throw error;
@@ -361,22 +456,23 @@ const add = async <T>(storeName: string, item: T): Promise<T> => {
         const firstItem = lineItems?.[0];
         if (firstItem) {
             return {
+                ...originalItem,
                 ...savedItem,
-                subject: firstItem.subject || savedItem.subject,
-                paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod,
-                checkNumber: firstItem.checkNumber || savedItem.checkNumber,
-                bankName: firstItem.bankName || savedItem.bankName,
-                notes: firstItem.notes || savedItem.notes,
-                purchaseOrderNumber: firstItem.purchaseOrderNumber || savedItem.purchaseOrderNumber,
-                dueDate: firstItem.dueDate || savedItem.dueDate,
-                expiryDate: firstItem.expiryDate || savedItem.expiryDate,
-                expectedDate: firstItem.expectedDate || savedItem.expectedDate,
-                calculationMode: firstItem.calculationMode || savedItem.calculationMode,
-                showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : savedItem.showDimensions
+                subject: firstItem.subject || savedItem.subject || originalItem.subject,
+                paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod || originalItem.paymentMethod,
+                checkNumber: firstItem.checkNumber || savedItem.checkNumber || originalItem.checkNumber,
+                bankName: firstItem.bankName || savedItem.bankName || originalItem.bankName,
+                notes: firstItem.notes || savedItem.notes || originalItem.notes,
+                purchaseOrderNumber: firstItem.purchaseOrderNumber || savedItem.purchaseOrderNumber || originalItem.purchaseOrderNumber,
+                dueDate: firstItem.dueDate || savedItem.dueDate || originalItem.dueDate,
+                expiryDate: firstItem.expiryDate || savedItem.expiryDate || originalItem.expiryDate,
+                expectedDate: firstItem.expectedDate || savedItem.expectedDate || originalItem.expectedDate,
+                calculationMode: firstItem.calculationMode || savedItem.calculationMode || originalItem.calculationMode,
+                showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : (savedItem.showDimensions !== undefined ? savedItem.showDimensions : originalItem.showDimensions)
             } as T;
         }
 
-        return savedItem as T;
+        return { ...originalItem, ...savedItem } as T;
     } catch (e) {
         if (await handleAuthError(e)) {
             return add(storeName, item);
@@ -393,11 +489,9 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
         const { companyId } = await getCurrentUserAndCompany();
         if (!companyId) throw new Error("User not authenticated");
 
-        // Destructure to remove fields that might not be in the Supabase schema
-        // and to remove 'id' from the update payload itself
-        const { id, paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, userId: _, created_at, ...itemToSave } = item as any;
+        const originalItem = { ...item } as any;
+        const { id, paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, userId: _, created_at, ...itemToSave } = originalItem;
         
-        // Re-add fields if they are in the database schema for specific tables
         if (tableName === 'purchase_orders') {
             if (dueDate) itemToSave.dueDate = dueDate;
         }
@@ -406,26 +500,56 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
             delete itemToSave.totalAmount;
         }
 
-        const updatePromise = supabase
-            .from(tableName)
-            .update(itemToSave)
-            .eq('id', id)
-            .eq('company_id', companyId)
-            .select()
-            .single();
+        let payload = { ...itemToSave };
 
-        const result: any = await withTimeout(updatePromise as any);
+        let result: any = await withTimeout(
+            supabase.from(tableName).update(payload).eq('id', id).eq('company_id', companyId).select().single() as any
+        );
+
+        if (result?.error && isSchemaError(result.error)) {
+            console.warn(`Schema error detected when updating ${storeName}:`, result.error.message);
+            const missingCol = extractMissingColumn(result.error);
+            if (missingCol && missingCol in payload) {
+                console.warn(`Removing missing column '${missingCol}' from update payload and retrying...`);
+                delete payload[missingCol];
+            } else {
+                console.warn(`Stripping potential missing columns and retrying update...`);
+                delete payload.createdAt;
+                delete payload.purchaseOrderId;
+                delete payload.showDimensions;
+                delete payload.calculationMode;
+            }
+
+            result = await withTimeout(
+                supabase.from(tableName).update(payload).eq('id', id).eq('company_id', companyId).select().single() as any
+            );
+        }
+
         const { data, error } = result;
 
         if (error) {
-            if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
-                console.error("Missing DB columns/table. Run SQL in /supabase_schema_update.sql");
-                throw new Error("Erreur de base de données. Veuillez exécuter le script SQL dans supabase_schema_update.sql pour créer ou mettre à jour les tables.");
+            if (isSchemaError(error)) {
+                console.warn(`Second schema retry for update on ${storeName}...`);
+                delete payload.createdAt;
+                delete payload.purchaseOrderId;
+                delete payload.showDimensions;
+                delete payload.calculationMode;
+                delete payload.expectedDate;
+                delete payload.expiryDate;
+                delete payload.dueDate;
+
+                const finalTry: any = await withTimeout(
+                    supabase.from(tableName).update(payload).eq('id', id).eq('company_id', companyId).select().single() as any
+                );
+                if (finalTry.data) {
+                    return { ...originalItem, ...finalTry.data };
+                }
             }
+
             const recovered = await handleAuthError(error);
             if (recovered) {
-                const retryResult: any = await withTimeout(supabase.from(tableName).update(itemToSave).eq('id', id).eq('company_id', companyId).select().single() as any);
-                if (retryResult.data) return retryResult.data;
+                const retryResult: any = await withTimeout(supabase.from(tableName).update(payload).eq('id', id).eq('company_id', companyId).select().single() as any);
+                if (retryResult.data) return { ...originalItem, ...retryResult.data };
             }
             console.error(`Error updating ${storeName}:`, error);
             throw error;
@@ -436,22 +560,23 @@ const update = async <T extends { id: string }>(storeName: string, item: T): Pro
         const firstItem = lineItems?.[0];
         if (firstItem) {
             return {
+                ...originalItem,
                 ...savedItem,
-                subject: firstItem.subject || savedItem.subject,
-                paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod,
-                checkNumber: firstItem.checkNumber || savedItem.checkNumber,
-                bankName: firstItem.bankName || savedItem.bankName,
-                notes: firstItem.notes || savedItem.notes,
-                purchaseOrderNumber: firstItem.purchaseOrderNumber || savedItem.purchaseOrderNumber,
-                dueDate: firstItem.dueDate || savedItem.dueDate,
-                expiryDate: firstItem.expiryDate || savedItem.expiryDate,
-                expectedDate: firstItem.expectedDate || savedItem.expectedDate,
-                calculationMode: firstItem.calculationMode || savedItem.calculationMode,
-                showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : savedItem.showDimensions
+                subject: firstItem.subject || savedItem.subject || originalItem.subject,
+                paymentMethod: firstItem.paymentMethod || savedItem.paymentMethod || originalItem.paymentMethod,
+                checkNumber: firstItem.checkNumber || savedItem.checkNumber || originalItem.checkNumber,
+                bankName: firstItem.bankName || savedItem.bankName || originalItem.bankName,
+                notes: firstItem.notes || savedItem.notes || originalItem.notes,
+                purchaseOrderNumber: firstItem.purchaseOrderNumber || savedItem.purchaseOrderNumber || originalItem.purchaseOrderNumber,
+                dueDate: firstItem.dueDate || savedItem.dueDate || originalItem.dueDate,
+                expiryDate: firstItem.expiryDate || savedItem.expiryDate || originalItem.expiryDate,
+                expectedDate: firstItem.expectedDate || savedItem.expectedDate || originalItem.expectedDate,
+                calculationMode: firstItem.calculationMode || savedItem.calculationMode || originalItem.calculationMode,
+                showDimensions: firstItem.showDimensions !== undefined ? firstItem.showDimensions : (savedItem.showDimensions !== undefined ? savedItem.showDimensions : originalItem.showDimensions)
             } as T;
         }
 
-        return savedItem as T;
+        return { ...originalItem, ...savedItem } as T;
     } catch (e) {
         if (await handleAuthError(e)) {
             return update(storeName, item);
@@ -522,22 +647,34 @@ const bulkAdd = async <T>(storeName: string, items: T[]): Promise<T[]> => {
         const itemsWithUser = items.map(item => ({ ...item, user_id: userId, company_id: companyId }));
         const allSavedItems: T[] = [];
 
-        // Chunking for bulk insert (safe chunk size for Supabase is around 200-500 depending on row size)
+        // Chunking for bulk insert
         const chunkSize = 200;
         for (let i = 0; i < itemsWithUser.length; i += chunkSize) {
-            const chunk = itemsWithUser.slice(i, i + chunkSize);
-            const { data, error } = await supabase
+            let chunk = itemsWithUser.slice(i, i + chunkSize);
+            let { data, error } = await supabase
                 .from(tableName)
                 .insert(chunk)
                 .select();
 
+            if (error && isSchemaError(error)) {
+                console.warn(`Schema error detected in bulkAdd for ${storeName}:`, error.message);
+                const missingCol = extractMissingColumn(error);
+                chunk = chunk.map((row: any) => {
+                    const r = { ...row };
+                    if (missingCol) delete r[missingCol];
+                    delete r.createdAt;
+                    delete r.purchaseOrderId;
+                    delete r.showDimensions;
+                    delete r.calculationMode;
+                    return r;
+                });
+                const retryRes = await supabase.from(tableName).insert(chunk).select();
+                data = retryRes.data;
+                error = retryRes.error;
+            }
+
             if (error) {
                 console.error(`Error bulk adding chunk to ${storeName}:`, error);
-                
-                if (error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01' || (error.message && error.message.includes('column') && error.message.includes('not found'))) {
-                    throw new Error("Erreur de base de données. Veuillez exécuter le script SQL dans /supabase_schema_update.sql pour créer ou mettre à jour les tables.");
-                }
-                
                 const recovered = await handleAuthError(error);
                 if (recovered) {
                     const { data: retryData, error: retryError } = await supabase.from(tableName).insert(chunk).select();
@@ -573,15 +710,32 @@ const bulkUpdate = async <T extends { id: string }>(storeName: string, items: T[
         for (let i = 0; i < items.length; i += chunkSize) {
             const chunk = items.slice(i, i + chunkSize);
             
-            const cleanedChunk = chunk.map(item => {
+            let cleanedChunk = chunk.map(item => {
                 const { id, paymentMethod, notes, subject, purchaseOrderNumber, dueDate, expiryDate, expectedDate, calculationMode, showDimensions, user_id, userId, created_at, ...itemToSave } = item as any;
                 return { id, ...itemToSave, company_id: companyId };
             });
 
-            const { data, error } = await supabase
+            let { data, error } = await supabase
                 .from(tableName)
                 .upsert(cleanedChunk)
                 .select();
+
+            if (error && isSchemaError(error)) {
+                console.warn(`Schema error detected in bulkUpdate for ${storeName}:`, error.message);
+                const missingCol = extractMissingColumn(error);
+                cleanedChunk = cleanedChunk.map((row: any) => {
+                    const r = { ...row };
+                    if (missingCol) delete r[missingCol];
+                    delete r.createdAt;
+                    delete r.purchaseOrderId;
+                    delete r.showDimensions;
+                    delete r.calculationMode;
+                    return r;
+                });
+                const retryRes = await supabase.from(tableName).upsert(cleanedChunk).select();
+                data = retryRes.data;
+                error = retryRes.error;
+            }
 
             if (error) {
                 console.error(`Error bulk updating chunk in ${storeName}:`, error);
