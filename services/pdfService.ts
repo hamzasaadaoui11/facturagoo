@@ -143,11 +143,12 @@ const numberToWordsFr = (amount: number, settings?: CompanySettings | null): str
     singularSubunit = pluralSubunit.slice(0, -1);
   }
 
-  if (amount === 0) return `Zéro ${singularUnit}`;
+  // Round amount to 2 decimal places to avoid floating point precision issues (e.g. 9999.996 -> 10000.00)
+  const totalCents = Math.round(Math.abs(amount) * 100);
+  const integerPart = Math.floor(totalCents / 100);
+  const decimalPart = totalCents % 100;
 
-  const absAmount = Math.abs(amount);
-  const integerPart = Math.floor(absAmount);
-  const decimalPart = Math.round((absAmount - integerPart) * 100);
+  if (integerPart === 0 && decimalPart === 0) return `Zéro ${singularUnit}`;
 
   const convertIntegerGroup = (n: number, isEnd: boolean): string => {
     let str = "";
@@ -337,7 +338,7 @@ export const generateDocumentHTML = (
     return acc + itemBaseForVat * (item.vat / 100);
   }, 0);
 
-  const totalAmount = subTotalAfterDiscount + vatAmount;
+  const totalAmount = Math.round((subTotalAfterDiscount + vatAmount) * 100) / 100;
 
   // Extract custom labels with defaults from translations
   const labels = settings.documentLabels || {};
@@ -1707,9 +1708,12 @@ const numberToWordsEn = (amount: number, settings?: CompanySettings | null): str
     subUnitPlural = "pence";
   }
 
-  if (amount === 0) return `Zero ${mainUnitPlural}`;
-  const integerPart = Math.floor(Math.abs(amount));
-  const decimalPart = Math.round((Math.abs(amount) - integerPart) * 100);
+  // Round amount to 2 decimal places to avoid floating point precision issues
+  const totalCents = Math.round(Math.abs(amount) * 100);
+  const integerPart = Math.floor(totalCents / 100);
+  const decimalPart = totalCents % 100;
+
+  if (integerPart === 0 && decimalPart === 0) return `Zero ${mainUnitPlural}`;
 
   let words = "";
   let num = integerPart;
@@ -1830,9 +1834,12 @@ const numberToWordsEs = (amount: number, settings?: CompanySettings | null): str
     subUnitPlural = "peniques";
   }
 
-  if (amount === 0) return `Cero ${mainUnitPlural}`;
-  const integerPart = Math.floor(Math.abs(amount));
-  const decimalPart = Math.round((Math.abs(amount) - integerPart) * 100);
+  // Round amount to 2 decimal places to avoid floating point precision issues
+  const totalCents = Math.round(Math.abs(amount) * 100);
+  const integerPart = Math.floor(totalCents / 100);
+  const decimalPart = totalCents % 100;
+
+  if (integerPart === 0 && decimalPart === 0) return `Cero ${mainUnitPlural}`;
 
   let words = "";
   if (integerPart === 0) words = "cero";

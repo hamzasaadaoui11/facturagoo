@@ -275,7 +275,7 @@ const CreateQuoteModal: React.FC<CreateQuoteModalProps> = ({ isOpen, onClose, on
             return acc + (itemBaseForVat * (item.vat / 100));
         }, 0);
 
-        const totalTTC = subTotalAfterDiscount + vatAmountAfterDiscount;
+        const totalTTC = Math.round((subTotalAfterDiscount + vatAmountAfterDiscount) * 100) / 100;
         return { subTotal, vatAmount: vatAmountAfterDiscount, totalTTC, discountAmount };
     }, [lineItems, isDiscountEnabled, discountType, discountValue, language, calculationMode]);
 

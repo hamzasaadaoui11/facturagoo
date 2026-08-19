@@ -87,7 +87,7 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
         return acc + (itemBaseForVat * (item.vat / 100));
     }, 0);
 
-    const totalTTC = subTotalAfterDiscount + vatAmount;
+    const totalTTC = Math.round((subTotalAfterDiscount + vatAmount) * 100) / 100;
 
     const renderAddress = (address: string) => {
         return address.split('\n').map((line, index) => (

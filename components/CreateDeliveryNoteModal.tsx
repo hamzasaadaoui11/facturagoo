@@ -315,7 +315,7 @@ const CreateDeliveryNoteModal: React.FC<CreateDeliveryNoteModalProps> = ({ isOpe
     const totals = useMemo(() => {
         const subTotal = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * getLineMultiplier(item)), 0);
         const vatAmount = lineItems.reduce((acc, item) => acc + (item.unitPrice * item.quantity * getLineMultiplier(item) * (item.vat / 100)), 0);
-        const totalTTC = subTotal + vatAmount;
+        const totalTTC = Math.round((subTotal + vatAmount) * 100) / 100;
         return { subTotal, vatAmount, totalTTC };
     }, [lineItems, calculationMode]);
 

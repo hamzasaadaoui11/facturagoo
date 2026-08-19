@@ -282,7 +282,7 @@ const CreatePurchaseOrderModal: React.FC<CreatePurchaseOrderModalProps> = ({ isO
             return acc + (itemBaseForVat * (item.vat / 100));
         }, 0);
 
-        const totalAmount = subTotalAfterDiscount + vatAmountAfterDiscount;
+        const totalAmount = Math.round((subTotalAfterDiscount + vatAmountAfterDiscount) * 100) / 100;
         return { subTotal, vatAmount: vatAmountAfterDiscount, totalAmount, discountAmount };
     }, [lineItems, isDiscountEnabled, discountType, discountValue, language, calculationMode]);
 
