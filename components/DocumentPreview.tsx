@@ -115,13 +115,17 @@ const DocumentPreview: React.FC<DocumentPreviewProps> = ({ settings, document, c
         <div className="bg-white p-12 shadow-2xl font-sans text-sm text-neutral-800 relative overflow-hidden flex flex-col" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
             
             {/* Watermark / Logo en arrière-plan */}
-            {settings.logo && (settings.showLogoWatermark ?? true) && (
+            {(settings.backgroundLogo || settings.logo) && (settings.showLogoWatermark ?? true) && (
                 <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
                     <img 
-                        src={settings.logo} 
+                        src={settings.backgroundLogo || settings.logo} 
                         alt="Watermark" 
-                        className="w-[80%] max-h-[60%] object-contain translate-y-16"
-                        style={{ opacity: settings.logoWatermarkOpacity ?? 0.07 }}
+                        className="max-h-[60%] object-contain translate-y-16"
+                        style={{ 
+                            width: settings.backgroundLogoWidth ? `${settings.backgroundLogoWidth}px` : '80%',
+                            maxWidth: '90%',
+                            opacity: settings.logoWatermarkOpacity ?? 0.07 
+                        }}
                     />
                 </div>
             )}

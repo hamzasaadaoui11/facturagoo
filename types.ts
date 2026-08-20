@@ -315,6 +315,8 @@ export interface CompanySettings {
     capital?: string;  
     logo?: string;
     logoWidth?: number;
+    backgroundLogo?: string; // Dedicated watermark / background logo
+    backgroundLogoWidth?: number;
     showLogoWatermark?: boolean;
     logoWatermarkOpacity?: number;
     stamp?: string;

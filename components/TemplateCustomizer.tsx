@@ -83,12 +83,22 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
         if (!mergedSettings.documentInfoPosition) mergedSettings.documentInfoPosition = 'right';
         if (mergedSettings.showExpiryDate === undefined) mergedSettings.showExpiryDate = true;
         if (!mergedSettings.logoWidth) mergedSettings.logoWidth = 200;
+        if (!mergedSettings.backgroundLogoWidth) mergedSettings.backgroundLogoWidth = 450;
         if (!mergedSettings.stampWidth) mergedSettings.stampWidth = 220;
         if (!mergedSettings.headerTextColor) mergedSettings.headerTextColor = '#ffffff';
         if (!mergedSettings.tableHeaderBgColor) mergedSettings.tableHeaderBgColor = mergedSettings.primaryColor || '#10b981';
         if (mergedSettings.showTableBorders === undefined) mergedSettings.showTableBorders = true;
         if (!mergedSettings.clientPosition) mergedSettings.clientPosition = 'right';
         if (mergedSettings.defaultTva === undefined) mergedSettings.defaultTva = 20;
+
+        if (settings?.backgroundLogo !== undefined) {
+            mergedSettings.backgroundLogo = settings.backgroundLogo;
+        } else {
+            const localBg = localStorage.getItem('facturago_background_logo');
+            if (localBg) {
+                mergedSettings.backgroundLogo = localBg;
+            }
+        }
 
         setLocalSettings(mergedSettings); 
         
@@ -147,6 +157,23 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
         }
     };
 
+    const handleBackgroundLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const newBgLogo = reader.result as string;
+                try {
+                    localStorage.setItem('facturago_background_logo', newBgLogo);
+                } catch (_) {}
+                setLocalSettings(prev => ({ ...prev, backgroundLogo: newBgLogo, showLogoWatermark: true }));
+            };
+            reader.readAsDataURL(file);
+        } else {
+            alert("Veuillez sélectionner un fichier image valide.");
+        }
+    };
+
     const handleStampChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file && file.type.startsWith('image/')) {
@@ -165,6 +192,15 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
         e.preventDefault();
         e.stopPropagation();
         setLocalSettings(prev => ({ ...prev, logo: null as any }));
+    };
+
+    const handleRemoveBackgroundLogo = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            localStorage.removeItem('facturago_background_logo');
+        } catch (_) {}
+        setLocalSettings(prev => ({ ...prev, backgroundLogo: '' }));
     };
 
     const handleRemoveStamp = (e: React.MouseEvent) => {
@@ -391,50 +427,68 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                             <div className="bg-white rounded-2xl shadow-sm ring-1 ring-neutral-100 p-8">
                                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-neutral-100">
                                     <div className="p-2 bg-pink-50 text-pink-600 rounded-lg"><Palette size={20}/></div>
-                                    <h3 className="text-xl font-bold text-neutral-900">{language === 'es' ? 'Identidad Visual' : 'Identité Visuelle'}</h3>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                     <div>
-                                        <label className="block text-sm font-semibold text-neutral-700 mb-3">{language === 'es' ? 'Logo de la empresa' : "Logo de l'entreprise"}</label>
-                                        <div className="group relative w-full border-2 border-dashed border-neutral-300 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden min-h-[12rem] py-4">
+                                        <h3 className="text-xl font-bold text-neutral-900">{language === 'es' ? 'Identidad Visual' : 'Identité Visuelle'}</h3>
+                                        <p className="text-xs text-neutral-500 mt-0.5">{language === 'es' ? 'Gestione sus logotipos, marcas de agua y firma.' : 'Gérez vos logos, filigranes d’arrière-plan et cachets pour vos documents.'}</p>
+                                    </div>
+                                </div>
+                                
+                                {/* 3 Dedicated Cards for Logos & Stamp */}
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                    {/* 1. Logo Principal (En-tête) */}
+                                    <div className="flex flex-col bg-neutral-50/70 rounded-2xl p-5 border border-neutral-200/80">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <label className="block text-sm font-bold text-neutral-800">
+                                                {language === 'es' ? '1. Logo Principal (Cabecera)' : "1. Logo Principal (En-tête)"}
+                                            </label>
+                                            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                                                {language === 'es' ? 'En-tête' : 'En-tête'}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-neutral-500 mb-3">
+                                            {language === 'es' ? 'Se muestra en la esquina superior del PDF.' : "S'affiche dans le coin supérieur de vos factures et devis."}
+                                        </p>
+                                        
+                                        <div className="group relative w-full border-2 border-dashed border-neutral-300 rounded-xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden min-h-[11rem] py-3 bg-white">
                                             <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/png, image/jpeg, image/svg+xml" onChange={handleLogoChange} />
                                             {localSettings.logo ? (
-                                                <div className="relative w-full p-4 flex items-center justify-center overflow-hidden min-h-[12rem] py-4">
+                                                <div className="relative w-full p-4 flex items-center justify-center overflow-hidden min-h-[11rem]">
                                                     <img 
                                                         src={localSettings.logo} 
-                                                        alt="Logo" 
-                                                        className="object-contain transition-all duration-150" 
+                                                        alt="Logo Principal" 
+                                                        className="object-contain transition-all duration-150 max-h-28" 
                                                         style={{ width: `${localSettings.logoWidth || 200}px`, maxWidth: '100%' }}
                                                     />
                                                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <span className="text-white font-medium flex items-center gap-2"><Upload size={18}/> {language === 'es' ? 'Cambiar' : 'Changer'}</span>
+                                                        <span className="text-white text-xs font-medium flex items-center gap-1.5"><Upload size={16}/> {language === 'es' ? 'Cambiar' : 'Changer'}</span>
                                                     </div>
                                                     <button 
                                                         type="button"
                                                         onClick={handleRemoveLogo}
-                                                        className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-red-50 hover:text-red-600 text-neutral-700 rounded-full z-20 shadow-md transition-all border border-neutral-200 duration-150 hover:scale-105 active:scale-95 animate-fadeIn"
+                                                        className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-red-50 hover:text-red-600 text-neutral-700 rounded-full z-20 shadow-md transition-all border border-neutral-200 duration-150 hover:scale-105 active:scale-95 animate-fadeIn"
                                                         title={language === 'es' ? 'Eliminar logo' : "Supprimer le logo"}
                                                     >
-                                                        <Trash2 size={16} />
+                                                        <Trash2 size={15} />
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="text-center p-6">
-                                                    <div className="w-12 h-12 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-3 text-neutral-400 group-hover:bg-emerald-100 group-hover:text-emerald-600 transition-colors">
-                                                        <Upload size={24} />
+                                                <div className="text-center p-4">
+                                                    <div className="w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-2 text-neutral-400 group-hover:bg-emerald-100 group-hover:text-emerald-600 transition-colors">
+                                                        <Upload size={20} />
                                                     </div>
-                                                    <p className="text-sm font-medium text-neutral-700">{language === 'es' ? 'Subir logo' : 'Cliquez pour importer'}</p>
-                                                    <p className="text-xs text-neutral-400 mt-1">PNG, JPG (Max 500x500px)</p>
+                                                    <p className="text-xs font-semibold text-neutral-700">{language === 'es' ? 'Subir logo' : 'Importer le logo'}</p>
+                                                    <p className="text-[10px] text-neutral-400 mt-0.5">PNG, JPG, SVG</p>
                                                 </div>
                                             )}
                                         </div>
+
                                         {localSettings.logo && (
-                                            <div className="mt-4 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
+                                            <div className="mt-4 p-3 bg-white rounded-xl border border-neutral-200/70 shadow-2xs">
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
-                                                        {language === 'es' ? 'Tamaño del logo' : 'Taille du logo'}
+                                                    <label className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
+                                                        {language === 'es' ? 'Tamaño del logo' : 'Largeur du logo'}
                                                     </label>
-                                                    <span className="text-xs font-mono font-bold text-emerald-600 bg-white px-2 py-1 rounded border border-neutral-200">
+                                                    <span className="text-xs font-mono font-bold text-emerald-600 bg-neutral-50 px-2 py-0.5 rounded border border-neutral-200">
                                                         {localSettings.logoWidth || 200}px
                                                     </span>
                                                 </div>
@@ -447,101 +501,191 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                                     onChange={(e) => setLocalSettings(prev => ({ ...prev, logoWidth: parseInt(e.target.value) }))}
                                                     className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                                                 />
-                                                <div className="flex justify-between mt-1 mb-4">
-                                                    <span className="text-[10px] text-neutral-400">Min</span>
-                                                    <span className="text-[10px] text-neutral-400">Max</span>
-                                                </div>
-
-                                                {/* Filigrane (Watermark) settings */}
-                                                <div className="pt-4 border-t border-neutral-100 flex flex-col gap-3">
-                                                    <div className="flex items-center justify-between">
-                                                        <div>
-                                                            <span className="text-xs font-bold text-neutral-700">
-                                                                {language === 'es' ? 'Activar logotipo de fondo' : 'Activer le logo en arrière-plan'}
-                                                            </span>
-                                                            <p className="text-[10px] text-neutral-400">
-                                                                {language === 'es' ? 'Centrado con opacidad en documentos' : 'Centré et estompé au milieu des documents'}
-                                                            </p>
-                                                        </div>
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => setLocalSettings(prev => ({ ...prev, showLogoWatermark: !(prev.showLogoWatermark ?? true) }))}
-                                                            className={`w-12 h-7 rounded-full flex items-center transition-colors duration-300 px-1 ${(localSettings.showLogoWatermark ?? true) ? 'bg-emerald-500 justify-end' : 'bg-neutral-300 justify-start'}`}
-                                                        >
-                                                            <div className="w-5 h-5 rounded-full bg-white shadow-md animate-scaleIn" />
-                                                        </button>
-                                                    </div>
-
-                                                    {(localSettings.showLogoWatermark ?? true) && (
-                                                        <div className="mt-1 animate-fadeIn">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">
-                                                                    {language === 'es' ? 'Opacidad del logotipo' : 'Opacité du logo'}
-                                                                </span>
-                                                                <span className="text-xs font-mono font-bold text-emerald-600 bg-white px-2 py-0.5 rounded border border-neutral-200">
-                                                                    {Math.round((localSettings.logoWatermarkOpacity ?? 0.07) * 100)}%
-                                                                </span>
-                                                            </div>
-                                                            <input 
-                                                                type="range" 
-                                                                min="0.01" 
-                                                                max="0.25" 
-                                                                step="0.01"
-                                                                value={localSettings.logoWatermarkOpacity ?? 0.07} 
-                                                                onChange={(e) => setLocalSettings(prev => ({ ...prev, logoWatermarkOpacity: parseFloat(e.target.value) }))}
-                                                                className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                                                            />
-                                                            <div className="flex justify-between mt-1">
-                                                                <span className="text-[9px] text-neutral-400">1% ({language === 'es' ? 'Sutil' : 'Subtil'})</span>
-                                                                <span className="text-[9px] text-neutral-400">25% ({language === 'es' ? 'Visible' : 'Visible'})</span>
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                <div className="flex justify-between mt-1">
+                                                    <span className="text-[9px] text-neutral-400">50px</span>
+                                                    <span className="text-[9px] text-neutral-400">500px</span>
                                                 </div>
                                             </div>
                                         )}
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-neutral-700 mb-3">Cachet de l'entreprise</label>
-                                        <div className="group relative w-full border-2 border-dashed border-neutral-300 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden min-h-[12rem] py-4">
+
+                                    {/* 2. Logo d'Arrière-Plan (Filigrane / Watermark) - NEW DEDICATED CASE */}
+                                    <div className="flex flex-col bg-indigo-50/40 rounded-2xl p-5 border border-indigo-100">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <label className="block text-sm font-bold text-neutral-800">
+                                                {language === 'es' ? '2. Logo de Fondo (Filigrana)' : "2. Logo d'Arrière-Plan (Filigrane)"}
+                                            </label>
+                                            <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded-md">
+                                                {language === 'es' ? 'Background' : 'Arrière-plan'}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-neutral-500 mb-3">
+                                            {language === 'es' ? 'Centrado y atenuado en el fondo de las páginas.' : "Centré en filigrane transparent au milieu de chaque page."}
+                                        </p>
+                                        
+                                        <div className="group relative w-full border-2 border-dashed border-indigo-200/80 rounded-xl hover:border-indigo-500 hover:bg-indigo-50/50 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden min-h-[11rem] py-3 bg-white">
+                                            <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/png, image/jpeg, image/svg+xml" onChange={handleBackgroundLogoChange} />
+                                            {(localSettings.backgroundLogo || (!localSettings.backgroundLogo && localSettings.logo && (localSettings.showLogoWatermark ?? true))) ? (
+                                                <div className="relative w-full p-4 flex items-center justify-center overflow-hidden min-h-[11rem]">
+                                                    <img 
+                                                        src={localSettings.backgroundLogo || localSettings.logo} 
+                                                        alt="Logo d'Arrière-plan" 
+                                                        className="object-contain transition-all duration-150 max-h-28" 
+                                                        style={{ 
+                                                            opacity: Math.max(0.2, (localSettings.logoWatermarkOpacity ?? 0.07) * 2.5),
+                                                            maxWidth: '100%' 
+                                                        }}
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <span className="text-white text-xs font-medium flex items-center gap-1.5"><Upload size={16}/> {language === 'es' ? 'Cambiar logo de fondo' : "Changer l'image de fond"}</span>
+                                                    </div>
+                                                    {localSettings.backgroundLogo && (
+                                                        <button 
+                                                            type="button"
+                                                            onClick={handleRemoveBackgroundLogo}
+                                                            className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-red-50 hover:text-red-600 text-neutral-700 rounded-full z-20 shadow-md transition-all border border-neutral-200 duration-150 hover:scale-105 active:scale-95 animate-fadeIn"
+                                                            title={language === 'es' ? 'Eliminar logo de fondo' : "Supprimer le logo d'arrière-plan"}
+                                                        >
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center p-4">
+                                                    <div className="w-10 h-10 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-2 text-indigo-400 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                                                        <Upload size={20} />
+                                                    </div>
+                                                    <p className="text-xs font-semibold text-neutral-700">{language === 'es' ? 'Subir logo de fondo' : 'Importer le filigrane'}</p>
+                                                    <p className="text-[10px] text-neutral-400 mt-0.5">{language === 'es' ? 'PNG transparente recomendado' : 'PNG transparent recommandé'}</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Watermark Controls */}
+                                        <div className="mt-4 p-3 bg-white rounded-xl border border-indigo-100 shadow-2xs space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <span className="text-xs font-bold text-neutral-700">
+                                                        {language === 'es' ? 'Activar en fondo' : 'Activer en arrière-plan'}
+                                                    </span>
+                                                </div>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setLocalSettings(prev => ({ ...prev, showLogoWatermark: !(prev.showLogoWatermark ?? true) }))}
+                                                    className={`w-10 h-6 rounded-full flex items-center transition-colors duration-300 px-0.5 ${(localSettings.showLogoWatermark ?? true) ? 'bg-indigo-600 justify-end' : 'bg-neutral-300 justify-start'}`}
+                                                >
+                                                    <div className="w-4 h-4 rounded-full bg-white shadow-md" />
+                                                </button>
+                                            </div>
+
+                                            {(localSettings.showLogoWatermark ?? true) && (
+                                                <div className="pt-2 border-t border-neutral-100 animate-fadeIn space-y-3">
+                                                    <div>
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
+                                                                {language === 'es' ? 'Tamaño del logo de fondo' : 'Largeur du logo de fond'}
+                                                            </span>
+                                                            <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                                                                {localSettings.backgroundLogoWidth || 450}px
+                                                            </span>
+                                                        </div>
+                                                        <input 
+                                                            type="range" 
+                                                            min="100" 
+                                                            max="750" 
+                                                            step="10" 
+                                                            value={localSettings.backgroundLogoWidth || 450} 
+                                                            onChange={(e) => setLocalSettings(prev => ({ ...prev, backgroundLogoWidth: parseInt(e.target.value) }))}
+                                                            className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                                        />
+                                                        <div className="flex justify-between mt-1">
+                                                            <span className="text-[9px] text-neutral-400">100px ({language === 'es' ? 'Pequeño' : 'Petit'})</span>
+                                                            <span className="text-[9px] text-neutral-400">750px ({language === 'es' ? 'Grand' : 'Grand'})</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="pt-2 border-t border-neutral-100">
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
+                                                                {language === 'es' ? 'Opacidad del fondo' : 'Opacité du filigrane'}
+                                                            </span>
+                                                            <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
+                                                                {Math.round((localSettings.logoWatermarkOpacity ?? 0.07) * 100)}%
+                                                            </span>
+                                                        </div>
+                                                        <input 
+                                                            type="range" 
+                                                            min="0.01" 
+                                                            max="0.30" 
+                                                            step="0.01" 
+                                                            value={localSettings.logoWatermarkOpacity ?? 0.07} 
+                                                            onChange={(e) => setLocalSettings(prev => ({ ...prev, logoWatermarkOpacity: parseFloat(e.target.value) }))}
+                                                            className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                                                        />
+                                                        <div className="flex justify-between mt-1">
+                                                            <span className="text-[9px] text-neutral-400">1% ({language === 'es' ? 'Muy sutil' : 'Très discret'})</span>
+                                                            <span className="text-[9px] text-neutral-400">30% ({language === 'es' ? 'Marcado' : 'Prononcé'})</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* 3. Cachet & Signature */}
+                                    <div className="flex flex-col bg-neutral-50/70 rounded-2xl p-5 border border-neutral-200/80">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <label className="block text-sm font-bold text-neutral-800">
+                                                {language === 'es' ? '3. Sello & Firma' : "3. Cachet & Signature"}
+                                            </label>
+                                            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                                                {language === 'es' ? 'Pie' : 'Bas de page'}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-neutral-500 mb-3">
+                                            {language === 'es' ? 'Se muestra en la zona de firma de la empresa.' : "S'affiche dans la zone de signature et validation en bas."}
+                                        </p>
+                                        
+                                        <div className="group relative w-full border-2 border-dashed border-neutral-300 rounded-xl hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden min-h-[11rem] py-3 bg-white">
                                             <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" accept="image/png, image/jpeg, image/svg+xml" onChange={handleStampChange} />
                                             {localSettings.stamp ? (
-                                                <div className="relative w-full p-4 flex items-center justify-center overflow-hidden min-h-[12rem] py-4">
+                                                <div className="relative w-full p-4 flex items-center justify-center overflow-hidden min-h-[11rem]">
                                                     <img 
                                                         src={localSettings.stamp} 
                                                         alt="Cachet" 
-                                                        className="object-contain transition-all duration-150" 
+                                                        className="object-contain transition-all duration-150 max-h-28" 
                                                         style={{ width: `${localSettings.stampWidth || 220}px`, maxWidth: '100%' }}
                                                     />
                                                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <span className="text-white font-medium flex items-center gap-2"><Upload size={18}/> {language === 'es' ? 'Cambiar' : 'Changer'}</span>
+                                                        <span className="text-white text-xs font-medium flex items-center gap-1.5"><Upload size={16}/> {language === 'es' ? 'Cambiar' : 'Changer'}</span>
                                                     </div>
                                                     <button 
                                                         type="button"
                                                         onClick={handleRemoveStamp}
-                                                        className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-red-50 hover:text-red-600 text-neutral-700 rounded-full z-20 shadow-md transition-all border border-neutral-200 duration-150 hover:scale-105 active:scale-95 animate-fadeIn"
+                                                        className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-red-50 hover:text-red-600 text-neutral-700 rounded-full z-20 shadow-md transition-all border border-neutral-200 duration-150 hover:scale-105 active:scale-95 animate-fadeIn"
                                                         title={language === 'es' ? 'Eliminar sello' : "Supprimer le cachet"}
                                                     >
-                                                        <Trash2 size={16} />
+                                                        <Trash2 size={15} />
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="text-center p-6">
-                                                    <div className="w-12 h-12 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-3 text-neutral-400 group-hover:bg-emerald-100 group-hover:text-emerald-600 transition-colors">
-                                                        <Upload size={24} />
+                                                <div className="text-center p-4">
+                                                    <div className="w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-2 text-neutral-400 group-hover:bg-emerald-100 group-hover:text-emerald-600 transition-colors">
+                                                        <Upload size={20} />
                                                     </div>
-                                                    <p className="text-sm font-medium text-neutral-700">Cliquez pour importer</p>
-                                                    <p className="text-xs text-neutral-400 mt-1">PNG, JPG (Transparent)</p>
+                                                    <p className="text-xs font-semibold text-neutral-700">{language === 'es' ? 'Subir sello' : 'Importer le cachet'}</p>
+                                                    <p className="text-[10px] text-neutral-400 mt-0.5">PNG, JPG (Transparent)</p>
                                                 </div>
                                             )}
                                         </div>
+
                                         {localSettings.stamp && (
-                                            <div className="mt-4 p-4 bg-neutral-50 rounded-xl border border-neutral-100">
+                                            <div className="mt-4 p-3 bg-white rounded-xl border border-neutral-200/70 shadow-2xs">
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
-                                                        {language === 'es' ? 'Tamaño del sello' : 'Taille du cachet'}
+                                                    <label className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
+                                                        {language === 'es' ? 'Tamaño del sello' : 'Largeur du cachet'}
                                                     </label>
-                                                    <span className="text-xs font-mono font-bold text-emerald-600 bg-white px-2 py-1 rounded border border-neutral-200">
+                                                    <span className="text-xs font-mono font-bold text-emerald-600 bg-neutral-50 px-2 py-0.5 rounded border border-neutral-200">
                                                         {localSettings.stampWidth || 220}px
                                                     </span>
                                                 </div>
@@ -554,97 +698,97 @@ const TemplateCustomizer: React.FC<TemplateCustomizerProps> = ({ settings, onSav
                                                     onChange={(e) => setLocalSettings(prev => ({ ...prev, stampWidth: parseInt(e.target.value) }))}
                                                     className="w-full h-2 bg-neutral-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                                                 />
-                                                <div className="flex justify-between mt-1 mb-4">
-                                                    <span className="text-[10px] text-neutral-400">Min</span>
-                                                    <span className="text-[10px] text-neutral-400">Max</span>
+                                                <div className="flex justify-between mt-1">
+                                                    <span className="text-[9px] text-neutral-400">50px</span>
+                                                    <span className="text-[9px] text-neutral-400">500px</span>
                                                 </div>
                                             </div>
                                         )}
                                     </div>
-                                    <div>
-                                        <label htmlFor="primaryColor" className="block text-sm font-semibold text-neutral-700 mb-3">{language === 'es' ? 'Color principal' : 'Couleur principale'}</label>
-                                        <div className="flex items-center gap-4 bg-neutral-50 p-4 rounded-xl border border-neutral-100">
-                                            <div className="relative overflow-hidden w-16 h-16 rounded-xl shadow-sm ring-2 ring-white ring-offset-2 ring-offset-neutral-100">
-                                                <input type="color" id="primaryColor" name="primaryColor" value={localSettings.primaryColor || '#10b981'} onChange={handleInputChange} className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 cursor-pointer p-0 border-0" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="flex items-center bg-white border border-neutral-200 rounded-lg px-3 py-2 w-full max-w-[140px]">
-                                                    <span className="text-neutral-400 mr-2">#</span>
-                                                    <input 
-                                                        type="text" 
-                                                        value={(localSettings.primaryColor || '#10b981').replace('#', '')} 
-                                                        onChange={(e) => {
-                                                            let val = e.target.value.trim();
-                                                            // Keep only valid hex characters
-                                                            val = val.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
-                                                            setLocalSettings(prev => ({ ...prev, primaryColor: `#${val}` }));
-                                                        }} 
-                                                        name="primaryColor" 
-                                                        className="w-full text-sm font-mono uppercase focus:outline-none text-neutral-700" 
-                                                        placeholder="10B981"
-                                                    />
+                                </div>
+
+                                {/* Colors and Document Styling Section */}
+                                <div className="mt-10 pt-8 border-t border-neutral-100">
+                                    <h4 className="text-sm font-bold text-neutral-900 mb-6 uppercase tracking-wider">
+                                        {language === 'es' ? 'Colores y Estilo de Tablas' : 'Couleurs & Style des Tableaux'}
+                                    </h4>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div>
+                                            <label htmlFor="primaryColor" className="block text-xs font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Color principal' : 'Couleur principale'}</label>
+                                            <div className="flex items-center gap-3 bg-neutral-50 p-3 rounded-xl border border-neutral-100">
+                                                <div className="relative overflow-hidden w-12 h-12 rounded-xl shadow-xs ring-2 ring-white shrink-0">
+                                                    <input type="color" id="primaryColor" name="primaryColor" value={localSettings.primaryColor || '#10b981'} onChange={handleInputChange} className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 cursor-pointer p-0 border-0" />
                                                 </div>
-                                                <p className="mt-2 text-xs text-neutral-500 leading-relaxed">
-                                                    {language === 'es' ? 'Usado para títulos y bordes en los PDFs.' : 'Utilisée pour les titres, bordures et accents dans vos factures.'}
-                                                </p>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center bg-white border border-neutral-200 rounded-lg px-2.5 py-1.5 w-full">
+                                                        <span className="text-neutral-400 mr-1 text-xs">#</span>
+                                                        <input 
+                                                            type="text" 
+                                                            value={(localSettings.primaryColor || '#10b981').replace('#', '')} 
+                                                            onChange={(e) => {
+                                                                let val = e.target.value.trim();
+                                                                val = val.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
+                                                                setLocalSettings(prev => ({ ...prev, primaryColor: `#${val}` }));
+                                                            }} 
+                                                            name="primaryColor" 
+                                                            className="w-full text-xs font-mono uppercase focus:outline-none text-neutral-700" 
+                                                            placeholder="10B981"
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="headerTextColor" className="block text-sm font-semibold text-neutral-700 mb-3">{language === 'es' ? 'Color del texto del encabezado' : "Couleur du texte de l'en-tête (tableau)"}</label>
-                                        <div className="flex items-center gap-4 bg-neutral-50 p-4 rounded-xl border border-neutral-100">
-                                            <div className="relative overflow-hidden w-16 h-16 rounded-xl shadow-sm ring-2 ring-white ring-offset-2 ring-offset-neutral-100">
-                                                <input type="color" id="headerTextColor" name="headerTextColor" value={localSettings.headerTextColor || '#ffffff'} onChange={handleInputChange} className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 cursor-pointer p-0 border-0" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="flex items-center bg-white border border-neutral-200 rounded-lg px-3 py-2 w-full max-w-[140px]">
-                                                    <span className="text-neutral-400 mr-2">#</span>
-                                                    <input 
-                                                        type="text" 
-                                                        value={(localSettings.headerTextColor || '#ffffff').replace('#', '')} 
-                                                        onChange={(e) => {
-                                                            let val = e.target.value.trim();
-                                                            // Keep only valid hex characters
-                                                            val = val.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
-                                                            setLocalSettings(prev => ({ ...prev, headerTextColor: `#${val}` }));
-                                                        }} 
-                                                        name="headerTextColor" 
-                                                        className="w-full text-sm font-mono uppercase focus:outline-none text-neutral-700" 
-                                                        placeholder="FFFFFF"
-                                                    />
+
+                                        <div>
+                                            <label htmlFor="tableHeaderBgColor" className="block text-xs font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Fondo cabecera tabla' : "Fond de l'en-tête du tableau"}</label>
+                                            <div className="flex items-center gap-3 bg-neutral-50 p-3 rounded-xl border border-neutral-100">
+                                                <div className="relative overflow-hidden w-12 h-12 rounded-xl shadow-xs ring-2 ring-white shrink-0">
+                                                    <input type="color" id="tableHeaderBgColor" name="tableHeaderBgColor" value={localSettings.tableHeaderBgColor || '#10b981'} onChange={handleInputChange} className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 cursor-pointer p-0 border-0" />
                                                 </div>
-                                                <p className="mt-2 text-xs text-neutral-500 leading-relaxed">
-                                                    {language === 'es' ? 'Usado para el color de los textos en la cabecera de las tablas.' : "Utilisée pour la couleur du texte dans l'en-tête du tableau (ex: désignation, Qté, etc.)."}
-                                                </p>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center bg-white border border-neutral-200 rounded-lg px-2.5 py-1.5 w-full">
+                                                        <span className="text-neutral-400 mr-1 text-xs">#</span>
+                                                        <input 
+                                                            type="text" 
+                                                            value={(localSettings.tableHeaderBgColor || '#10b981').replace('#', '')} 
+                                                            onChange={(e) => {
+                                                                let val = e.target.value.trim();
+                                                                val = val.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
+                                                                setLocalSettings(prev => ({ ...prev, tableHeaderBgColor: `#${val}` }));
+                                                            }} 
+                                                            name="tableHeaderBgColor" 
+                                                            className="w-full text-xs font-mono uppercase focus:outline-none text-neutral-700" 
+                                                            placeholder="10B981"
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div>
-                                        <label htmlFor="tableHeaderBgColor" className="block text-sm font-semibold text-neutral-700 mb-3">{language === 'es' ? 'Color de la barra del encabezado' : "Couleur de la barre de l'en-tête (tableau)"}</label>
-                                        <div className="flex items-center gap-4 bg-neutral-50 p-4 rounded-xl border border-neutral-100">
-                                            <div className="relative overflow-hidden w-16 h-16 rounded-xl shadow-sm ring-2 ring-white ring-offset-2 ring-offset-neutral-100">
-                                                <input type="color" id="tableHeaderBgColor" name="tableHeaderBgColor" value={localSettings.tableHeaderBgColor || '#10b981'} onChange={handleInputChange} className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 cursor-pointer p-0 border-0" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="flex items-center bg-white border border-neutral-200 rounded-lg px-3 py-2 w-full max-w-[140px]">
-                                                    <span className="text-neutral-400 mr-2">#</span>
-                                                    <input 
-                                                        type="text" 
-                                                        value={(localSettings.tableHeaderBgColor || '#10b981').replace('#', '')} 
-                                                        onChange={(e) => {
-                                                            let val = e.target.value.trim();
-                                                            // Keep only valid hex characters
-                                                            val = val.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
-                                                            setLocalSettings(prev => ({ ...prev, tableHeaderBgColor: `#${val}` }));
-                                                        }} 
-                                                        name="tableHeaderBgColor" 
-                                                        className="w-full text-sm font-mono uppercase focus:outline-none text-neutral-700" 
-                                                        placeholder="10B981"
-                                                    />
+
+                                        <div>
+                                            <label htmlFor="headerTextColor" className="block text-xs font-semibold text-neutral-700 mb-2">{language === 'es' ? 'Texto cabecera tabla' : "Texte de l'en-tête du tableau"}</label>
+                                            <div className="flex items-center gap-3 bg-neutral-50 p-3 rounded-xl border border-neutral-100">
+                                                <div className="relative overflow-hidden w-12 h-12 rounded-xl shadow-xs ring-2 ring-white shrink-0">
+                                                    <input type="color" id="headerTextColor" name="headerTextColor" value={localSettings.headerTextColor || '#ffffff'} onChange={handleInputChange} className="absolute inset-0 w-[150%] h-[150%] -top-1/4 -left-1/4 cursor-pointer p-0 border-0" />
                                                 </div>
-                                                <p className="mt-2 text-xs text-neutral-500 leading-relaxed">
-                                                    {language === 'es' ? 'Color de fondo personalizado para la barra de la cabecera de la tabla.' : "Couleur de fond personnalisée pour la barre de l'en-tête du tableau."}
-                                                </p>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center bg-white border border-neutral-200 rounded-lg px-2.5 py-1.5 w-full">
+                                                        <span className="text-neutral-400 mr-1 text-xs">#</span>
+                                                        <input 
+                                                            type="text" 
+                                                            value={(localSettings.headerTextColor || '#ffffff').replace('#', '')} 
+                                                            onChange={(e) => {
+                                                                let val = e.target.value.trim();
+                                                                val = val.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
+                                                                setLocalSettings(prev => ({ ...prev, headerTextColor: `#${val}` }));
+                                                            }} 
+                                                            name="headerTextColor" 
+                                                            className="w-full text-xs font-mono uppercase focus:outline-none text-neutral-700" 
+                                                            placeholder="FFFFFF"
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

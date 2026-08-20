@@ -1345,6 +1345,7 @@ export const generateDocumentHTML = (
 
   const totalPages = itemChunks.length;
   const pages: string[] = [];
+  const watermarkLogo = settings.backgroundLogo || settings.logo;
 
   itemChunks.forEach((pageItems, index) => {
     const pageNum = index + 1;
@@ -1378,10 +1379,10 @@ export const generateDocumentHTML = (
                 </style>
                 
                 ${
-                  settings.logo && (settings.showLogoWatermark ?? true)
+                  watermarkLogo && (settings.showLogoWatermark ?? true)
                     ? `
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; z-index: 0; opacity: ${settings.logoWatermarkOpacity ?? 0.07}; pointer-events: none;">
-                        <img src="${settings.logo}" style="width: 100%; height: auto; object-fit: contain;" />
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: ${settings.backgroundLogoWidth ? `${settings.backgroundLogoWidth}px` : '85%'}; max-width: 90%; z-index: 0; opacity: ${settings.logoWatermarkOpacity ?? 0.07}; pointer-events: none; text-align: center;">
+                        <img src="${watermarkLogo}" style="width: 100%; height: auto; max-height: 200mm; object-fit: contain;" />
                     </div>
                 `
                     : ""

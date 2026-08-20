@@ -25,6 +25,8 @@ const LOCAL_STORAGE_KEYS = {
     DOCUMENT_INFO_POSITION: 'facturago_document_info_position',
     SHOW_EXPIRY_DATE: 'facturago_show_expiry_date',
     LOGO_WIDTH: 'facturago_logo_width',
+    BACKGROUND_LOGO: 'facturago_background_logo',
+    BACKGROUND_LOGO_WIDTH: 'facturago_background_logo_width',
     STAMP_WIDTH: 'facturago_stamp_width',
     SHOW_LOGO_WATERMARK: 'facturago_show_logo_watermark',
     LOGO_WATERMARK_OPACITY: 'facturago_logo_watermark_opacity',
@@ -915,6 +917,22 @@ export const dbService = {
                         settings.logoWidth = 200;
                     }
 
+                    const localBgLogo = localStorage.getItem(LOCAL_STORAGE_KEYS.BACKGROUND_LOGO);
+                    if (localBgLogo !== null) {
+                        settings.backgroundLogo = localBgLogo;
+                    } else if (dbCustom.backgroundLogo !== undefined) {
+                        settings.backgroundLogo = dbCustom.backgroundLogo;
+                    }
+
+                    const localBgLogoWidth = localStorage.getItem(LOCAL_STORAGE_KEYS.BACKGROUND_LOGO_WIDTH);
+                    if (localBgLogoWidth !== null) {
+                        settings.backgroundLogoWidth = parseInt(localBgLogoWidth, 10);
+                    } else if (dbCustom.backgroundLogoWidth !== undefined) {
+                        settings.backgroundLogoWidth = dbCustom.backgroundLogoWidth;
+                    } else if (settings.backgroundLogoWidth === undefined) {
+                        settings.backgroundLogoWidth = 450;
+                    }
+
                     const localStampWidth = localStorage.getItem(LOCAL_STORAGE_KEYS.STAMP_WIDTH);
                     if (localStampWidth !== null) {
                         settings.stampWidth = parseInt(localStampWidth, 10);
@@ -1001,6 +1019,14 @@ export const dbService = {
                         localStorage.setItem(LOCAL_STORAGE_KEYS.DOCUMENT_INFO_POSITION, settings.documentInfoPosition || 'right');
                         localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_EXPIRY_DATE, String(settings.showExpiryDate));
                         localStorage.setItem(LOCAL_STORAGE_KEYS.LOGO_WIDTH, String(settings.logoWidth));
+                        if (settings.backgroundLogo) {
+                            localStorage.setItem(LOCAL_STORAGE_KEYS.BACKGROUND_LOGO, settings.backgroundLogo);
+                        } else {
+                            localStorage.removeItem(LOCAL_STORAGE_KEYS.BACKGROUND_LOGO);
+                        }
+                        if (settings.backgroundLogoWidth) {
+                            localStorage.setItem(LOCAL_STORAGE_KEYS.BACKGROUND_LOGO_WIDTH, String(settings.backgroundLogoWidth));
+                        }
                         localStorage.setItem(LOCAL_STORAGE_KEYS.STAMP_WIDTH, String(settings.stampWidth));
                         localStorage.setItem(LOCAL_STORAGE_KEYS.SHOW_LOGO_WATERMARK, String(settings.showLogoWatermark));
                         localStorage.setItem(LOCAL_STORAGE_KEYS.LOGO_WATERMARK_OPACITY, String(settings.logoWatermarkOpacity));
@@ -1060,6 +1086,18 @@ export const dbService = {
                     localStorage.setItem(LOCAL_STORAGE_KEYS.LOGO_WIDTH, String(settings.logoWidth));
                  }
 
+                if (settings.backgroundLogo !== undefined) {
+                    if (settings.backgroundLogo) {
+                        localStorage.setItem(LOCAL_STORAGE_KEYS.BACKGROUND_LOGO, settings.backgroundLogo);
+                    } else {
+                        localStorage.removeItem(LOCAL_STORAGE_KEYS.BACKGROUND_LOGO);
+                    }
+                }
+
+                if (settings.backgroundLogoWidth !== undefined) {
+                    localStorage.setItem(LOCAL_STORAGE_KEYS.BACKGROUND_LOGO_WIDTH, String(settings.backgroundLogoWidth));
+                }
+
                 if (settings.stampWidth !== undefined) {
                     localStorage.setItem(LOCAL_STORAGE_KEYS.STAMP_WIDTH, String(settings.stampWidth));
                  }
@@ -1106,6 +1144,8 @@ export const dbService = {
                 documentInfoPosition: settings.documentInfoPosition,
                 showExpiryDate: settings.showExpiryDate,
                 logoWidth: settings.logoWidth,
+                backgroundLogo: settings.backgroundLogo,
+                backgroundLogoWidth: settings.backgroundLogoWidth,
                 stampWidth: settings.stampWidth,
                 showLogoWatermark: settings.showLogoWatermark,
                 logoWatermarkOpacity: settings.logoWatermarkOpacity,
@@ -1135,6 +1175,8 @@ export const dbService = {
             delete (cleanData as any).documentInfoPosition; // Remove to avoid Supabase schema error
             delete (cleanData as any).showExpiryDate; // Remove to avoid Supabase schema error
             delete (cleanData as any).logoWidth; // Remove to avoid Supabase schema error
+            delete (cleanData as any).backgroundLogo; // Remove to avoid Supabase schema error
+            delete (cleanData as any).backgroundLogoWidth; // Remove to avoid Supabase schema error
             delete (cleanData as any).stampWidth; // Remove to avoid Supabase schema error
             delete (cleanData as any).showLogoWatermark; // Remove to avoid Supabase schema error
             delete (cleanData as any).logoWatermarkOpacity; // Remove to avoid Supabase schema error
@@ -1178,6 +1220,8 @@ export const dbService = {
                 documentInfoPosition: settings.documentInfoPosition,
                 showExpiryDate: settings.showExpiryDate,
                 logoWidth: settings.logoWidth,
+                backgroundLogo: settings.backgroundLogo,
+                backgroundLogoWidth: settings.backgroundLogoWidth,
                 stampWidth: settings.stampWidth,
                 showLogoWatermark: settings.showLogoWatermark,
                 logoWatermarkOpacity: settings.logoWatermarkOpacity,

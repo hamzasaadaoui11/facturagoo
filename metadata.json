@@ -1,5 +1,6 @@
 {
   "name": "Facturago",
   "description": "Une plateforme tout-en-un pour la facturation et la gestion d'entreprise. Gérez vos clients, envoyez des factures, suivez vos dépenses et optimisez vos opérations.",
-  "requestFramePermissions": ["camera", "web-share"]
+  "requestFramePermissions": ["camera", "web-share"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
